@@ -1,70 +1,70 @@
 [
   {
     "section": "Addons",
-    "name": "PET DOOR - SMALL (FITTED TO DOOR WHEN MAKE AT SAME TIME)",
+    "name": "PET DOOR - SMALL",
     "price": 180,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "PET DOOR - MEDIUM (FITTED TO DOOR WHEN MAKE AT SAME TIME)",
+    "name": "PET DOOR - MEDIUM",
     "price": 190,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "PET DOOR - LARGE (FITTED TO DOOR WHEN MAKE AT SAME TIME)",
+    "name": "PET DOOR - LARGE",
     "price": 205,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "HOPPER HATCH (FITTED TO SCREEN WHEN MAKE AT SAME TIME)",
+    "name": "HOPPER HATCH",
     "price": 35,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "HOPPER HATCH (PETWAYS FITTED TO SCREEN WHEN MAKE AT SAME TIME)",
+    "name": "HOPPER HATCH with PetWay",
     "price": 115,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "SNIB GUARDS (FITTED TO DOOR WHEN MAKE AT SAME TIME)",
+    "name": "SNIB GUARDS",
     "price": 32,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "TRIPLE LOCKS  (FITTED TO DOOR WHEN MAKE AT SAME TIME)",
+    "name": "TRIPLE LOCKS",
     "price": 96,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "LOCK POSTS (WHEN FITTED TO CURRENT DOOR FRAMES)",
+    "name": "LOCK POSTS",
     "price": 75,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "TOP TRACKS (WHEN FITTED TO CURRENT DOOR FRAMES)",
+    "name": "TOP TRACKS",
     "price": 75,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Addons",
-    "name": "BOTTOM TRACK (WHEN FITTED TO CURRENT DOOR FRAMES)",
+    "name": "BOTTOM TRACK",
     "price": 75,
     "priceOnRequest": false,
     "unit": "Each"
@@ -120,42 +120,42 @@
   },
   {
     "section": "Extras",
-    "name": "REMESH FLYSCREEN WINDOW - STANDARD MESH (UNDER 1500 H)",
+    "name": "REMESH FLYSCREEN WINDOW - STANDARD MESH UNDER 1500 H",
     "price": 55,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Extras",
-    "name": "REMESH FLYSCREEN WINDOW - STANDARD MESH (OVER 1500 H)",
+    "name": "REMESH FLYSCREEN WINDOW - STANDARD MESH OVER 1500 H",
     "price": 60,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Extras",
-    "name": "REMESH GRILLE WINDOW - STANDARD MESH (UNDER 1500 H)",
+    "name": "REMESH GRILLE WINDOW - STANDARD MESH UNDER 1500 H",
     "price": 85,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Extras",
-    "name": "REMESH GRILLE WINDOW - STANDARD MESH (OVER 1500 H)",
+    "name": "REMESH GRILLE WINDOW - STANDARD MESH OVER 1500 H",
     "price": 91,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Extras",
-    "name": "REMESH DOORS - STANDARD MESH (UNDER 2400 IN HIGHT)",
+    "name": "REMESH DOORS - STANDARD MESH UNDER 2400 IN HEIGHT",
     "price": 105,
     "priceOnRequest": false,
     "unit": "Each"
   },
   {
     "section": "Extras",
-    "name": "REMESH DOORS - STANDARD MESH (OVER 2400 IN HIGHT)",
+    "name": "REMESH DOORS - STANDARD MESH OVER 2400 IN HEIGHT",
     "price": 120,
     "priceOnRequest": false,
     "unit": "Each"

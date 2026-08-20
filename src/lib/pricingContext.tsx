@@ -14,6 +14,8 @@ interface PricingState {
   fileName: string | null
 }
 
+// Feels like (1) Unsafe as hell and (2) Unnecessary on to be sessiononly. 
+// Could instead make it an admin function that changes it for everyone on next system reboot.
 interface PricingContextValue extends PricingState {
   /** Parses the file client-side and swaps it in for the rest of this browser session only. */
   importFromFile: (file: File) => Promise<{ warnings: string[] }>
