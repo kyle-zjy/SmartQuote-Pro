@@ -13,7 +13,7 @@ export interface QuoteLineItem {
 export interface RoomPhoto {
   id: string
   dataUrl: string
-  annotatedDataUrl: string | null
+  caption: string
 }
 
 interface QuoteState {
@@ -30,7 +30,7 @@ type QuoteAction =
   | { type: 'CLEAR' }
   | { type: 'ADD_PHOTO'; room: string; dataUrl: string }
   | { type: 'REMOVE_PHOTO'; room: string; id: string }
-  | { type: 'SET_PHOTO_ANNOTATION'; room: string; id: string; annotatedDataUrl: string | null }
+  | { type: 'SET_PHOTO_CAPTION'; room: string; id: string; caption: string }
 
 const STORAGE_KEY = 'smartquote-pro:quote'
 const GST_RATE = 0.1
@@ -64,7 +64,7 @@ function reducer(state: QuoteState, action: QuoteAction): QuoteState {
     case 'CLEAR':
       return { ...state, items: [], roomPhotos: {} }
     case 'ADD_PHOTO': {
-      const photo: RoomPhoto = { id: crypto.randomUUID(), dataUrl: action.dataUrl, annotatedDataUrl: null }
+      const photo: RoomPhoto = { id: crypto.randomUUID(), dataUrl: action.dataUrl, caption: '' }
       const existing = state.roomPhotos[action.room] ?? []
       return { ...state, roomPhotos: { ...state.roomPhotos, [action.room]: [...existing, photo] } }
     }
@@ -75,15 +75,13 @@ function reducer(state: QuoteState, action: QuoteAction): QuoteState {
         roomPhotos: { ...state.roomPhotos, [action.room]: existing.filter((p) => p.id !== action.id) },
       }
     }
-    case 'SET_PHOTO_ANNOTATION': {
+    case 'SET_PHOTO_CAPTION': {
       const existing = state.roomPhotos[action.room] ?? []
       return {
         ...state,
         roomPhotos: {
           ...state.roomPhotos,
-          [action.room]: existing.map((p) =>
-            p.id === action.id ? { ...p, annotatedDataUrl: action.annotatedDataUrl } : p,
-          ),
+          [action.room]: existing.map((p) => (p.id === action.id ? { ...p, caption: action.caption } : p)),
         },
       }
     }
@@ -100,7 +98,7 @@ interface QuoteContextValue extends QuoteState {
   clear: () => void
   addPhoto: (room: string, dataUrl: string) => void
   removePhoto: (room: string, id: string) => void
-  setPhotoAnnotation: (room: string, id: string, annotatedDataUrl: string | null) => void
+  setPhotoCaption: (room: string, id: string, caption: string) => void
   subtotal: number
   gstAmount: number
   total: number
@@ -127,8 +125,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       clear: () => dispatch({ type: 'CLEAR' }),
       addPhoto: (room, dataUrl) => dispatch({ type: 'ADD_PHOTO', room, dataUrl }),
       removePhoto: (room, id) => dispatch({ type: 'REMOVE_PHOTO', room, id }),
-      setPhotoAnnotation: (room, id, annotatedDataUrl) =>
-        dispatch({ type: 'SET_PHOTO_ANNOTATION', room, id, annotatedDataUrl }),
+      setPhotoCaption: (room, id, caption) => dispatch({ type: 'SET_PHOTO_CAPTION', room, id, caption }),
       subtotal,
       gstAmount,
       total: subtotal + gstAmount,
