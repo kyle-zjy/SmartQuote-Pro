@@ -10,9 +10,16 @@ export interface QuoteLineItem {
   note: string
 }
 
+export interface RoomPhoto {
+  id: string
+  dataUrl: string
+  annotatedDataUrl: string | null
+}
+
 interface QuoteState {
   items: QuoteLineItem[]
   gstEnabled: boolean
+  roomPhotos: Record<string, RoomPhoto[]>
 }
 
 type QuoteAction =
@@ -21,6 +28,9 @@ type QuoteAction =
   | { type: 'SET_QUANTITY'; id: string; quantity: number }
   | { type: 'SET_GST'; enabled: boolean }
   | { type: 'CLEAR' }
+  | { type: 'ADD_PHOTO'; room: string; dataUrl: string }
+  | { type: 'REMOVE_PHOTO'; room: string; id: string }
+  | { type: 'SET_PHOTO_ANNOTATION'; room: string; id: string; annotatedDataUrl: string | null }
 
 const STORAGE_KEY = 'smartquote-pro:quote'
 const GST_RATE = 0.1
@@ -28,11 +38,14 @@ const GST_RATE = 0.1
 function loadInitialState(): QuoteState {
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) return JSON.parse(raw) as QuoteState
+    if (raw) {
+      const parsed = JSON.parse(raw) as Partial<QuoteState>
+      return { items: parsed.items ?? [], gstEnabled: parsed.gstEnabled ?? true, roomPhotos: parsed.roomPhotos ?? {} }
+    }
   } catch {
     // ignore corrupt storage and start fresh
   }
-  return { items: [], gstEnabled: true }
+  return { items: [], gstEnabled: true, roomPhotos: {} }
 }
 
 function reducer(state: QuoteState, action: QuoteAction): QuoteState {
@@ -49,7 +62,31 @@ function reducer(state: QuoteState, action: QuoteAction): QuoteState {
     case 'SET_GST':
       return { ...state, gstEnabled: action.enabled }
     case 'CLEAR':
-      return { ...state, items: [] }
+      return { ...state, items: [], roomPhotos: {} }
+    case 'ADD_PHOTO': {
+      const photo: RoomPhoto = { id: crypto.randomUUID(), dataUrl: action.dataUrl, annotatedDataUrl: null }
+      const existing = state.roomPhotos[action.room] ?? []
+      return { ...state, roomPhotos: { ...state.roomPhotos, [action.room]: [...existing, photo] } }
+    }
+    case 'REMOVE_PHOTO': {
+      const existing = state.roomPhotos[action.room] ?? []
+      return {
+        ...state,
+        roomPhotos: { ...state.roomPhotos, [action.room]: existing.filter((p) => p.id !== action.id) },
+      }
+    }
+    case 'SET_PHOTO_ANNOTATION': {
+      const existing = state.roomPhotos[action.room] ?? []
+      return {
+        ...state,
+        roomPhotos: {
+          ...state.roomPhotos,
+          [action.room]: existing.map((p) =>
+            p.id === action.id ? { ...p, annotatedDataUrl: action.annotatedDataUrl } : p,
+          ),
+        },
+      }
+    }
     default:
       return state
   }
@@ -61,6 +98,9 @@ interface QuoteContextValue extends QuoteState {
   setQuantity: (id: string, quantity: number) => void
   setGstEnabled: (enabled: boolean) => void
   clear: () => void
+  addPhoto: (room: string, dataUrl: string) => void
+  removePhoto: (room: string, id: string) => void
+  setPhotoAnnotation: (room: string, id: string, annotatedDataUrl: string | null) => void
   subtotal: number
   gstAmount: number
   total: number
@@ -85,6 +125,10 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       setQuantity: (id, quantity) => dispatch({ type: 'SET_QUANTITY', id, quantity }),
       setGstEnabled: (enabled) => dispatch({ type: 'SET_GST', enabled }),
       clear: () => dispatch({ type: 'CLEAR' }),
+      addPhoto: (room, dataUrl) => dispatch({ type: 'ADD_PHOTO', room, dataUrl }),
+      removePhoto: (room, id) => dispatch({ type: 'REMOVE_PHOTO', room, id }),
+      setPhotoAnnotation: (room, id, annotatedDataUrl) =>
+        dispatch({ type: 'SET_PHOTO_ANNOTATION', room, id, annotatedDataUrl }),
       subtotal,
       gstAmount,
       total: subtotal + gstAmount,

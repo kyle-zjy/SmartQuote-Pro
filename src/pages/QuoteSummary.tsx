@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useQuote, type QuoteLineItem } from '../lib/quoteContext'
 import { formatCurrency } from '../lib/formatCurrency'
 import QuoteLineItemRow from '../components/QuoteLineItemRow'
+import RoomPhotos from '../components/RoomPhotos'
 import { ROOM_TYPES } from '../lib/roomTypes'
 
 const UNASSIGNED = 'Unassigned'
@@ -52,6 +53,7 @@ export default function QuoteSummary() {
                   ))}
                 </tbody>
               </table>
+              <RoomPhotos room={room} />
             </div>
           ))}
 
