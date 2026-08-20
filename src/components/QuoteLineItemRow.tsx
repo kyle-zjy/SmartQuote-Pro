@@ -16,6 +16,7 @@ export default function QuoteLineItemRow({
       <td>
         <div>{item.description}</div>
         <div className="muted small">{item.detail}</div>
+        {item.note && <div className="muted small">Note: {item.note}</div>}
       </td>
       <td>
         <input

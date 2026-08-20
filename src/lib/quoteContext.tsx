@@ -6,6 +6,8 @@ export interface QuoteLineItem {
   detail: string
   quantity: number
   unitPrice: number
+  room: string
+  note: string
 }
 
 interface QuoteState {

@@ -5,9 +5,11 @@ import { formatCurrency } from '../lib/formatCurrency'
 import { useQuote } from '../lib/quoteContext'
 import { usePricing } from '../lib/pricingContext'
 import PriceResultCard from '../components/PriceResultCard'
+import { ROOM_TYPES } from '../lib/roomTypes'
 
 const STANDARD_MESH = 'Standard'
 const DOUBLE_HUNG_SURCHARGE = 15
+const OTHER_ROOM = 'Other'
 
 export default function ProductCalculator() {
   const { productKey } = useParams()
@@ -20,6 +22,9 @@ export default function ProductCalculator() {
   const [height, setHeight] = useState('')
   const [meshOption, setMeshOption] = useState(STANDARD_MESH)
   const [doubleHung, setDoubleHung] = useState(false)
+  const [room, setRoom] = useState(ROOM_TYPES[0])
+  const [customRoom, setCustomRoom] = useState('')
+  const [note, setNote] = useState('')
   const [added, setAdded] = useState(false)
 
   const category = product?.categories.find((c) => c.key === categoryKey) ?? product?.categories[0]
@@ -53,11 +58,14 @@ export default function ProductCalculator() {
     if (!category || !result?.ok) return
     const meshNote = meshOption !== STANDARD_MESH ? `, ${meshOption} mesh` : ''
     const dhNote = doubleHungSurcharge > 0 ? ', double hung' : ''
+    const resolvedRoom = room === OTHER_ROOM && customRoom.trim() ? customRoom.trim() : room
     addItem({
       description: `${product!.name} - ${category.label}`,
       detail: `${widthMm} x ${heightMm} mm${meshNote}${dhNote}`,
       quantity: 1,
       unitPrice: result.price + totalExtras,
+      room: resolvedRoom,
+      note: note.trim(),
     })
     setAdded(true)
   }
@@ -147,6 +155,45 @@ export default function ProductCalculator() {
               Double hung window (+{formatCurrency(DOUBLE_HUNG_SURCHARGE)})
             </label>
           )}
+
+          <label className="field-row__single">
+            Room
+            <select
+              value={room}
+              onChange={(e) => {
+                setRoom(e.target.value)
+                if (e.target.value !== OTHER_ROOM) setCustomRoom('')
+              }}
+            >
+              {ROOM_TYPES.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          {room === OTHER_ROOM && (
+            <label className="field-row__single">
+              Room name
+              <input
+                type="text"
+                value={customRoom}
+                onChange={(e) => setCustomRoom(e.target.value)}
+                placeholder="e.g. Sunroom"
+              />
+            </label>
+          )}
+
+          <label className="field-row__single">
+            Notes (optional)
+            <textarea
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Any remarks for this item"
+              rows={2}
+            />
+          </label>
 
           {hasValidInput && result && (
             <>

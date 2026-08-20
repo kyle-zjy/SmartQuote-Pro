@@ -157,11 +157,14 @@ h1 {
 
 input[type='number'],
 input[type='text'],
-select {
+select,
+textarea {
   padding: 0.5rem 0.6rem;
   border: 1px solid var(--color-border);
   border-radius: 6px;
   font-size: 1rem;
+  font-family: inherit;
+  resize: vertical;
 }
 
 .checkbox-row {
@@ -249,6 +252,15 @@ select {
 
 .addon-section {
   margin-top: 2rem;
+}
+
+.quote-room-section {
+  margin-top: 1.5rem;
+}
+
+.quote-room-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
 }
 
 .dropzone-wrap {
