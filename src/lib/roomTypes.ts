@@ -4,8 +4,6 @@ export const ROOM_TYPES = [
   'Kitchen',
   'Bathroom',
   'Dining Room',
-  'Study',
-  'Laundry',
   'Garage',
   'Other',
 ]
