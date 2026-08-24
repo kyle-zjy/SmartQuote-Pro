@@ -1,9 +1,15 @@
+import { lazy, Suspense } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
-import Home from './pages/Home'
-import ProductCalculator from './pages/ProductCalculator'
-import QuoteSummary from './pages/QuoteSummary'
-import AddOns from './pages/AddOns'
 import { useQuote } from './lib/quoteContext'
+
+const Home = lazy(() => import('./pages/Home'))
+const ProductCalculator = lazy(() => import('./pages/ProductCalculator'))
+const QuoteSummary = lazy(() => import('./pages/QuoteSummary'))
+const AddOns = lazy(() => import('./pages/AddOns'))
+
+function PageFallback() {
+  return <p className="muted">Loading…</p>
+}
 
 export default function App() {
   const { items } = useQuote()
@@ -25,12 +31,14 @@ export default function App() {
       </header>
 
       <main className="content">
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/product/:productKey" element={<ProductCalculator />} />
-          <Route path="/addons" element={<AddOns />} />
-          <Route path="/quote" element={<QuoteSummary />} />
-        </Routes>
+        <Suspense fallback={<PageFallback />}>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/product/:productKey" element={<ProductCalculator />} />
+            <Route path="/addons" element={<AddOns />} />
+            <Route path="/quote" element={<QuoteSummary />} />
+          </Routes>
+        </Suspense>
       </main>
     </div>
   )

@@ -2,7 +2,6 @@ import { createContext, useContext, useMemo, useState, type ReactNode } from 're
 import pricingDefault from '../data/pricing.json'
 import addonsDefault from '../data/addons.json'
 import type { AddonItem, PricingData } from '../types/pricing'
-import { parseExcelFile } from './xlsxImport'
 
 const DEFAULT_DATA = pricingDefault as PricingData
 const DEFAULT_ADDONS = addonsDefault as AddonItem[]
@@ -38,6 +37,7 @@ export function PricingProvider({ children }: { children: ReactNode }) {
     () => ({
       ...state,
       importFromFile: async (file: File) => {
+        const { parseExcelFile } = await import('./xlsxImport')
         const result = await parseExcelFile(file)
         setState((prev) => ({
           data: result.data,

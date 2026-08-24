@@ -1,5 +1,7 @@
-import * as XLSX from 'xlsx'
+import type { WorkBook } from 'xlsx'
 import type { AddonItem, Extras, ExtraOption, PriceCategory, PricingData, Product } from '../types/pricing'
+
+type XLSXModule = typeof import('xlsx')
 
 /**
  * Client-side counterpart of scripts/generate-pricing-data.py -- same title-substring /
@@ -140,18 +142,18 @@ function extractPricingAsAt(sheet: Sheet): string | null {
   return null
 }
 
-function getSheetRows(wb: XLSX.WorkBook, name: string): Sheet {
+function getSheetRows(XLSX: XLSXModule, wb: WorkBook, name: string): Sheet {
   const sheetName = wb.SheetNames.find((n) => n === name) ?? wb.SheetNames.find((n) => n.trim() === name.trim())
   if (!sheetName) throw new Error(`sheet "${name}" not found`)
   return XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { header: 1, raw: true, defval: null }) as Sheet
 }
 
-function buildProducts(wb: XLSX.WorkBook): { products: Product[]; warnings: string[] } {
+function buildProducts(XLSX: XLSXModule, wb: WorkBook): { products: Product[]; warnings: string[] } {
   const products: Product[] = []
   const warnings: string[] = []
 
   try {
-    const rows = getSheetRows(wb, 'Supascreen')
+    const rows = getSheetRows(XLSX, wb, 'Supascreen')
     products.push({
       key: 'supascreen',
       name: 'Supascreen',
@@ -166,7 +168,7 @@ function buildProducts(wb: XLSX.WorkBook): { products: Product[]; warnings: stri
   }
 
   try {
-    const rows = getSheetRows(wb, ' IntrudaGuard')
+    const rows = getSheetRows(XLSX, wb, ' IntrudaGuard')
     products.push({
       key: 'intrudaguard',
       name: 'IntrudaGuard',
@@ -181,7 +183,7 @@ function buildProducts(wb: XLSX.WorkBook): { products: Product[]; warnings: stri
   }
 
   try {
-    const rows = getSheetRows(wb, '7mm Diamond')
+    const rows = getSheetRows(XLSX, wb, '7mm Diamond')
     products.push({
       key: '7mm-diamond',
       name: '7mm Diamond',
@@ -206,7 +208,7 @@ function buildProducts(wb: XLSX.WorkBook): { products: Product[]; warnings: stri
   }
 
   try {
-    const rows = getSheetRows(wb, 'Fly Screens')
+    const rows = getSheetRows(XLSX, wb, 'Fly Screens')
     products.push({
       key: 'flyscreens',
       name: 'Fly Screens',
@@ -240,9 +242,9 @@ function buildProducts(wb: XLSX.WorkBook): { products: Product[]; warnings: stri
   return { products, warnings }
 }
 
-function buildAddons(wb: XLSX.WorkBook): { addons: AddonItem[]; warning: string | null } {
+function buildAddons(XLSX: XLSXModule, wb: WorkBook): { addons: AddonItem[]; warning: string | null } {
   try {
-    const rows = getSheetRows(wb, 'Retail Supply Extras')
+    const rows = getSheetRows(XLSX, wb, 'Retail Supply Extras')
     const addons: AddonItem[] = []
     let section: string | null = null
     for (const row of rows) {
@@ -284,22 +286,23 @@ export interface ImportResult {
   warnings: string[]
 }
 
-export function parseWorkbook(wb: XLSX.WorkBook): ImportResult {
-  const { products, warnings } = buildProducts(wb)
+export function parseWorkbook(XLSX: XLSXModule, wb: WorkBook): ImportResult {
+  const { products, warnings } = buildProducts(XLSX, wb)
   if (products.length === 0) {
     throw new Error(
       'No recognizable product price sheets were found. Make sure this file uses the same template as the current price list.',
     )
   }
 
-  const { addons, warning: addonsWarning } = buildAddons(wb)
+  const { addons, warning: addonsWarning } = buildAddons(XLSX, wb)
   if (addonsWarning) warnings.push(addonsWarning)
 
   return { data: { products, note: 'All prices exclude GST' }, addons, warnings }
 }
 
 export async function parseExcelFile(file: File): Promise<ImportResult> {
+  const XLSX = await import('xlsx')
   const buffer = await file.arrayBuffer()
   const wb = XLSX.read(buffer, { type: 'array', cellDates: true })
-  return parseWorkbook(wb)
+  return parseWorkbook(XLSX, wb)
 }
