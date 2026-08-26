@@ -11,15 +11,16 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 export default function RoomPhotos({ room }: { room: string }) {
-  const { roomPhotos, addPhoto, removePhoto, setPhotoCaption } = useQuote()
+  const { roomPhotos, addPhoto, removePhoto, setPhotoCaption, status } = useQuote()
   const photos = roomPhotos[room] ?? []
+  const issued = status === 'issued'
   const [activeId, setActiveId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const activePhoto = photos.find((p) => p.id === activeId) ?? null
 
   async function handleFiles(files: FileList | null) {
-    if (!files) return
+    if (issued || !files) return
     for (const file of Array.from(files)) {
       if (!file.type.startsWith('image/')) continue
       const dataUrl = await readAsDataUrl(file)
@@ -35,9 +36,11 @@ export default function RoomPhotos({ room }: { room: string }) {
             <img src={photo.dataUrl} alt={photo.caption || 'Room photo'} />
           </button>
         ))}
-        <button type="button" className="room-photo-add" onClick={() => fileInputRef.current?.click()}>
-          + Add photo
-        </button>
+        {!issued && (
+          <button type="button" className="room-photo-add" onClick={() => fileInputRef.current?.click()}>
+            + Add photo
+          </button>
+        )}
         <input
           ref={fileInputRef}
           type="file"
@@ -62,19 +65,22 @@ export default function RoomPhotos({ room }: { room: string }) {
                 onChange={(e) => setPhotoCaption(room, activePhoto.id, e.target.value)}
                 placeholder="Add a note about this photo"
                 rows={3}
+                disabled={issued}
               />
             </label>
             <div className="photo-modal__actions">
-              <button
-                type="button"
-                className="link-button"
-                onClick={() => {
-                  removePhoto(room, activePhoto.id)
-                  setActiveId(null)
-                }}
-              >
-                Delete photo
-              </button>
+              {!issued && (
+                <button
+                  type="button"
+                  className="link-button"
+                  onClick={() => {
+                    removePhoto(room, activePhoto.id)
+                    setActiveId(null)
+                  }}
+                >
+                  Delete photo
+                </button>
+              )}
               <button type="button" className="primary-button" onClick={() => setActiveId(null)}>
                 Done
               </button>

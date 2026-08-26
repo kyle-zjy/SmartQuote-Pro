@@ -3,6 +3,7 @@ dist
 dist-ssr
 *.local
 *.tsbuildinfo
+documents/_extract/
 .vscode/*
 !.vscode/extensions.json
 ~$*

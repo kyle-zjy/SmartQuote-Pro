@@ -8,11 +8,13 @@ import { ROOM_TYPES } from '../lib/roomTypes'
 const OTHER_ROOM = 'Other'
 
 export default function AddOns() {
-  const { addItem } = useQuote()
+  const { addItem, status } = useQuote()
+  const issued = status === 'issued'
   const { addons: data } = usePricing()
   const [room, setRoom] = useState(ROOM_TYPES[0])
   const [customRoom, setCustomRoom] = useState('')
   const [note, setNote] = useState('')
+  const [requestPrices, setRequestPrices] = useState<Record<string, string>>({})
   const resolvedRoom = room === OTHER_ROOM && customRoom.trim() ? customRoom.trim() : room
 
   const sections = useMemo(() => {
@@ -28,6 +30,11 @@ export default function AddOns() {
     <div>
       <h1>Add-ons &amp; extras</h1>
       <p className="muted">Flat-rate items that can be added to any quote.</p>
+      {issued && (
+        <p className="price-result--error">
+          The open quote is issued and locked. Start a new quote before adding items.
+        </p>
+      )}
 
       <div className="field-row">
         <label className="field-row__single">
@@ -83,26 +90,51 @@ export default function AddOns() {
               {sectionItems.map((item) => (
                 <tr key={item.name}>
                   <td>{item.name}</td>
-                  <td>{item.priceOnRequest ? 'Price on request' : formatCurrency(item.price ?? 0)}</td>
                   <td>
-                    {!item.priceOnRequest && item.price !== null && (
-                      <button
-                        type="button"
-                        className="link-button"
-                        onClick={() =>
-                          addItem({
-                            description: item.name,
-                            detail: item.unit ?? '',
-                            quantity: 1,
-                            unitPrice: item.price!,
-                            room: resolvedRoom,
-                            note: note.trim(),
-                          })
-                        }
-                      >
-                        Add to quote
-                      </button>
+                    {item.priceOnRequest ? (
+                      <input
+                        type="number"
+                        min={0}
+                        className="price-input"
+                        placeholder="Enter price"
+                        value={requestPrices[item.name] ?? ''}
+                        onChange={(e) => setRequestPrices((current) => ({ ...current, [item.name]: e.target.value }))}
+                      />
+                    ) : (
+                      formatCurrency(item.price ?? 0)
                     )}
+                  </td>
+                  <td>
+                    {(() => {
+                      const typed = requestPrices[item.name]
+                      const typedPrice = Number(typed)
+                      const unitPrice = item.priceOnRequest ? typedPrice : item.price
+                      const canAdd = item.priceOnRequest
+                        ? Boolean(typed) && !Number.isNaN(typedPrice) && typedPrice >= 0
+                        : unitPrice !== null && unitPrice !== undefined && !Number.isNaN(unitPrice)
+                      return (
+                        canAdd &&
+                        !issued && (
+                          <button
+                            type="button"
+                            className="link-button"
+                            onClick={() => {
+                              if (unitPrice == null || Number.isNaN(unitPrice)) return
+                              addItem({
+                                description: item.name,
+                                detail: item.unit ?? '',
+                                quantity: 1,
+                                unitPrice,
+                                room: resolvedRoom,
+                                note: note.trim(),
+                              })
+                            }}
+                          >
+                            Add to quote
+                          </button>
+                        )
+                      )
+                    })()}
                   </td>
                 </tr>
               ))}

@@ -1,4 +1,25 @@
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from 'react'
+import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
+import colours from '../data/colours.json'
+import {
+  deleteArchivedQuote,
+  getArchivedQuote,
+  listArchivedQuotes,
+  upsertArchivedQuote,
+  type ArchiveWriteResult,
+  type ArchivedQuote,
+} from './quoteArchive'
+import { useCompanySettings } from './companySettings'
+import { OTHER_FRAME_COLOUR } from './frameColour'
+import { deleteRoomPhotos, loadRoomPhotos, saveRoomPhotos } from './quotePhotoStore'
+import { DRAFT_PERSIST_MS, DRAFT_STORAGE_KEY, MEASURE_LEGACY_DRAFT_PERSIST, hasPhotoData, persistDraftQuote } from './quotePersist'
+import {
+  canIssueQuote,
+  createIssuedSnapshot,
+  isActionLocked,
+  quoteFinancials,
+  type IssuedSnapshot,
+  type QuoteStatus,
+} from './quoteLifecycle'
 
 export interface QuoteLineItem {
   id: string
@@ -8,6 +29,7 @@ export interface QuoteLineItem {
   unitPrice: number
   room: string
   note: string
+  productKey?: string
 }
 
 export interface RoomPhoto {
@@ -16,39 +38,127 @@ export interface RoomPhoto {
   caption: string
 }
 
-interface QuoteState {
+export interface QuoteCustomer {
+  name: string
+  address: string
+  phone: string
+}
+
+export interface QuoteState {
   items: QuoteLineItem[]
   gstEnabled: boolean
   roomPhotos: Record<string, RoomPhoto[]>
+  customer: QuoteCustomer
+  shipSameAsBill: boolean
+  shipTo: QuoteCustomer
+  quoteNo: string
+  quoteSuffix: string
+  quoteDate: string
+  frameColour: string
+  customFrameColour: string
+  colourExtraOverride: number | null
+  paid: number
+  status: QuoteStatus
+  issuedSnapshot: IssuedSnapshot | null
 }
 
-type QuoteAction =
+export type QuoteAction =
   | { type: 'ADD_ITEM'; item: Omit<QuoteLineItem, 'id'> }
   | { type: 'REMOVE_ITEM'; id: string }
   | { type: 'SET_QUANTITY'; id: string; quantity: number }
+  | { type: 'UPDATE_ITEM'; id: string; patch: Partial<Omit<QuoteLineItem, 'id'>> }
   | { type: 'SET_GST'; enabled: boolean }
   | { type: 'CLEAR' }
+  | { type: 'SET_CUSTOMER'; customer: QuoteCustomer }
+  | { type: 'SET_SHIP_TO'; shipTo: QuoteCustomer }
+  | { type: 'SET_SHIP_SAME'; same: boolean }
+  | { type: 'SET_COLOUR'; frameColour: string }
+  | { type: 'SET_CUSTOM_COLOUR'; customFrameColour: string }
+  | { type: 'SET_COLOUR_EXTRA'; amount: number | null }
+  | { type: 'SET_QUOTE_DATE'; quoteDate: string }
+  | { type: 'SET_QUOTE_SUFFIX'; quoteSuffix: string }
+  | { type: 'SET_PAID'; paid: number }
+  | { type: 'NEW_QUOTE' }
+  | { type: 'LOAD_QUOTE'; quote: QuoteState }
   | { type: 'ADD_PHOTO'; room: string; dataUrl: string }
   | { type: 'REMOVE_PHOTO'; room: string; id: string }
   | { type: 'SET_PHOTO_CAPTION'; room: string; id: string; caption: string }
+  | { type: 'HYDRATE_PHOTOS'; roomPhotos: Record<string, RoomPhoto[]> }
+  | { type: 'ISSUE'; snapshot: IssuedSnapshot }
 
-const STORAGE_KEY = 'smartquote-pro:quote'
-const GST_RATE = 0.1
+const SEQ_KEY = 'smartquote-pro:quote-seq'
+
+const emptyCustomer: QuoteCustomer = { name: '', address: '', phone: '' }
+
+function nextQuoteNo(): string {
+  try {
+    const current = Number(localStorage.getItem(SEQ_KEY) ?? '33020')
+    const next = current + 1
+    localStorage.setItem(SEQ_KEY, String(next))
+    return String(next).padStart(8, '0')
+  } catch {
+    return String(Date.now()).slice(-8)
+  }
+}
+
+function todayISO(): string {
+  return new Date().toISOString().slice(0, 10)
+}
+
+function defaultState(quoteNo: string): QuoteState {
+  return {
+    items: [],
+    gstEnabled: true,
+    roomPhotos: {},
+    customer: emptyCustomer,
+    shipSameAsBill: true,
+    shipTo: emptyCustomer,
+    quoteNo,
+    quoteSuffix: '',
+    quoteDate: todayISO(),
+    frameColour: 'White',
+    customFrameColour: '',
+    colourExtraOverride: null,
+    paid: 0,
+    status: 'draft',
+    issuedSnapshot: null,
+  }
+}
+
+export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: string): QuoteState {
+  const quoteNo = parsed.quoteNo || fallbackQuoteNo || nextQuoteNo()
+  return {
+    ...defaultState(quoteNo),
+    items: parsed.items ?? [],
+    gstEnabled: parsed.gstEnabled ?? true,
+    roomPhotos: parsed.roomPhotos ?? {},
+    customer: { ...emptyCustomer, ...parsed.customer },
+    shipSameAsBill: parsed.shipSameAsBill ?? true,
+    shipTo: { ...emptyCustomer, ...parsed.shipTo },
+    quoteSuffix: parsed.quoteSuffix ?? '',
+    quoteDate: parsed.quoteDate || todayISO(),
+    frameColour: parsed.frameColour || 'White',
+    customFrameColour: parsed.customFrameColour ?? '',
+    colourExtraOverride: parsed.colourExtraOverride ?? null,
+    paid: parsed.paid ?? 0,
+    status: parsed.status === 'issued' && parsed.issuedSnapshot ? 'issued' : 'draft',
+    issuedSnapshot: parsed.status === 'issued' && parsed.issuedSnapshot ? parsed.issuedSnapshot : null,
+  }
+}
 
 function loadInitialState(): QuoteState {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw) as Partial<QuoteState>
-      return { items: parsed.items ?? [], gstEnabled: parsed.gstEnabled ?? true, roomPhotos: parsed.roomPhotos ?? {} }
-    }
+    const raw = localStorage.getItem(DRAFT_STORAGE_KEY)
+    if (raw) return normalizeQuote(JSON.parse(raw) as Partial<QuoteState>)
   } catch {
     // ignore corrupt storage and start fresh
   }
-  return { items: [], gstEnabled: true, roomPhotos: {} }
+  return defaultState(nextQuoteNo())
 }
 
-function reducer(state: QuoteState, action: QuoteAction): QuoteState {
+export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState {
+  if (isActionLocked(state.status, action.type)) return state
+
   switch (action.type) {
     case 'ADD_ITEM':
       return { ...state, items: [...state.items, { ...action.item, id: crypto.randomUUID() }] }
@@ -59,10 +169,50 @@ function reducer(state: QuoteState, action: QuoteAction): QuoteState {
         ...state,
         items: state.items.map((i) => (i.id === action.id ? { ...i, quantity: Math.max(1, action.quantity) } : i)),
       }
+    case 'UPDATE_ITEM': {
+      const patch = {
+        ...action.patch,
+        ...(action.patch.quantity !== undefined ? { quantity: Math.max(1, action.patch.quantity) } : {}),
+      }
+      return {
+        ...state,
+        items: state.items.map((i) => (i.id === action.id ? { ...i, ...patch } : i)),
+      }
+    }
     case 'SET_GST':
       return { ...state, gstEnabled: action.enabled }
     case 'CLEAR':
       return { ...state, items: [], roomPhotos: {} }
+    case 'SET_CUSTOMER':
+      return { ...state, customer: action.customer }
+    case 'SET_SHIP_TO':
+      return { ...state, shipTo: action.shipTo }
+    case 'SET_SHIP_SAME':
+      return { ...state, shipSameAsBill: action.same }
+    case 'SET_COLOUR':
+      return {
+        ...state,
+        frameColour: action.frameColour,
+        customFrameColour: action.frameColour === OTHER_FRAME_COLOUR ? state.customFrameColour : '',
+        colourExtraOverride: null,
+      }
+    case 'SET_CUSTOM_COLOUR':
+      return { ...state, customFrameColour: action.customFrameColour }
+    case 'SET_COLOUR_EXTRA':
+      return { ...state, colourExtraOverride: action.amount }
+    case 'SET_QUOTE_DATE':
+      return { ...state, quoteDate: action.quoteDate }
+    case 'SET_QUOTE_SUFFIX':
+      return { ...state, quoteSuffix: action.quoteSuffix }
+    case 'SET_PAID':
+      return { ...state, paid: Math.max(0, action.paid) }
+    case 'NEW_QUOTE':
+      return defaultState(nextQuoteNo())
+    case 'LOAD_QUOTE':
+      return normalizeQuote(action.quote, action.quote.quoteNo)
+    case 'ISSUE':
+      if (!canIssueQuote(state)) return state
+      return { ...state, status: 'issued', issuedSnapshot: action.snapshot }
     case 'ADD_PHOTO': {
       const photo: RoomPhoto = { id: crypto.randomUUID(), dataUrl: action.dataUrl, caption: '' }
       const existing = state.roomPhotos[action.room] ?? []
@@ -85,52 +235,207 @@ function reducer(state: QuoteState, action: QuoteAction): QuoteState {
         },
       }
     }
+    case 'HYDRATE_PHOTOS':
+      return { ...state, roomPhotos: action.roomPhotos }
     default:
       return state
   }
 }
 
+export function colourRecord(name: string) {
+  return colours.find((c) => c.name === name)
+}
+
+export function colourSurcharge(name: string, defaultPrice: number): number {
+  return colourRecord(name)?.additionalCharge ? defaultPrice : 0
+}
+
 interface QuoteContextValue extends QuoteState {
-  addItem: (item: Omit<QuoteLineItem, 'id'>) => void
+  addItem: (item: Omit<QuoteLineItem, 'id'>) => boolean
   removeItem: (id: string) => void
   setQuantity: (id: string, quantity: number) => void
+  updateItem: (id: string, patch: Partial<Omit<QuoteLineItem, 'id'>>) => void
   setGstEnabled: (enabled: boolean) => void
+  setCustomer: (customer: QuoteCustomer) => void
+  setShipTo: (shipTo: QuoteCustomer) => void
+  setShipSameAsBill: (same: boolean) => void
+  setFrameColour: (frameColour: string) => void
+  setCustomFrameColour: (customFrameColour: string) => void
+  setColourExtraOverride: (amount: number | null) => void
+  setQuoteDate: (quoteDate: string) => void
+  setQuoteSuffix: (quoteSuffix: string) => void
+  setPaid: (paid: number) => void
+  issueQuote: () => boolean
+  newQuote: () => void
+  saveCurrentQuote: () => ArchiveWriteResult
+  loadSavedQuote: (quoteNo: string) => boolean
+  deleteSavedQuote: (quoteNo: string) => void
+  savedQuotes: ArchivedQuote[]
   clear: () => void
   addPhoto: (room: string, dataUrl: string) => void
   removePhoto: (room: string, id: string) => void
   setPhotoCaption: (room: string, id: string, caption: string) => void
+  colourExtra: number
   subtotal: number
   gstAmount: number
   total: number
+  deposit: number
+  balance: number
 }
 
 const QuoteContext = createContext<QuoteContextValue | null>(null)
 
 export function QuoteProvider({ children }: { children: ReactNode }) {
-  const [state, dispatch] = useReducer(reducer, undefined, loadInitialState)
+  const { settings } = useCompanySettings()
+  const [state, dispatch] = useReducer(quoteReducer, undefined, loadInitialState)
+  const [savedQuotes, setSavedQuotes] = useState<ArchivedQuote[]>(() => {
+    try {
+      return listArchivedQuotes()
+    } catch {
+      return []
+    }
+  })
+
+  const stateRef = useRef(state)
+  stateRef.current = state
+  const draftQuoteNoRef = useRef(state.quoteNo)
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+    const persist = () => {
+      try {
+        persistDraftQuote(state, localStorage, {
+          log: true,
+          includePhotos: MEASURE_LEGACY_DRAFT_PERSIST,
+        })
+      } catch {
+        // Quota or private-mode storage; keep editing in memory.
+      }
+    }
+
+    if (MEASURE_LEGACY_DRAFT_PERSIST) {
+      persist()
+      return
+    }
+
+    const timer = window.setTimeout(persist, DRAFT_PERSIST_MS)
+    return () => window.clearTimeout(timer)
   }, [state])
 
+  useEffect(() => {
+    return () => {
+      try {
+        persistDraftQuote(stateRef.current, localStorage, {
+          log: true,
+          includePhotos: MEASURE_LEGACY_DRAFT_PERSIST,
+        })
+      } catch {
+        // ignore
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    const previousQuoteNo = draftQuoteNoRef.current
+    if (previousQuoteNo !== state.quoteNo) {
+      void deleteRoomPhotos(previousQuoteNo).catch(() => undefined)
+      draftQuoteNoRef.current = state.quoteNo
+    }
+    void saveRoomPhotos(state.quoteNo, state.roomPhotos).catch(() => undefined)
+  }, [state.quoteNo, state.roomPhotos])
+
+  useEffect(() => {
+    let cancelled = false
+    const quoteNo = state.quoteNo
+    const photos = state.roomPhotos
+    void (async () => {
+      try {
+        if (hasPhotoData(photos)) {
+          await saveRoomPhotos(quoteNo, photos)
+          return
+        }
+        const stored = await loadRoomPhotos(quoteNo)
+        if (cancelled || !stored || !hasPhotoData(stored)) return
+        dispatch({ type: 'HYDRATE_PHOTOS', roomPhotos: stored })
+      } catch {
+        // IndexedDB unavailable; photos stay in memory only.
+      }
+    })()
+    return () => {
+      cancelled = true
+    }
+    // Hydrate once from disk after the first paint; later photo edits go through the reducer.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const value = useMemo<QuoteContextValue>(() => {
-    const subtotal = state.items.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
-    const gstAmount = state.gstEnabled ? subtotal * GST_RATE : 0
+    const defaultExtra = colourSurcharge(state.frameColour, settings.nonStandardColourPrice)
+    const liveColourExtra = defaultExtra > 0 ? (state.colourExtraOverride ?? defaultExtra) : 0
+    const { colourExtra, subtotal, gstAmount, total, deposit, balance } = quoteFinancials(state, {
+      colourExtra: liveColourExtra,
+      depositRate: settings.depositRate,
+    })
     return {
       ...state,
-      addItem: (item) => dispatch({ type: 'ADD_ITEM', item }),
+      addItem: (item) => {
+        if (isActionLocked(state.status, 'ADD_ITEM')) return false
+        dispatch({ type: 'ADD_ITEM', item })
+        return true
+      },
       removeItem: (id) => dispatch({ type: 'REMOVE_ITEM', id }),
       setQuantity: (id, quantity) => dispatch({ type: 'SET_QUANTITY', id, quantity }),
+      updateItem: (id, patch) => dispatch({ type: 'UPDATE_ITEM', id, patch }),
       setGstEnabled: (enabled) => dispatch({ type: 'SET_GST', enabled }),
+      setCustomer: (customer) => dispatch({ type: 'SET_CUSTOMER', customer }),
+      setShipTo: (shipTo) => dispatch({ type: 'SET_SHIP_TO', shipTo }),
+      setShipSameAsBill: (same) => dispatch({ type: 'SET_SHIP_SAME', same }),
+      setFrameColour: (frameColour) => dispatch({ type: 'SET_COLOUR', frameColour }),
+      setCustomFrameColour: (customFrameColour) => dispatch({ type: 'SET_CUSTOM_COLOUR', customFrameColour }),
+      setColourExtraOverride: (amount) => dispatch({ type: 'SET_COLOUR_EXTRA', amount }),
+      setQuoteDate: (quoteDate) => dispatch({ type: 'SET_QUOTE_DATE', quoteDate }),
+      setQuoteSuffix: (quoteSuffix) => dispatch({ type: 'SET_QUOTE_SUFFIX', quoteSuffix }),
+      setPaid: (paid) => dispatch({ type: 'SET_PAID', paid }),
+      issueQuote: () => {
+        if (!canIssueQuote(state)) return false
+        const snapshot = createIssuedSnapshot(state, liveColourExtra, settings.depositRate)
+        dispatch({ type: 'ISSUE', snapshot })
+        const issued = { ...state, status: 'issued' as const, issuedSnapshot: snapshot }
+        try {
+          upsertArchivedQuote(issued, { total: snapshot.total })
+          setSavedQuotes(listArchivedQuotes())
+        } catch {
+          // Keep the in-memory issued quote even if the archive write fails.
+        }
+        return true
+      },
+      newQuote: () => dispatch({ type: 'NEW_QUOTE' }),
+      saveCurrentQuote: () => {
+        const result = upsertArchivedQuote(state, { total })
+        setSavedQuotes(listArchivedQuotes())
+        return result
+      },
+      loadSavedQuote: (quoteNo) => {
+        const record = getArchivedQuote(quoteNo)
+        if (!record) return false
+        dispatch({ type: 'LOAD_QUOTE', quote: record.quote })
+        return true
+      },
+      deleteSavedQuote: (quoteNo) => {
+        deleteArchivedQuote(quoteNo)
+        setSavedQuotes(listArchivedQuotes())
+      },
+      savedQuotes,
       clear: () => dispatch({ type: 'CLEAR' }),
       addPhoto: (room, dataUrl) => dispatch({ type: 'ADD_PHOTO', room, dataUrl }),
       removePhoto: (room, id) => dispatch({ type: 'REMOVE_PHOTO', room, id }),
       setPhotoCaption: (room, id, caption) => dispatch({ type: 'SET_PHOTO_CAPTION', room, id, caption }),
+      colourExtra,
       subtotal,
       gstAmount,
-      total: subtotal + gstAmount,
+      total,
+      deposit,
+      balance,
     }
-  }, [state])
+  }, [savedQuotes, settings.depositRate, settings.nonStandardColourPrice, state])
 
   return <QuoteContext.Provider value={value}>{children}</QuoteContext.Provider>
 }

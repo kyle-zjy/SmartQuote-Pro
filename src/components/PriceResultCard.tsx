@@ -26,7 +26,7 @@ export default function PriceResultCard({
       <div className="price-result__amount">{formatCurrency(total)}</div>
       <div className="muted small">
         Priced at {result.matchedWidth} x {result.matchedHeight} mm bracket
-        {extraSurcharge > 0 && ` · includes ${formatCurrency(extraSurcharge)} mesh upgrade`}
+        {extraSurcharge > 0 && ` · includes ${formatCurrency(extraSurcharge)} extras`}
       </div>
     </div>
   )

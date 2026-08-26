@@ -1,0 +1,116 @@
+import { describe, expect, it } from 'vitest'
+import type { QuoteState } from './quoteContext'
+import { quoteReducer } from './quoteContext'
+import {
+  canIssueQuote,
+  createIssuedSnapshot,
+  isActionLocked,
+  quoteFinancials,
+} from './quoteLifecycle'
+
+function draftQuote(overrides: Partial<QuoteState> = {}): QuoteState {
+  return {
+    items: [{ id: '1', description: 'Door', detail: '', quantity: 2, unitPrice: 1203, room: 'Lounge', note: '' }],
+    gstEnabled: true,
+    roomPhotos: {},
+    customer: { name: 'Ada', address: '1 Test St', phone: '0400000000' },
+    shipSameAsBill: true,
+    shipTo: { name: '', address: '', phone: '' },
+    quoteNo: '00033021',
+    quoteSuffix: '',
+    quoteDate: '2026-08-23',
+    frameColour: 'White',
+    customFrameColour: '',
+    colourExtraOverride: null,
+    paid: 0,
+    status: 'draft',
+    issuedSnapshot: null,
+    ...overrides,
+  }
+}
+
+describe('quoteLifecycle', () => {
+  it('only drafts with line items can be issued', () => {
+    expect(canIssueQuote(draftQuote())).toBe(true)
+    expect(canIssueQuote(draftQuote({ items: [] }))).toBe(false)
+    expect(canIssueQuote(draftQuote({ status: 'issued' }))).toBe(false)
+  })
+
+  it('freezes colour extra, GST and deposit at the current totals', () => {
+    const snapshot = createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z')
+    expect(snapshot).toMatchObject({
+      colourExtra: 220,
+      gstEnabled: true,
+      depositRate: 0.5,
+      subtotal: 2626,
+      gstAmount: 262.6,
+      total: 2888.6,
+      deposit: 1444.3,
+      issuedAt: '2026-08-24T00:00:00.000Z',
+    })
+  })
+
+  it('keeps issued totals when the live colour extra or deposit rate changes', () => {
+    const issued = draftQuote({
+      status: 'issued',
+      issuedSnapshot: createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z'),
+    })
+
+    expect(quoteFinancials(issued, { colourExtra: 250, depositRate: 0.4 })).toMatchObject({
+      colourExtra: 220,
+      total: 2888.6,
+      deposit: 1444.3,
+    })
+  })
+
+  it('still updates balance when payment is recorded on an issued quote', () => {
+    const issued = draftQuote({
+      status: 'issued',
+      paid: 100,
+      issuedSnapshot: createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z'),
+    })
+
+    expect(quoteFinancials(issued, { colourExtra: 250, depositRate: 0.5 })).toMatchObject({
+      total: 2888.6,
+      paid: 100,
+      balance: 2788.6,
+    })
+  })
+
+  it('locks pricing actions after issue', () => {
+    expect(isActionLocked('issued', 'ADD_ITEM')).toBe(true)
+    expect(isActionLocked('issued', 'SET_GST')).toBe(true)
+    expect(isActionLocked('issued', 'SET_COLOUR')).toBe(true)
+    expect(isActionLocked('issued', 'SET_PAID')).toBe(false)
+    expect(isActionLocked('draft', 'ADD_ITEM')).toBe(false)
+  })
+})
+
+describe('quoteReducer issue lock', () => {
+  it('rejects new line items after the quote is issued', () => {
+    const snapshot = createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z')
+    const issued = quoteReducer(draftQuote(), { type: 'ISSUE', snapshot })
+    const next = quoteReducer(issued, {
+      type: 'ADD_ITEM',
+      item: {
+        description: 'Window',
+        detail: '',
+        quantity: 1,
+        unitPrice: 343,
+        room: 'Lounge',
+        note: '',
+      },
+    })
+
+    expect(issued.status).toBe('issued')
+    expect(next.items).toEqual(issued.items)
+  })
+
+  it('still records payment on an issued quote', () => {
+    const snapshot = createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z')
+    const issued = quoteReducer(draftQuote(), { type: 'ISSUE', snapshot })
+    const next = quoteReducer(issued, { type: 'SET_PAID', paid: 200 })
+    expect(next.paid).toBe(200)
+    expect(next.status).toBe('issued')
+  })
+})

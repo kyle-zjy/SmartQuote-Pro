@@ -1,0 +1,296 @@
+[
+  {
+    "name": "Bronze",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Black",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "White",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "10um Clear",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "10um T37 Bronze",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Anodic Natural Matt (GY235A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Apo Grey Satin (GL107A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Basalt Matt Excel (GP208A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Black Custom Mt Low Mar (GN279A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Black Satin (GN150A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Black Textura (GN305A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Deep Ocean Matt Excel (GJ203A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Dune Satin Excel (GP152A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Deco Bush Cherry Decoral",
+    "additionalCharge": true,
+    "products": [
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Deco Snow Gum Decoral",
+    "additionalCharge": true,
+    "products": [
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Deco Western Red Cedar Decoral",
+    "additionalCharge": true,
+    "products": [
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Hamersley Brown Satin (GM100A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Ironstone Satin Excel (GP136A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Jasper Satin Excel (GT114A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Monument Matt Excel (GL229A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Notre Dame Gloss (GL040A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Paperbark Matt Excel (GD214A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Paperbark Satin Excel (GU114A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Primrose Gloss (GD037A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Stone Beige Matt (GD247A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Surfmist Matt Excel (GA236A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Ultra Silver GL Vivica (GY070A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "White Birch Gloss (2602057G)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "White Pearl Gloss (GA078A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Woodland Grey Mt Excel (GL205A)",
+    "additionalCharge": false,
+    "products": [
+      "7mm-diamond",
+      "flyscreens",
+      "intrudaguard",
+      "supascreen"
+    ]
+  },
+  {
+    "name": "Non-standard / Other",
+    "additionalCharge": true,
+    "products": []
+  }
+]

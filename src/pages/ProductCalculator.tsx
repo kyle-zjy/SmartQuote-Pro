@@ -1,21 +1,22 @@
 import { useMemo, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { extraSurcharge, findPrice } from '../lib/priceLookup'
+import { calcConfiguredPrice, DOUBLE_HUNG_SURCHARGE, STANDARD_MESH } from '../lib/configuredPrice'
+import { formatQuoteDescription } from '../lib/lineDescription'
 import { formatCurrency } from '../lib/formatCurrency'
+import { LINE_FIT_EXTRAS, fitExtraPhrase } from '../lib/lineExtras'
 import { useQuote } from '../lib/quoteContext'
 import { usePricing } from '../lib/pricingContext'
 import PriceResultCard from '../components/PriceResultCard'
 import { ROOM_TYPES } from '../lib/roomTypes'
 
-const STANDARD_MESH = 'Standard'
-const DOUBLE_HUNG_SURCHARGE = 15
 const OTHER_ROOM = 'Other'
 
 export default function ProductCalculator() {
   const { productKey } = useParams()
-  const { data } = usePricing()
+  const { data, addons } = usePricing()
   const product = data.products.find((p) => p.key === productKey)
-  const { addItem } = useQuote()
+  const { addItem, status } = useQuote()
+  const issued = status === 'issued'
 
   const [categoryKey, setCategoryKey] = useState(product?.categories[0]?.key)
   const [width, setWidth] = useState('')
@@ -26,6 +27,7 @@ export default function ProductCalculator() {
   const [customRoom, setCustomRoom] = useState('')
   const [note, setNote] = useState('')
   const [added, setAdded] = useState(false)
+  const [fitExtras, setFitExtras] = useState<string[]>([])
 
   const category = product?.categories.find((c) => c.key === categoryKey) ?? product?.categories[0]
 
@@ -33,39 +35,64 @@ export default function ProductCalculator() {
   const heightMm = Number(height)
   const hasValidInput = widthMm > 0 && heightMm > 0
 
-  const result = useMemo(() => {
+  const configured = useMemo(() => {
     if (!category || !hasValidInput) return null
-    return findPrice(category, widthMm, heightMm)
-  }, [category, hasValidInput, widthMm, heightMm])
+    return calcConfiguredPrice(category, widthMm, heightMm, {
+      meshOption,
+      doubleHung: product?.key === 'flyscreens' && category.key === 'windows' && doubleHung,
+    })
+  }, [category, doubleHung, hasValidInput, heightMm, meshOption, product?.key, widthMm])
+
+  const result = configured?.lookup ?? null
+  const meshExtras = configured?.extras ?? 0
+  const fitExtraItems = LINE_FIT_EXTRAS.map((extra) => ({
+    ...extra,
+    price: addons.find((item) => item.name === extra.addonName)?.price ?? 0,
+  })).filter((extra) => extra.price > 0)
+  const fitExtraTotal = fitExtraItems
+    .filter((extra) => fitExtras.includes(extra.addonName))
+    .reduce((sum, extra) => sum + extra.price, 0)
+  const totalExtras = meshExtras + fitExtraTotal
 
   if (!product) {
     return <Navigate to="/" replace />
   }
 
   const isFlyscreenWindows = product.key === 'flyscreens' && category?.key === 'windows'
-  const meshSurcharge = category?.extras && hasValidInput ? extraSurcharge(category.extras, meshOption, heightMm) : 0
   const doubleHungSurcharge = isFlyscreenWindows && doubleHung ? DOUBLE_HUNG_SURCHARGE : 0
-  const totalExtras = meshSurcharge + doubleHungSurcharge
 
   function handleCategoryChange(key: string) {
     setCategoryKey(key)
     setMeshOption(STANDARD_MESH)
     setDoubleHung(false)
+    setFitExtras([])
     setAdded(false)
   }
 
   function handleAddToQuote() {
-    if (!category || !result?.ok) return
-    const meshNote = meshOption !== STANDARD_MESH ? `, ${meshOption} mesh` : ''
-    const dhNote = doubleHungSurcharge > 0 ? ', double hung' : ''
+    if (issued || !category || !result?.ok) return
+    const extras = [
+      ...(doubleHungSurcharge > 0 ? ['double hung'] : []),
+      ...fitExtras.map((name) => fitExtraPhrase(name)),
+    ]
     const resolvedRoom = room === OTHER_ROOM && customRoom.trim() ? customRoom.trim() : room
     addItem({
-      description: `${product!.name} - ${category.label}`,
-      detail: `${widthMm} x ${heightMm} mm${meshNote}${dhNote}`,
+      description: formatQuoteDescription({
+        widthMm,
+        heightMm,
+        productName: product!.name,
+        categoryKey: category.key,
+        categoryLabel: category.label,
+        meshOption: meshOption !== STANDARD_MESH ? meshOption : undefined,
+        extras,
+        room: resolvedRoom,
+      }),
+      detail: `${widthMm} x ${heightMm} mm`,
       quantity: 1,
-      unitPrice: result.price + totalExtras,
+      unitPrice: (configured?.unitPrice ?? result.price + meshExtras) + fitExtraTotal,
       room: resolvedRoom,
       note: note.trim(),
+      productKey: product!.key,
     })
     setAdded(true)
   }
@@ -76,6 +103,11 @@ export default function ProductCalculator() {
         <Link to="/">&larr; Back to products</Link>
       </p>
       <h1>{product.name}</h1>
+      {issued && (
+        <p className="price-result--error">
+          The open quote is issued and locked. Start a new quote before adding items.
+        </p>
+      )}
       {product.note && <p className="muted">{product.note}</p>}
 
       <div className="tabs">
@@ -142,6 +174,29 @@ export default function ProductCalculator() {
             </label>
           )}
 
+          {fitExtraItems.length > 0 && (
+            <div className="fit-extras">
+              <p className="small">Add to this line</p>
+              {fitExtraItems.map((extra) => (
+                <label key={extra.addonName} className="checkbox-row">
+                  <input
+                    type="checkbox"
+                    checked={fitExtras.includes(extra.addonName)}
+                    onChange={(e) => {
+                      setFitExtras((current) =>
+                        e.target.checked
+                          ? [...current, extra.addonName]
+                          : current.filter((name) => name !== extra.addonName),
+                      )
+                      setAdded(false)
+                    }}
+                  />
+                  {extra.phrase} (+{formatCurrency(extra.price)})
+                </label>
+              ))}
+            </div>
+          )}
+
           {isFlyscreenWindows && (
             <label className="checkbox-row">
               <input
@@ -199,7 +254,7 @@ export default function ProductCalculator() {
             <>
               <PriceResultCard result={result} extraSurcharge={totalExtras} formatCurrency={formatCurrency} />
               {result.ok && (
-                <button type="button" className="primary-button" onClick={handleAddToQuote}>
+                <button type="button" className="primary-button" onClick={handleAddToQuote} disabled={issued}>
                   Add to quote
                 </button>
               )}

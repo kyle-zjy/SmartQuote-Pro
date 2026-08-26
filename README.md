@@ -23,6 +23,7 @@ When the price list is updated, regenerate the data:
 ```bash
 pip install openpyxl
 python scripts/generate-pricing-data.py
+python scripts/generate-colours.py
 ```
 
 ### Importing an updated price list from the browser
@@ -35,6 +36,8 @@ layout — only the numbers are expected to change. Imported data is held in mem
 (`src/lib/pricingContext.tsx`, not persisted to `localStorage`), so refreshing the page reverts to the
 bundled default. `documents/Supply & Install (TEST - updated prices).xlsx` is a same-template copy
 with prices bumped ~10% and dates shifted, generated for exercising this import path.
+
+Backend handoff: Chinese teammate brief `docs/backend-handoff-zh.md`; English contract `docs/backend-api-and-schema.md`.
 
 ## Structure
 
