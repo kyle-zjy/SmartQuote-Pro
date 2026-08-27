@@ -273,7 +273,8 @@ Flat-rate extras from the price list (top track, lock post, pet door, call-out f
 | customer_id | uuid FK | |
 | colour_id | uuid FK | frame colour for the whole job |
 | created_by | uuid FK | staff |
-| status | text | `draft` \| `issued` \| `accepted` \| `void` |
+| status | text | **Version** lock: `draft` \| `issued`. Do **not** store deal outcome here |
+| deal_status | text | **Quote family**: `open` \| `abandoned` \| `closed`. Same for every revision of a `quote_no`. Issue ≠ closed |
 | gst_enabled | boolean | default true |
 | colour_surcharge | numeric(10,2) | snapshot, usually `0` or `220` |
 | sale_amount | numeric(10,2) | lines + colour surcharge, ex GST |
@@ -397,12 +398,14 @@ Body: `{ "name", "phone", "address", "suburb", "state", "postcode" }`.
 
 | Method | Path | Purpose |
 |--------|------|---------|
-| GET | `/quotes` | Staff list (`status`, `q`, date range) |
-| POST | `/quotes` | Create **draft** (allocates `quote_no`) |
+| GET | `/quotes` | Staff list (`dealStatus`, version `status`, `q`, date range) |
+| POST | `/quotes` | Create **draft** (allocates `quote_no`). `deal_status` defaults to `open` |
 | GET | `/quotes/:id` | Full quote for the print page |
-| PATCH | `/quotes/:id` | Update draft only |
-| POST | `/quotes/:id/issue` | Lock snapshot; status → `issued` |
-| POST | `/quotes/:id/void` | Issued → void |
+| PATCH | `/quotes/:id` | Update draft while `deal_status = open`; issued / settled quotes may only change `paid` |
+| PATCH | `/quotes/:id/deal-status` | Set family deal status `{ "dealStatus": "open" \| "abandoned" \| "closed" }` for **all** versions |
+| POST | `/quotes/:id/issue` | Lock snapshot; status → `issued`. Only while `deal_status = open` |
+| POST | `/quotes/:id/revise` | Issued **and** open only: copy to version+1 draft |
+| POST | `/quotes/:id/void` | Issued → void **this version** (not the same as Abandoned) |
 | POST | `/quotes/:id/lines` | Add a line (product or addon) |
 | PATCH | `/quotes/:id/lines/:lineId` | Qty / room / note |
 | DELETE | `/quotes/:id/lines/:lineId` | Draft only |

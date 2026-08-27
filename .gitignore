@@ -4,6 +4,11 @@ dist-ssr
 *.local
 *.tsbuildinfo
 documents/_extract/
+documents/*.xlsx
 .vscode/*
 !.vscode/extensions.json
 ~$*
+*.lnk
+.vercel
+
+.vercel

@@ -1,0 +1,265 @@
+{
+  "products": [
+    "Diamond Grille",
+    "Flyscreen",
+    "Intrudaguard",
+    "Supascreen"
+  ],
+  "screenTypes": [
+    "Hinged Door",
+    "Sliding Door",
+    "Window"
+  ],
+  "notes": [
+    "Price is based on the standard colour",
+    "Powder coating finish based on standard domestic finish",
+    "It has been assumed that all sliding doors and windows have been manufactured to take flyscreens and security screens (doors & windows)",
+    "All flyscreen doors have been quoted with a bass  ONLY",
+    "All flyscreen doors and windows to be manufactured from standard fiberglass screen mesh",
+    "No allowances has been made for top & bottom tracks, lock posts and door interlocks in this quote",
+    "No allowance has been made for hand ports for window flyscreens",
+    "No allowance has been made for bushfire ratings or fire retardant mesh in this quote.",
+    "No allowance has been made for build outs, adaptors for doors & windows in this quote",
+    "Safe access to be provided by builder for the fitting of screens and doors",
+    "No allowance bas been made for fall prevention in this quote during installation",
+    "No allowance made for union site in this quote",
+    "Price subject to site measure",
+    "Price valid for 30 days"
+  ],
+  "configs": [
+    {
+      "code": "HDX-L",
+      "image": "hdx-l.png",
+      "panels": 1,
+      "widthFactor": 1,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [
+        "H1",
+        "H2",
+        "H3"
+      ],
+      "widthPoints": [
+        "W1",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "code": "HDX-R",
+      "image": "hdx-r.png",
+      "panels": 1,
+      "widthFactor": 1,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [
+        "H1",
+        "H2",
+        "H3"
+      ],
+      "widthPoints": [
+        "W1",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "code": "HDXX-L",
+      "image": "hdxx-l.png",
+      "panels": 2,
+      "widthFactor": 2,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [
+        "H1",
+        "H2",
+        "H3"
+      ],
+      "widthPoints": [
+        "W1",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "code": "HDXX-R",
+      "image": "hdxx-r.png",
+      "panels": 2,
+      "widthFactor": 2,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [
+        "H1",
+        "H2",
+        "H3"
+      ],
+      "widthPoints": [
+        "W1",
+        "W2",
+        "W3"
+      ]
+    },
+    {
+      "code": "SDOX",
+      "image": "sdox.png",
+      "panels": 1,
+      "widthFactor": 2,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [
+        "H1",
+        "H2",
+        "H3"
+      ],
+      "widthPoints": [
+        "W1"
+      ]
+    },
+    {
+      "code": "SDOXO-L",
+      "image": "sdoxo-l.png",
+      "panels": 1,
+      "widthFactor": 3,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [
+        "H1",
+        "H2",
+        "H3"
+      ],
+      "widthPoints": [
+        "W1"
+      ]
+    },
+    {
+      "code": "SDOXO-R",
+      "image": "sdoxo-r.png",
+      "panels": 1,
+      "widthFactor": 3,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXX",
+      "image": "sdoxx.png",
+      "panels": 2,
+      "widthFactor": 3,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXO-L",
+      "image": "sdoxxo-l.png",
+      "panels": 2,
+      "widthFactor": 4,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXO-R",
+      "image": "sdoxxo-r.png",
+      "panels": 2,
+      "widthFactor": 4,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXX",
+      "image": "sdoxxx.png",
+      "panels": 3,
+      "widthFactor": 4,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXXXO-L",
+      "image": "sdoxxxxo-l.png",
+      "panels": 4,
+      "widthFactor": 6,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXXXO-R",
+      "image": "sdoxxxxo-r.png",
+      "panels": 4,
+      "widthFactor": 6,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXXXXO-R",
+      "image": "sdoxxxxxo-r.png",
+      "panels": 6,
+      "widthFactor": 8,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDOXXXXXXO-L",
+      "image": "sdoxxxxxxo-l.png",
+      "panels": 6,
+      "widthFactor": 8,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDXO",
+      "image": "sdxo.png",
+      "panels": 1,
+      "widthFactor": 2,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDXXO",
+      "image": "sdxxo.png",
+      "panels": 2,
+      "widthFactor": 3,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "SDXXXO",
+      "image": "sdxxxo.png",
+      "panels": 3,
+      "widthFactor": 4,
+      "widthOffset": 70,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    },
+    {
+      "code": "WS",
+      "image": "ws.png",
+      "panels": 1,
+      "widthFactor": 1,
+      "widthOffset": 0,
+      "heightFactor": 1,
+      "heightPoints": [],
+      "widthPoints": []
+    }
+  ]
+}

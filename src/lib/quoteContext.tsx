@@ -1,9 +1,11 @@
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import colours from '../data/colours.json'
 import {
+  addArchivedQuoteComment,
   deleteArchivedQuote,
   getArchivedQuote,
   listArchivedQuotes,
+  setArchivedQuoteDealStatus,
   upsertArchivedQuote,
   type ArchiveWriteResult,
   type ArchivedQuote,
@@ -14,9 +16,12 @@ import { deleteRoomPhotos, loadRoomPhotos, saveRoomPhotos } from './quotePhotoSt
 import { DRAFT_PERSIST_MS, DRAFT_STORAGE_KEY, MEASURE_LEGACY_DRAFT_PERSIST, hasPhotoData, persistDraftQuote } from './quotePersist'
 import {
   canIssueQuote,
+  canReviseQuote,
   createIssuedSnapshot,
   isActionLocked,
+  parseDealStatus,
   quoteFinancials,
+  type DealStatus,
   type IssuedSnapshot,
   type QuoteStatus,
 } from './quoteLifecycle'
@@ -58,7 +63,9 @@ export interface QuoteState {
   customFrameColour: string
   colourExtraOverride: number | null
   paid: number
+  version: number
   status: QuoteStatus
+  dealStatus: DealStatus
   issuedSnapshot: IssuedSnapshot | null
 }
 
@@ -85,6 +92,8 @@ export type QuoteAction =
   | { type: 'SET_PHOTO_CAPTION'; room: string; id: string; caption: string }
   | { type: 'HYDRATE_PHOTOS'; roomPhotos: Record<string, RoomPhoto[]> }
   | { type: 'ISSUE'; snapshot: IssuedSnapshot }
+  | { type: 'REVISE' }
+  | { type: 'SET_DEAL_STATUS'; dealStatus: DealStatus }
 
 const SEQ_KEY = 'smartquote-pro:quote-seq'
 
@@ -120,7 +129,9 @@ function defaultState(quoteNo: string): QuoteState {
     customFrameColour: '',
     colourExtraOverride: null,
     paid: 0,
+    version: 1,
     status: 'draft',
+    dealStatus: 'open',
     issuedSnapshot: null,
   }
 }
@@ -141,7 +152,9 @@ export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: st
     customFrameColour: parsed.customFrameColour ?? '',
     colourExtraOverride: parsed.colourExtraOverride ?? null,
     paid: parsed.paid ?? 0,
+    version: Math.max(1, parsed.version ?? 1),
     status: parsed.status === 'issued' && parsed.issuedSnapshot ? 'issued' : 'draft',
+    dealStatus: parseDealStatus(parsed.dealStatus),
     issuedSnapshot: parsed.status === 'issued' && parsed.issuedSnapshot ? parsed.issuedSnapshot : null,
   }
 }
@@ -157,7 +170,7 @@ function loadInitialState(): QuoteState {
 }
 
 export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState {
-  if (isActionLocked(state.status, action.type)) return state
+  if (isActionLocked(state.status, action.type, state.dealStatus)) return state
 
   switch (action.type) {
     case 'ADD_ITEM':
@@ -213,6 +226,18 @@ export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState
     case 'ISSUE':
       if (!canIssueQuote(state)) return state
       return { ...state, status: 'issued', issuedSnapshot: action.snapshot }
+    case 'REVISE':
+      if (state.status !== 'issued' || state.dealStatus !== 'open') return state
+      return {
+        ...state,
+        version: Math.max(1, state.version) + 1,
+        status: 'draft',
+        issuedSnapshot: null,
+        quoteDate: todayISO(),
+        paid: 0,
+      }
+    case 'SET_DEAL_STATUS':
+      return { ...state, dealStatus: action.dealStatus }
     case 'ADD_PHOTO': {
       const photo: RoomPhoto = { id: crypto.randomUUID(), dataUrl: action.dataUrl, caption: '' }
       const existing = state.roomPhotos[action.room] ?? []
@@ -266,10 +291,13 @@ interface QuoteContextValue extends QuoteState {
   setQuoteSuffix: (quoteSuffix: string) => void
   setPaid: (paid: number) => void
   issueQuote: () => boolean
+  reviseQuote: (reason?: string) => boolean
   newQuote: () => void
   saveCurrentQuote: () => ArchiveWriteResult
-  loadSavedQuote: (quoteNo: string) => boolean
-  deleteSavedQuote: (quoteNo: string) => void
+  loadSavedQuote: (quoteNo: string, version?: number) => boolean
+  deleteSavedQuote: (quoteNo: string, version: number) => void
+  addSavedQuoteComment: (quoteNo: string, version: number, text: string) => boolean
+  setQuoteDealStatus: (quoteNo: string, dealStatus: DealStatus) => void
   savedQuotes: ArchivedQuote[]
   clear: () => void
   addPhoto: (room: string, dataUrl: string) => void
@@ -298,7 +326,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
 
   const stateRef = useRef(state)
   stateRef.current = state
-  const draftQuoteNoRef = useRef(state.quoteNo)
+  const draftKeyRef = useRef({ quoteNo: state.quoteNo, version: state.version || 1 })
 
   useEffect(() => {
     const persist = () => {
@@ -335,25 +363,26 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const previousQuoteNo = draftQuoteNoRef.current
-    if (previousQuoteNo !== state.quoteNo) {
-      void deleteRoomPhotos(previousQuoteNo).catch(() => undefined)
-      draftQuoteNoRef.current = state.quoteNo
+    const previous = draftKeyRef.current
+    if (previous.quoteNo !== state.quoteNo) {
+      void deleteRoomPhotos(previous.quoteNo, previous.version).catch(() => undefined)
     }
-    void saveRoomPhotos(state.quoteNo, state.roomPhotos).catch(() => undefined)
-  }, [state.quoteNo, state.roomPhotos])
+    draftKeyRef.current = { quoteNo: state.quoteNo, version: state.version || 1 }
+    void saveRoomPhotos(state.quoteNo, state.roomPhotos, state.version || 1).catch(() => undefined)
+  }, [state.quoteNo, state.version, state.roomPhotos])
 
   useEffect(() => {
     let cancelled = false
     const quoteNo = state.quoteNo
+    const version = state.version || 1
     const photos = state.roomPhotos
     void (async () => {
       try {
         if (hasPhotoData(photos)) {
-          await saveRoomPhotos(quoteNo, photos)
+          await saveRoomPhotos(quoteNo, photos, version)
           return
         }
-        const stored = await loadRoomPhotos(quoteNo)
+        const stored = await loadRoomPhotos(quoteNo, version)
         if (cancelled || !stored || !hasPhotoData(stored)) return
         dispatch({ type: 'HYDRATE_PHOTOS', roomPhotos: stored })
       } catch {
@@ -377,7 +406,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     return {
       ...state,
       addItem: (item) => {
-        if (isActionLocked(state.status, 'ADD_ITEM')) return false
+        if (isActionLocked(state.status, 'ADD_ITEM', state.dealStatus)) return false
         dispatch({ type: 'ADD_ITEM', item })
         return true
       },
@@ -407,21 +436,53 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         }
         return true
       },
+      reviseQuote: (reason) => {
+        if (!canReviseQuote(state)) return false
+        const revised: QuoteState = {
+          ...state,
+          version: Math.max(1, state.version || 1) + 1,
+          status: 'draft',
+          issuedSnapshot: null,
+          quoteDate: new Date().toISOString().slice(0, 10),
+          paid: 0,
+        }
+        try {
+          upsertArchivedQuote(state, { total })
+          upsertArchivedQuote(revised, { total })
+          if (reason?.trim()) addArchivedQuoteComment(revised.quoteNo, revised.version, reason)
+          setSavedQuotes(listArchivedQuotes())
+        } catch {
+          // Keep going so the staff can still edit the new revision in memory.
+        }
+        dispatch({ type: 'LOAD_QUOTE', quote: revised })
+        return true
+      },
       newQuote: () => dispatch({ type: 'NEW_QUOTE' }),
       saveCurrentQuote: () => {
         const result = upsertArchivedQuote(state, { total })
         setSavedQuotes(listArchivedQuotes())
         return result
       },
-      loadSavedQuote: (quoteNo) => {
-        const record = getArchivedQuote(quoteNo)
+      loadSavedQuote: (quoteNo, version) => {
+        const record = getArchivedQuote(quoteNo, version)
         if (!record) return false
         dispatch({ type: 'LOAD_QUOTE', quote: record.quote })
         return true
       },
-      deleteSavedQuote: (quoteNo) => {
-        deleteArchivedQuote(quoteNo)
+      deleteSavedQuote: (quoteNo, version) => {
+        deleteArchivedQuote(quoteNo, version)
         setSavedQuotes(listArchivedQuotes())
+      },
+      addSavedQuoteComment: (quoteNo, version, text) => {
+        const comment = addArchivedQuoteComment(quoteNo, version, text)
+        if (!comment) return false
+        setSavedQuotes(listArchivedQuotes())
+        return true
+      },
+      setQuoteDealStatus: (quoteNo, dealStatus) => {
+        setArchivedQuoteDealStatus(quoteNo, dealStatus)
+        setSavedQuotes(listArchivedQuotes())
+        if (state.quoteNo === quoteNo) dispatch({ type: 'SET_DEAL_STATUS', dealStatus })
       },
       savedQuotes,
       clear: () => dispatch({ type: 'CLEAR' }),
