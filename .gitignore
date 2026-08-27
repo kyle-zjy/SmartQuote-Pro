@@ -7,3 +7,4 @@ documents/_extract/
 .vscode/*
 !.vscode/extensions.json
 ~$*
+.env

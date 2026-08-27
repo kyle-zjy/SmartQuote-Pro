@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model CompanySettings {
+  id                     String   @id @default(uuid())
+  name                   String
+  abn                    String
+  qbcc                   String
+  address                String
+  phone                  String
+  bankName               String
+  bankBsb                String
+  bankAccount            String
+  cardFeePercent         Decimal  @db.Decimal(5, 2)
+  gstRate                Decimal  @default(0.10) @db.Decimal(4, 3)
+  depositRate            Decimal  @default(0.50) @db.Decimal(4, 3)
+  nonStandardColourPrice Decimal  @default(220.00) @db.Decimal(10, 2)
+  validityDays           Int      @default(30)
+  warrantyUrl            String
+  careUrl                String
+  termsNote              String
+  termsContract          String
+  sizeDisclaimer         String
+  licensing              String
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  @@map("company_settings")
+}
+
+model Product {
+  id           String    @id @default(uuid())
+  key          String    @unique
+  name         String
+  pricingAsAt  DateTime? @db.Date
+  note         String?
+  active       Boolean   @default(true)
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  categories     ProductCategory[]
+  colourProducts ColourProduct[]
+  quoteLines     QuoteLine[]
+
+  @@map("products")
+}
+
+model ProductCategory {
+  id               String   @id @default(uuid())
+  productId        String
+  key              String
+  label            String
+  extraThresholdMm Int?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  product    Product     @relation(fields: [productId], references: [id], onDelete: Cascade)
+  priceCells PriceCell[]
+  meshExtras MeshExtra[]
+  quoteLines QuoteLine[]
+
+  @@unique([productId, key])
+  @@map("product_categories")
+}
+
+model PriceCell {
+  id         String   @id @default(uuid())
+  categoryId String
+  widthMm    Int
+  heightMm   Int
+  price      Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, widthMm, heightMm])
+  @@map("price_cells")
+}
+
+model MeshExtra {
+  id         String   @id @default(uuid())
+  categoryId String
+  name       String
+  underPrice Decimal? @db.Decimal(10, 2)
+  overPrice  Decimal? @db.Decimal(10, 2)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  category ProductCategory @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+  @@unique([categoryId, name])
+  @@map("mesh_extras")
+}
+
+model Colour {
+  id               String   @id @default(uuid())
+  name             String   @unique
+  additionalCharge Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  colourProducts ColourProduct[]
+  quotes         Quote[]
+
+  @@map("colours")
+}
+
+model ColourProduct {
+  colourId  String
+  productId String
+
+  colour  Colour  @relation(fields: [colourId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@id([colourId, productId])
+  @@map("colour_products")
+}
+
+model Addon {
+  id             String   @id @default(uuid())
+  section        String?
+  name           String
+  price          Decimal? @db.Decimal(10, 2)
+  priceOnRequest Boolean  @default(false)
+  unit           String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  quoteLines QuoteLine[]
+
+  @@map("addons")
+}
+
+// Auth is not implemented yet (see docs/backend-handoff-zh.md §5.1) -- this
+// table exists so quotes.createdBy has somewhere to point once login lands.
+model StaffUser {
+  id           String   @id @default(uuid())
+  email        String   @unique @db.Citext
+  name         String
+  passwordHash String?
+  role         String   @default("staff") // 'staff' | 'admin'
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  quotes Quote[]
+
+  @@map("staff_users")
+}
+
+model Customer {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String?
+  address   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  quotes Quote[]
+
+  @@map("customers")
+}
+
+model Quote {
+  id                   String    @id @default(uuid())
+  quoteNo              String    @unique
+  quoteSuffix          String?
+  quoteDate            DateTime  @db.Date
+  customerId           String?
+  shipSameAsBill       Boolean   @default(true)
+  shipName             String?
+  shipPhone            String?
+  shipAddress          String?
+  colourId             String?
+  customFrameColour    String?
+  colourExtraOverride  Decimal?  @db.Decimal(10, 2)
+  status               String    @default("draft")
+  gstEnabled           Boolean   @default(true)
+  colourSurcharge      Decimal?  @db.Decimal(10, 2)
+  saleAmount           Decimal?  @db.Decimal(10, 2)
+  gstAmount            Decimal?  @db.Decimal(10, 2)
+  totalAmount          Decimal?  @db.Decimal(10, 2)
+  depositAmount        Decimal?  @db.Decimal(10, 2)
+  paid                 Decimal   @default(0) @db.Decimal(10, 2)
+  validUntil           DateTime? @db.Date
+  issuedAt             DateTime?
+  createdBy            String?
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  customer       Customer?   @relation(fields: [customerId], references: [id])
+  colour         Colour?     @relation(fields: [colourId], references: [id])
+  createdByStaff StaffUser?  @relation(fields: [createdBy], references: [id])
+  lines          QuoteLine[]
+
+  @@map("quotes")
+}
+
+model QuoteLine {
+  id               String   @id @default(uuid())
+  quoteId          String
+  sortOrder        Int      @default(0)
+  productId        String?
+  categoryId       String?
+  addonId          String?
+  description      String
+  room             String?
+  note             String?
+  widthMm          Int?
+  heightMm         Int?
+  matchedWidthMm   Int?
+  matchedHeightMm  Int?
+  meshOption       String?
+  quantity         Int      @default(1)
+  unitPrice        Decimal  @db.Decimal(10, 2)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  quote    Quote            @relation(fields: [quoteId], references: [id], onDelete: Cascade)
+  product  Product?         @relation(fields: [productId], references: [id])
+  category ProductCategory? @relation(fields: [categoryId], references: [id])
+  addon    Addon?           @relation(fields: [addonId], references: [id])
+
+  @@map("quote_lines")
+}

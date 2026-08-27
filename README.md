@@ -39,6 +39,32 @@ with prices bumped ~10% and dates shifted, generated for exercising this import 
 
 Backend handoff: Chinese teammate brief `docs/backend-handoff-zh.md`; English contract `docs/backend-api-and-schema.md`.
 
+## Backend (server/)
+
+A minimal Postgres-backed API skeleton lives in `server/` — catalog data only (products,
+addons, colours, company settings). It does not replace the frontend's bundled JSON yet;
+see `docs/backend-handoff-zh.md` for the full contract this is building toward.
+
+```bash
+docker compose up -d                 # starts Postgres on localhost:5432
+cd server
+cp .env.example .env
+npm install
+npx prisma migrate dev --name init   # creates tables
+npx prisma db seed                   # loads src/data/*.json + company settings
+npm run dev                          # http://localhost:3001
+```
+
+Then check `curl localhost:3001/api/v1/products`, `/addons`, `/colours`, `/company`, and
+`/health`. Quote/customer CRUD, auth, and room photos are not implemented yet.
+
+`staff_users` exists in the schema (so `quotes.createdBy` has a target once login lands) but
+nothing seeds or writes to it yet — there is no login flow. Quote numbers are meant to be
+allocated from a Postgres sequence, `quote_number_seq` (starts at `33021`, continuing on from
+the frontend's old client-side counter), not generated in the browser; see the comment above
+`CREATE SEQUENCE quote_number_seq` in `server/prisma/migrations/*_init/migration.sql` for the
+exact allocation pattern once a quote-creation endpoint is added.
+
 ## Structure
 
 - `src/data/` — generated pricing JSON (do not hand-edit; regenerate from the xlsx instead)
