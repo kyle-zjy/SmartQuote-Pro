@@ -3,6 +3,7 @@ import type { QuoteState } from './quoteContext'
 import { quoteReducer } from './quoteContext'
 import {
   canIssueQuote,
+  canReviseQuote,
   createIssuedSnapshot,
   isActionLocked,
   quoteFinancials,
@@ -23,7 +24,9 @@ function draftQuote(overrides: Partial<QuoteState> = {}): QuoteState {
     customFrameColour: '',
     colourExtraOverride: null,
     paid: 0,
+    version: 1,
     status: 'draft',
+    dealStatus: 'open',
     issuedSnapshot: null,
     ...overrides,
   }
@@ -34,6 +37,8 @@ describe('quoteLifecycle', () => {
     expect(canIssueQuote(draftQuote())).toBe(true)
     expect(canIssueQuote(draftQuote({ items: [] }))).toBe(false)
     expect(canIssueQuote(draftQuote({ status: 'issued' }))).toBe(false)
+    expect(canIssueQuote(draftQuote({ dealStatus: 'abandoned' }))).toBe(false)
+    expect(canIssueQuote(draftQuote({ dealStatus: 'closed' }))).toBe(false)
   })
 
   it('freezes colour extra, GST and deposit at the current totals', () => {
@@ -84,6 +89,20 @@ describe('quoteLifecycle', () => {
     expect(isActionLocked('issued', 'SET_PAID')).toBe(false)
     expect(isActionLocked('draft', 'ADD_ITEM')).toBe(false)
   })
+
+  it('locks line edits when the deal is abandoned or closed', () => {
+    expect(isActionLocked('draft', 'ADD_ITEM', 'abandoned')).toBe(true)
+    expect(isActionLocked('issued', 'ADD_ITEM', 'closed')).toBe(true)
+    expect(isActionLocked('issued', 'REVISE', 'abandoned')).toBe(true)
+    expect(isActionLocked('issued', 'SET_PAID', 'closed')).toBe(false)
+    expect(isActionLocked('issued', 'SET_DEAL_STATUS', 'closed')).toBe(false)
+  })
+
+  it('cannot revise a settled deal', () => {
+    expect(canReviseQuote(draftQuote({ status: 'issued' }))).toBe(true)
+    expect(canReviseQuote(draftQuote({ status: 'issued', dealStatus: 'closed' }))).toBe(false)
+    expect(canReviseQuote(draftQuote({ status: 'issued', dealStatus: 'abandoned' }))).toBe(false)
+  })
 })
 
 describe('quoteReducer issue lock', () => {
@@ -112,5 +131,51 @@ describe('quoteReducer issue lock', () => {
     const next = quoteReducer(issued, { type: 'SET_PAID', paid: 200 })
     expect(next.paid).toBe(200)
     expect(next.status).toBe('issued')
+  })
+
+  it('opens a new unlocked revision from an issued quote', () => {
+    const snapshot = createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z')
+    const issued = quoteReducer(draftQuote(), { type: 'ISSUE', snapshot })
+    const revised = quoteReducer(issued, { type: 'REVISE' })
+    expect(canReviseQuote(issued)).toBe(true)
+    expect(canReviseQuote(draftQuote())).toBe(false)
+    expect(revised.status).toBe('draft')
+    expect(revised.version).toBe(2)
+    expect(revised.issuedSnapshot).toBeNull()
+    expect(revised.items).toEqual(issued.items)
+    expect(isActionLocked(revised.status, 'ADD_ITEM')).toBe(false)
+  })
+
+  it('rejects new line items after the deal is closed', () => {
+    const closed = quoteReducer(draftQuote(), { type: 'SET_DEAL_STATUS', dealStatus: 'closed' })
+    const next = quoteReducer(closed, {
+      type: 'ADD_ITEM',
+      item: {
+        description: 'Window',
+        detail: '',
+        quantity: 1,
+        unitPrice: 343,
+        room: 'Lounge',
+        note: '',
+      },
+    })
+    expect(next.items).toEqual(closed.items)
+  })
+
+  it('still records payment on a closed quote', () => {
+    const closed = quoteReducer(draftQuote({ paid: 0 }), { type: 'SET_DEAL_STATUS', dealStatus: 'closed' })
+    const next = quoteReducer(closed, { type: 'SET_PAID', paid: 200 })
+    expect(next.paid).toBe(200)
+    expect(next.dealStatus).toBe('closed')
+  })
+
+  it('does not revise an issued quote after the deal is abandoned', () => {
+    const snapshot = createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z')
+    const issued = quoteReducer(draftQuote(), { type: 'ISSUE', snapshot })
+    const abandoned = quoteReducer(issued, { type: 'SET_DEAL_STATUS', dealStatus: 'abandoned' })
+    const revised = quoteReducer(abandoned, { type: 'REVISE' })
+    expect(canReviseQuote(abandoned)).toBe(false)
+    expect(revised.version).toBe(abandoned.version)
+    expect(revised.status).toBe('issued')
   })
 })

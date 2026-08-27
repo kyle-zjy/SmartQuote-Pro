@@ -8,8 +8,8 @@ import { ROOM_TYPES } from '../lib/roomTypes'
 const OTHER_ROOM = 'Other'
 
 export default function AddOns() {
-  const { addItem, status } = useQuote()
-  const issued = status === 'issued'
+  const { addItem, status, dealStatus } = useQuote()
+  const issued = status === 'issued' || dealStatus !== 'open'
   const { addons: data } = usePricing()
   const [room, setRoom] = useState(ROOM_TYPES[0])
   const [customRoom, setCustomRoom] = useState('')
@@ -32,7 +32,9 @@ export default function AddOns() {
       <p className="muted">Flat-rate items that can be added to any quote.</p>
       {issued && (
         <p className="price-result--error">
-          The open quote is issued and locked. Start a new quote before adding items.
+          {dealStatus !== 'open'
+            ? 'This quote is abandoned or closed. Reopen it from Saved, or start a new quote, before adding items.'
+            : 'The open quote is issued and locked. Start a new quote before adding items.'}
         </p>
       )}
 

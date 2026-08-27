@@ -38,10 +38,13 @@ export default function QuoteSummary() {
     gstEnabled,
     setGstEnabled,
     quoteNo,
+    version,
     status,
+    dealStatus,
     issuedSnapshot,
     saveCurrentQuote,
     issueQuote,
+    reviseQuote,
     savedQuotes,
     clear,
     newQuote,
@@ -49,13 +52,15 @@ export default function QuoteSummary() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [saveMessage, setSaveMessage] = useState<string | null>(null)
   const issued = status === 'issued'
+  const dealSettled = dealStatus !== 'open'
+  const locked = issued || dealSettled
 
   const colour = colourRecord(frameColour)
   const usedProducts = [...new Set(items.map((i) => i.productKey).filter(Boolean))] as string[]
   const colourMismatch =
     colour && colour.products.length > 0 && usedProducts.some((key) => !colour.products.includes(key))
   const colourHasExtra = Boolean(colour?.additionalCharge)
-  const alreadySaved = savedQuotes.some((record) => record.quoteNo === quoteNo)
+  const alreadySaved = savedQuotes.some((record) => record.quoteNo === quoteNo && record.version === version)
 
   function handleClear() {
     if (items.length === 0 || window.confirm('Clear all items on this quote?')) clear()
@@ -81,6 +86,20 @@ export default function QuoteSummary() {
     )
   }
 
+  function handleReviseQuote() {
+    if (
+      !window.confirm(
+        'Create a new revision? The issued quote stays in Saved. This copy unlocks so you can change lines and prices.',
+      )
+    ) {
+      return
+    }
+    const reason = window.prompt('Why is this quote being revised? (saved on the new revision)')
+    if (reason === null) return
+    if (!reviseQuote(reason)) return
+    setSaveMessage('Revision opened. Previous issued quote is kept in Saved. Add more notes under the version in Saved.')
+  }
+
   function handleIssueQuote() {
     if (
       !window.confirm(
@@ -95,10 +114,17 @@ export default function QuoteSummary() {
 
   return (
     <div className="quote-page">
-      {issued && (
+      {dealSettled && (
+        <p className={`quote-issued-banner quote-issued-banner--${dealStatus} no-print`}>
+          This quote is {dealStatus === 'closed' ? 'closed (deal won)' : 'abandoned'}. Reopen it from Saved to keep
+          editing. Amount paid can still be recorded.
+        </p>
+      )}
+      {issued && !dealSettled && (
         <p className="quote-issued-banner no-print">
-          Issued{issuedSnapshot ? ` ${formatIssuedAt(issuedSnapshot.issuedAt)}` : ''}. Pricing is locked. Start a new
-          quote to use an updated price list. Amount paid can still be recorded.
+          Issued{issuedSnapshot ? ` ${formatIssuedAt(issuedSnapshot.issuedAt)}` : ''}
+          {version > 1 ? ` · Rev ${version}` : ''}. Pricing is locked. Choose Revise quote if the customer wants
+          changes — the issued copy stays in Saved. Amount paid can still be recorded.
         </p>
       )}
       <section className="quote-editor no-print">
@@ -110,7 +136,7 @@ export default function QuoteSummary() {
               value={customer.name}
               onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
               placeholder="Name"
-              disabled={issued}
+              disabled={locked}
             />
           </label>
           <label>
@@ -119,7 +145,7 @@ export default function QuoteSummary() {
               value={customer.phone}
               onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
               placeholder="04xx xxx xxx"
-              disabled={issued}
+              disabled={locked}
             />
           </label>
           <label className="quote-editor__wide">
@@ -129,12 +155,12 @@ export default function QuoteSummary() {
               onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
               placeholder={'Street\nSuburb STATE'}
               rows={3}
-              disabled={issued}
+              disabled={locked}
             />
           </label>
           <label>
             Quote date
-            <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} disabled={issued} />
+            <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} disabled={locked} />
           </label>
           <label>
             Quote suffix
@@ -142,12 +168,12 @@ export default function QuoteSummary() {
               value={quoteSuffix}
               onChange={(e) => setQuoteSuffix(e.target.value)}
               placeholder="SS, DG, IG"
-              disabled={issued}
+              disabled={locked}
             />
           </label>
           <label>
             Frame colour
-            <select value={frameColour} onChange={(e) => setFrameColour(e.target.value)} disabled={issued}>
+            <select value={frameColour} onChange={(e) => setFrameColour(e.target.value)} disabled={locked}>
               {colours.map((c) => (
                 <option key={c.name} value={c.name}>
                   {c.name}
@@ -173,7 +199,7 @@ export default function QuoteSummary() {
                 value={customFrameColour}
                 onChange={(e) => setCustomFrameColour(e.target.value)}
                 placeholder="e.g. Stromboli"
-                disabled={issued}
+                disabled={locked}
               />
             </label>
           )}
@@ -186,7 +212,7 @@ export default function QuoteSummary() {
                 step={1}
                 value={colourExtra}
                 onChange={(e) => setColourExtraOverride(Number(e.target.value) || 0)}
-                disabled={issued}
+                disabled={locked}
               />
             </label>
           )}
@@ -196,7 +222,7 @@ export default function QuoteSummary() {
             type="checkbox"
             checked={shipSameAsBill}
             onChange={(e) => setShipSameAsBill(e.target.checked)}
-            disabled={issued}
+            disabled={locked}
           />
           Ship To is the same as Bill To
         </label>
@@ -208,7 +234,7 @@ export default function QuoteSummary() {
                 value={shipTo.name}
                 onChange={(e) => setShipTo({ ...shipTo, name: e.target.value })}
                 placeholder="Name"
-                disabled={issued}
+                disabled={locked}
               />
             </label>
             <label>
@@ -217,7 +243,7 @@ export default function QuoteSummary() {
                 value={shipTo.phone}
                 onChange={(e) => setShipTo({ ...shipTo, phone: e.target.value })}
                 placeholder="04xx xxx xxx"
-                disabled={issued}
+                disabled={locked}
               />
             </label>
             <label className="quote-editor__wide">
@@ -227,12 +253,12 @@ export default function QuoteSummary() {
                 onChange={(e) => setShipTo({ ...shipTo, address: e.target.value })}
                 placeholder={'Street\nSuburb STATE'}
                 rows={3}
-                disabled={issued}
+                disabled={locked}
               />
             </label>
           </div>
         )}
-        {colourHasExtra && !issued && (
+        {colourHasExtra && !locked && (
           <p className="muted small">
             Default powder-coating extra is {formatCurrency(settings.nonStandardColourPrice)}. You can change it for
             this quote.
@@ -243,7 +269,7 @@ export default function QuoteSummary() {
             type="checkbox"
             checked={gstEnabled}
             onChange={(e) => setGstEnabled(e.target.checked)}
-            disabled={issued}
+            disabled={locked}
           />
           Include GST (10%)
         </label>
@@ -268,16 +294,21 @@ export default function QuoteSummary() {
         >
           Save as PDF
         </button>
-        <button type="button" className="secondary-button" onClick={handleIssueQuote} disabled={issued || items.length === 0}>
+        <button type="button" className="secondary-button" onClick={handleIssueQuote} disabled={issued || dealSettled || items.length === 0}>
           {issued ? 'Issued' : 'Issue quote'}
         </button>
+        {issued && !dealSettled && (
+          <button type="button" className="secondary-button" onClick={handleReviseQuote}>
+            Revise quote
+          </button>
+        )}
         <button type="button" className="secondary-button" onClick={handleSaveQuote}>
           {alreadySaved ? 'Update saved quote' : 'Save quote'}
         </button>
         <button type="button" className="secondary-button" onClick={() => window.print()} disabled={items.length === 0}>
           Print quote
         </button>
-        <button type="button" className="link-button" onClick={handleClear} disabled={issued}>
+        <button type="button" className="link-button" onClick={handleClear} disabled={locked}>
           Clear items
         </button>
         <button type="button" className="link-button" onClick={handleNewQuote}>

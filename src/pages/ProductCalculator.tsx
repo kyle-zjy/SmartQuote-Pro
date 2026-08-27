@@ -15,8 +15,8 @@ export default function ProductCalculator() {
   const { productKey } = useParams()
   const { data, addons } = usePricing()
   const product = data.products.find((p) => p.key === productKey)
-  const { addItem, status } = useQuote()
-  const issued = status === 'issued'
+  const { addItem, status, dealStatus } = useQuote()
+  const issued = status === 'issued' || dealStatus !== 'open'
 
   const [categoryKey, setCategoryKey] = useState(product?.categories[0]?.key)
   const [width, setWidth] = useState('')
@@ -105,7 +105,9 @@ export default function ProductCalculator() {
       <h1>{product.name}</h1>
       {issued && (
         <p className="price-result--error">
-          The open quote is issued and locked. Start a new quote before adding items.
+          {dealStatus !== 'open'
+            ? 'This quote is abandoned or closed. Reopen it from Saved, or start a new quote, before adding items.'
+            : 'The open quote is issued and locked. Start a new quote before adding items.'}
         </p>
       )}
       {product.note && <p className="muted">{product.note}</p>}

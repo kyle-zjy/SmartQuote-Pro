@@ -171,7 +171,8 @@ v1 可以只存一个 `address` 文本，对齐前端。`suburb` / `state` / `po
 
 | 字段 | 说明 |
 |------|------|
-| quote_no | 唯一，形如 `00033021`，单调递增 |
+| quote_no | 报价家族号，形如 `00033021`，**改单不换号** |
+| version | 从 1 起。客户改单后 +1（Rev 2、Rev 3） |
 | quote_suffix | 可空，打印成 `00033012-SS` |
 | quote_date | date |
 | customer_id | Bill To |
@@ -181,7 +182,8 @@ v1 可以只存一个 `address` 文本，对齐前端。`suburb` / `state` / `po
 | custom_frame_colour | 非标颜色的手填名 |
 | colour_extra_override | 可空；有值则覆盖公司默认 $220 |
 | created_by | 员工 |
-| status | `draft` \| `issued` \| `accepted` \| `void`（前端目前只用 draft / issued） |
+| status | **版本**状态：`draft` \| `issued`（锁定该 version 的价格）。前端目前只用这两个 |
+| deal_status | **报价家族**成交状态：`open`（进行中）\| `abandoned`（已废弃）\| `closed`（已结单）。挂在 `quotes` 根上，同一 `quote_no` 下所有 version 共用。**Issue ≠ 结单**；出单后仍算进行中，直到员工标 Abandoned / Closed |
 | gst_enabled | 默认 true |
 | colour_surcharge | 快照，通常 0 或 220 |
 | sale_amount / gst_amount / total_amount / deposit_amount | 快照 |
@@ -189,7 +191,16 @@ v1 可以只存一个 `address` 文本，对齐前端。`suburb` / `state` / `po
 | valid_until | quote_date + validity_days |
 | issued_at | 出单时间 |
 
-报价号：序列 `quote_number_seq` 从 **33021** 起，`LPAD(nextval::text, 8, '0')`。**发出去的号永不复用。**
+报价号：序列 `quote_number_seq` 从 **33021** 起，`LPAD(nextval::text, 8, '0')`。**发出去的号永不复用。** 客户改单不要新开号，对同一 `quote_no` 新增 `version`。
+
+推荐拆表：
+
+- `quotes`：一行一个报价号（`quote_no` unique），记下 `current_version` 和 **`deal_status`**
+- `quote_versions`：一行一个历史版本（`quote_id + version` unique），含 **version** status（draft/issued）、金额快照、`issued_at`
+- `quote_version_comments`：改单原因/备注，挂在 version 上（谁、何时、为什么改）
+- `quote_lines` / `room_photos` **挂在 version 上**，不要挂在 quote 根上
+
+不要把成交结果写进 version 的 `status`。`accepted` / `void` 不要和 `deal_status` 混用：已结单 = `deal_status = closed`；已废弃 = `deal_status = abandoned`。旧版 `issued` 永远只读（可改 Paid 记在该 version 上）。新 version 从上一版拷贝明细，status = `draft`，改完再 `issue`。**仅 `deal_status = open` 时允许改明细、Issue、Revise。** Abandoned / Closed 仍可改 Paid、看单、导出 PDF，也可 Reopen。
 
 ### 5.8 `quote_lines`
 
@@ -278,12 +289,16 @@ Body：`{ "name", "phone", "address" }`（suburb/state/postcode 可选）
 
 | 方法 | 路径 | 说明 |
 |------|------|------|
-| GET | `/quotes` | 员工列表（status、q、日期） |
-| POST | `/quotes` | 建 **draft**，同时占号 |
+| GET | `/quotes` | 员工列表（`dealStatus`、version `status`、q、日期）。Saved 页按 `dealStatus` 分三栏 |
+| POST | `/quotes` | 建 **draft**，同时占号。`deal_status` 默认 `open` |
 | GET | `/quotes/:id` | 打印页完整数据 |
-| PATCH | `/quotes/:id` | 只改 draft；issued 只允许改 `paid` |
-| POST | `/quotes/:id/issue` | 锁定快照，status → issued |
-| POST | `/quotes/:id/void` | issued → void |
+| PATCH | `/quotes/:id` | 只改 draft 且 `deal_status = open`；issued / 已结单只允许改 `paid` |
+| PATCH | `/quotes/:id/deal-status` | 改 **整号**成交状态。Body：`{ "dealStatus": "open" \| "abandoned" \| "closed" }`。所有 version 一起走 |
+| POST | `/quotes/:id/issue` | 锁定该 version 快照，status → issued。**仅 `deal_status = open`** |
+| POST | `/quotes/:id/revise` | **仅 issued 且 open**：拷贝为 version+1 的 draft，旧 version 保留。Body 可带 `{ "reason" }` |
+| GET | `/quotes/:id/versions` | 该报价号下全部历史版本（含 comments） |
+| POST | `/quotes/:id/versions/:version/comments` | 给某 version 加改单备注 |
+| POST | `/quotes/:id/void` | issued → void（作废这一 version，不删号） |
 | POST | `/quotes/:id/lines` | 加一行（产品或配件） |
 | PATCH | `/quotes/:id/lines/:lineId` | 数量 / 描述 / 单价 / 房间 / 备注（draft） |
 | DELETE | `/quotes/:id/lines/:lineId` | 仅 draft |
@@ -327,8 +342,10 @@ Body：`{ "name", "phone", "address" }`（suburb/state/postcode 可选）
   "id": "uuid",
   "quoteNo": "00033021",
   "quoteSuffix": "SS",
+  "version": 2,
   "quoteDate": "2026-08-23",
   "status": "draft",
+  "dealStatus": "open",
   "customer": { "name": "Sample Customer", "phone": "0400 000 000", "address": "1 Example St\nMiami QLD" },
   "shipSameAsBill": true,
   "shipTo": { "name": "", "phone": "", "address": "" },
@@ -425,16 +442,17 @@ Body：`{ "name", "phone", "address" }`（suburb/state/postcode 可选）
 - 常用配件（top track、lock post 等）可以写进同一行产品描述
 - Price on request 先填价格再加入
 - 出单后金额锁定
+- **客户改单：同一报价号升 Rev，旧版留在历史里**
+- **成交追踪：报价号级 `deal_status` = open / abandoned / closed（进行中 / 已废弃 / 已结单）。Saved 分三栏。Issue 不等于结单。**
 
 **还要一起定：**
 
 1. 同一洞口两个产品选项（Supascreen vs Intrudaguard）：一张单里分组，还是两个号（`33012-SS` / `33012-IG`）？现有 PDF 是两个号。
-2. 谁可以 void 已出单？
+2. 谁可以 void 已出单？（若仍要作废某一版 PDF，不要和 Abandoned 混用）
 3. 现场照片做不做 v1？
-4. `accepted` 状态要不要 v1 就做？
 
 ---
 
 ## 11. 和英文原稿的差异
 
-`docs/backend-api-and-schema.md` 写得比较早。本文已按当前前端补上：Ship To、quoteSuffix、paid/balance、公司 ABN/QBCC/银行/条款、颜色覆盖价、issued 快照、行内可改描述单价。实现时以本文为准。
+`docs/backend-api-and-schema.md` 写得比较早。本文已按当前前端补上：Ship To、quoteSuffix、paid/balance、公司 ABN/QBCC/银行/条款、颜色覆盖价、issued 快照、行内可改描述单价、报价版本、改单备注、报价号级成交状态（open/abandoned/closed）。实现时以本文为准。

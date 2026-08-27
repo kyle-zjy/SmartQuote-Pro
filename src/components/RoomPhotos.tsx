@@ -11,9 +11,9 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 export default function RoomPhotos({ room }: { room: string }) {
-  const { roomPhotos, addPhoto, removePhoto, setPhotoCaption, status } = useQuote()
+  const { roomPhotos, addPhoto, removePhoto, setPhotoCaption, status, dealStatus } = useQuote()
   const photos = roomPhotos[room] ?? []
-  const issued = status === 'issued'
+  const issued = status === 'issued' || dealStatus !== 'open'
   const [activeId, setActiveId] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 

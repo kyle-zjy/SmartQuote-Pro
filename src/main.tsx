@@ -9,9 +9,11 @@ import { QuoteProvider } from './lib/quoteContext'
 import { PricingProvider } from './lib/pricingContext'
 import './index.css'
 
+const basename = import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <BrowserRouter>
+    <BrowserRouter basename={basename}>
       <CompanySettingsProvider>
         <PricingProvider>
           <QuoteProvider>

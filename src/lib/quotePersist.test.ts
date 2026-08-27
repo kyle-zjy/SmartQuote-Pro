@@ -48,7 +48,9 @@ function sampleQuote(): QuoteState {
     customFrameColour: '',
     colourExtraOverride: null,
     paid: 0,
+    version: 1,
     status: 'draft',
+    dealStatus: 'open',
     issuedSnapshot: null,
   }
 }

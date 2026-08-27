@@ -1,7 +1,7 @@
 import { productWarrantyNotes } from '../data/company'
 import { useCompanySettings } from '../lib/companySettings'
 import { displayFrameColour } from '../lib/frameColour'
-import { displayQuoteNo } from '../lib/displayQuoteNo'
+import { displayQuoteNo, displayQuoteRevision } from '../lib/displayQuoteNo'
 import { useQuote } from '../lib/quoteContext'
 import { formatCurrency } from '../lib/formatCurrency'
 import { partyLines } from '../lib/partyLines'
@@ -29,6 +29,7 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
     quoteNo,
     quoteSuffix,
     quoteDate,
+    version,
     frameColour,
     customFrameColour,
     colourExtra,
@@ -39,10 +40,11 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
     paid,
     balance,
     status,
+    dealStatus,
     issuedSnapshot,
   } = useQuote()
 
-  const linesLocked = readOnly || status === 'issued'
+  const linesLocked = readOnly || status === 'issued' || dealStatus !== 'open'
 
   const billLines = partyLines(customer.name, customer.address, customer.phone)
   const shipParty = shipSameAsBill ? customer : shipTo
@@ -72,7 +74,10 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
         <h1>Quote</h1>
         <div className="quote-doc__meta">
           <p>Date: {formatQuoteDate(quoteDate)}</p>
-          <p className="quote-doc__no">Quote No: {displayQuoteNo(quoteNo, quoteSuffix)}</p>
+          <p className="quote-doc__no">
+            Quote No: {displayQuoteNo(quoteNo, quoteSuffix)}
+            {version > 1 ? ` · ${displayQuoteRevision(version)}` : ''}
+          </p>
           {status === 'issued' && <p>Status: Issued</p>}
         </div>
         <div className="quote-party">
