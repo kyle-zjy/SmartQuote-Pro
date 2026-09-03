@@ -146,6 +146,7 @@ export default function ItemWizard() {
       frameColourMode: draft.frameColourMode,
       customFrameColour: draft.customFrameColour,
       addons: draft.addons,
+      photos: draft.photos,
     }
 
     if (itemId) {

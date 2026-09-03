@@ -775,6 +775,14 @@ textarea {
   margin-bottom: 0.25rem;
 }
 
+.item-photos-section {
+  margin-top: 1.25rem;
+}
+
+.item-photos-section h3 {
+  margin: 0 0 0.25rem;
+}
+
 .room-photos {
   margin-top: 0.75rem;
 }
@@ -1673,6 +1681,37 @@ textarea {
 
 .sheet-color.is-selected {
   box-shadow: 0 0 0 2px var(--color-text);
+}
+
+.photo-markup-modal {
+  max-width: min(720px, 100%);
+}
+
+.photo-markup-canvas {
+  margin-top: 0.25rem;
+}
+
+.photo-markup-color-picker {
+  width: 1.6rem;
+  height: 1.6rem;
+  padding: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--color-border);
+  border-radius: 999px;
+  cursor: pointer;
+  background: none;
+}
+
+.photo-markup-size {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--color-muted);
+}
+
+.photo-markup-size input[type='range'] {
+  width: 90px;
 }
 
 .sheet-marker {

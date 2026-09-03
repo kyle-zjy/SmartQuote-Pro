@@ -1,6 +1,12 @@
 import { expect, test } from '@playwright/test'
 import { addOpening, openLocationAndConfig, resetApp, startNewQuote } from './helpers'
 
+// A minimal 1x1 transparent PNG, small enough to embed inline without a fixture file on disk.
+const ONE_PX_PNG = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=',
+  'base64',
+)
+
 test.describe('item wizard', () => {
   test.beforeEach(async ({ page }) => {
     await resetApp(page)
@@ -60,6 +66,55 @@ test.describe('item wizard', () => {
     await addOpening(page, opening)
     await expect(page.locator('.quote-item-card')).toHaveCount(1)
     await expect(page.getByLabel('Qty')).toHaveValue('2')
+  })
+
+  test('attaches and annotates a photo, then reloads it on edit', async ({ page }) => {
+    await openLocationAndConfig(page, { location: 'Living Room', configCode: 'HDX-L' })
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
+    await page.getByRole('button', { name: 'Continue' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Review & save' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Photos / Markup' })).toBeVisible()
+
+    const fileInput = page.locator('.item-photos-section input[type="file"]')
+    await fileInput.setInputFiles({ name: 'opening.png', mimeType: 'image/png', buffer: ONE_PX_PNG })
+
+    const thumbnails = page.locator('.item-photos-section .room-photo-thumb')
+    await expect(thumbnails).toHaveCount(1)
+
+    await thumbnails.first().click()
+    await page.getByRole('button', { name: 'Annotate' }).click()
+
+    const canvas = page.locator('.photo-markup-modal canvas')
+    const box = await canvas.boundingBox()
+    if (!box) throw new Error('markup canvas did not render')
+    await page.mouse.move(box.x + box.width * 0.2, box.y + box.height * 0.2)
+    await page.mouse.down()
+    await page.mouse.move(box.x + box.width * 0.8, box.y + box.height * 0.8, { steps: 5 })
+    await page.mouse.up()
+
+    await page.getByRole('button', { name: 'Save annotation' }).click()
+    await expect(page.getByRole('button', { name: 'Annotate' })).toBeVisible()
+    await page.getByRole('button', { name: 'Done' }).click()
+
+    await page.getByRole('button', { name: 'Save Item' }).click()
+    await expect(page.getByRole('heading', { name: /^Quote \d/ })).toBeVisible()
+
+    await page.getByRole('link', { name: 'Edit' }).click()
+    await expect(page.getByRole('heading', { name: 'Review & save' })).toBeVisible()
+    await expect(page.locator('.item-photos-section .room-photo-thumb')).toHaveCount(1)
+
+    await page.locator('.item-photos-section .room-photo-thumb').first().click()
+    await page.getByRole('button', { name: 'Annotate' }).click()
+    await expect(page.locator('.photo-markup-modal canvas')).toBeVisible()
+
+    // The stroke drawn and saved earlier reloads into the editor: Clear starts enabled (there is
+    // something to clear) while Undo starts disabled (no new action has been taken yet this session).
+    await expect(page.getByRole('button', { name: 'Clear' })).toBeEnabled()
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Clear' }).click()
+    await expect(page.getByRole('button', { name: 'Undo' })).toBeEnabled()
   })
 
   test('rejects sizes larger than the matrix', async ({ page }) => {

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import ItemPhotos from '../../components/ItemPhotos'
 import ProductQuoteNotes from '../../components/ProductQuoteNotes'
 import { calcConfiguredPrice, STANDARD_MESH } from '../../lib/configuredPrice'
 import { effectiveFrameColour } from '../../lib/frameColour'
@@ -111,6 +112,12 @@ export default function ReviewItemStep({
         Additional notes
         <textarea value={draft.note} onChange={(e) => onChange({ note: e.target.value })} rows={3} />
       </label>
+
+      <div className="item-photos-section">
+        <h3>Photos / Markup</h3>
+        <p className="muted small">Attach reference photos of this opening and mark them up if needed.</p>
+        <ItemPhotos photos={draft.photos} onChange={(photos) => onChange({ photos })} disabled={locked} />
+      </div>
 
       {unitPrice != null && (
         <div className="price-result">

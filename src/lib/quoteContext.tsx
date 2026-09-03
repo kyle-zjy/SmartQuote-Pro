@@ -26,10 +26,21 @@ import {
   type IssuedSnapshot,
   type QuoteStatus,
 } from './quoteLifecycle'
+import type { DrawStroke } from './sheetDraw'
 
 export interface QuoteAddon {
   name: string
   price: number
+}
+
+export interface ItemPhoto {
+  id: string
+  /** Original uploaded image (resized), never mutated by annotation. */
+  dataUrl: string
+  /** Annotation strokes drawn on top of dataUrl. */
+  strokes: DrawStroke[]
+  /** Flattened image+strokes composite; null until the photo has been annotated and saved. */
+  annotatedDataUrl: string | null
 }
 
 export interface QuoteLineItem {
@@ -52,6 +63,7 @@ export interface QuoteLineItem {
   frameColourMode?: 'default' | 'custom'
   customFrameColour?: string
   addons?: QuoteAddon[]
+  photos?: ItemPhoto[]
 }
 
 export interface RoomPhoto {

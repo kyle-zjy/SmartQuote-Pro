@@ -1,5 +1,5 @@
 import { STANDARD_MESH } from '../../lib/configuredPrice'
-import type { QuoteAddon, QuoteLineItem } from '../../lib/quoteContext'
+import type { ItemPhoto, QuoteAddon, QuoteLineItem } from '../../lib/quoteContext'
 import { configFamily } from '../../lib/quoteSheet'
 import type { Product } from '../../types/pricing'
 
@@ -24,6 +24,7 @@ export interface ItemDraft {
   addons: QuoteAddon[]
   note: string
   quantity: number
+  photos: ItemPhoto[]
 }
 
 export function emptyItemDraft(): ItemDraft {
@@ -43,6 +44,7 @@ export function emptyItemDraft(): ItemDraft {
     addons: [],
     note: '',
     quantity: 1,
+    photos: [],
   }
 }
 
@@ -64,12 +66,16 @@ export function draftFromItem(item: QuoteLineItem): ItemDraft {
     addons: item.addons ?? [],
     note: item.note ?? '',
     quantity: item.quantity,
+    photos: item.photos ?? [],
   }
 }
 
-/** Reuse must always force a fresh location confirmation, so it never silently reuses the original. */
+/**
+ * Reuse must always force a fresh location confirmation, so it never silently reuses the original.
+ * Reference photos are tied to the original opening, so they don't carry over either.
+ */
 export function draftForReuse(item: QuoteLineItem): ItemDraft {
-  return { ...draftFromItem(item), location: '' }
+  return { ...draftFromItem(item), location: '', photos: [] }
 }
 
 interface ComparableItem {
@@ -83,6 +89,7 @@ interface ComparableItem {
   customFrameColour?: string
   note?: string
   addons?: QuoteAddon[]
+  photos?: ItemPhoto[]
   unitPrice: number
 }
 
@@ -98,6 +105,9 @@ function itemSignature(item: ComparableItem): string {
     customFrameColour: item.customFrameColour ?? '',
     note: item.note ?? '',
     addons: [...(item.addons ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
+    // Different photos mean a genuinely different opening context, even if every other field matches
+    // -- never silently merge quantity and drop one item's photos in the process.
+    photos: item.photos ?? [],
     unitPrice: item.unitPrice,
   })
 }

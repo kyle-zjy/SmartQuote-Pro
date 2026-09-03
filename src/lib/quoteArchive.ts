@@ -68,7 +68,15 @@ function writeArchive(storage: Storage, records: ArchivedQuote[]): void {
 }
 
 function withoutPhotos(quote: QuoteState): QuoteState {
-  return { ...quote, roomPhotos: {} }
+  return {
+    ...quote,
+    roomPhotos: {},
+    items: quote.items.map((item) =>
+      item.photos
+        ? { ...item, photos: item.photos.map((photo) => ({ ...photo, dataUrl: '', annotatedDataUrl: null })) }
+        : item,
+    ),
+  }
 }
 
 export function listArchivedQuotes(storage: Storage = localStorage): ArchivedQuote[] {
