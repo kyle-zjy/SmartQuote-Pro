@@ -1,0 +1,5 @@
+documents
+*.xlsx
+*.lnk
+.git
+dist

@@ -5,7 +5,8 @@
     <title>SmartQuote Pro</title>
     <script>
       sessionStorage.setItem('gh-pages-redirect', location.pathname + location.search + location.hash)
-      location.replace('/SmartQuote-Pro/')
+      var segments = location.pathname.split('/').filter(Boolean)
+      location.replace(segments.length ? '/' + segments[0] + '/' : '/')
     </script>
   </head>
   <body></body>

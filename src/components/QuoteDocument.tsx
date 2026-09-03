@@ -120,7 +120,7 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
             <tr>
               <td />
               <td>
-                Supply &amp; Installation
+                Supply &amp; Install
                 <br />
                 Frame Colour: {displayFrameColour(frameColour, customFrameColour)}
               </td>

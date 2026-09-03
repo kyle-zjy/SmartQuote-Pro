@@ -11,3 +11,8 @@ documents/*.xlsx
 .env
 *.lnk
 .vercel
+
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/

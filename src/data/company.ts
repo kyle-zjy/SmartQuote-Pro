@@ -47,20 +47,44 @@ export const COMPANY: CompanySettings = {
     'Goldco Security Group is QBCC licensed as per the requirements of the QLD Government, a licensed Amplimesh dealer and a member of the National Security Screen Association (NSSA).',
 }
 
+export const PRODUCT_WARRANTY_NOTES: Record<string, string> = {
+  supascreen:
+    'Additionally, Amplimesh® SupaScreen® products are backed by 16-year warranty and all doors are fitted with a triple lock system as per the Australian Standard',
+  intrudaguard:
+    'All Amplimesh® Intrudaguard® products are backed by 10-year warranty and all doors are fitted with a triple lock system as per the Australian Standard',
+  '7mm-diamond': 'All Goldco® Security Group 7mm Diamond Grille products are backed by 7-year warranty',
+  flyscreens: 'All Goldco® Security Group Flyscreen products are backed by 1-year warranty',
+}
+
+const WARRANTY_NOTE_ORDER = ['supascreen', 'intrudaguard', '7mm-diamond', 'flyscreens'] as const
+
+const PRODUCT_TONES: Record<string, string> = {
+  supascreen: 'supascreen',
+  intrudaguard: 'intrudaguard',
+  '7mm-diamond': 'diamond',
+  flyscreens: 'flyscreens',
+}
+
+const PRODUCT_WARRANTY_LABELS: Record<string, string> = {
+  supascreen: '16-year warranty',
+  intrudaguard: '10-year warranty',
+  '7mm-diamond': '7-year warranty',
+  flyscreens: '1-year warranty',
+}
+
+export function productTone(productKey: string): string {
+  return PRODUCT_TONES[productKey] ?? 'default'
+}
+
+export function productWarrantyLabel(productKey: string): string | undefined {
+  return PRODUCT_WARRANTY_LABELS[productKey]
+}
+
+export function productWarrantyNote(productKey: string): string | undefined {
+  return PRODUCT_WARRANTY_NOTES[productKey]
+}
+
 export function productWarrantyNotes(productKeys: string[]): string[] {
-  const notes: string[] = []
-  if (productKeys.includes('7mm-diamond')) {
-    notes.push('All Goldco® Security Group 7mm Diamond Grille products are backed by 7-year warranty')
-  }
-  if (productKeys.includes('supascreen') || productKeys.includes('intrudaguard')) {
-    notes.push(
-      'Additionally, Amplimesh® SupaScreen® products are backed by 16-year warranty and all doors are fitted with a triple lock system as per the Australian Standard',
-    )
-  }
-  if (notes.length === 0 && productKeys.length > 0) {
-    notes.push(
-      'Additionally, Amplimesh® SupaScreen® products are backed by 16-year warranty and all doors are fitted with a triple lock system as per the Australian Standard',
-    )
-  }
-  return notes
+  const present = new Set(productKeys.filter(Boolean))
+  return WARRANTY_NOTE_ORDER.filter((key) => present.has(key)).map((key) => PRODUCT_WARRANTY_NOTES[key])
 }

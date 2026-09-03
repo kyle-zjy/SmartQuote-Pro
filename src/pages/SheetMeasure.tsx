@@ -201,6 +201,7 @@ export default function SheetMeasure() {
                 <label key={key}>
                   {key}
                   <input
+                    aria-label={key}
                     type="number"
                     min={0}
                     value={draft.values[key] ?? ''}
@@ -221,6 +222,7 @@ export default function SheetMeasure() {
                 <label key={key}>
                   {key}
                   <input
+                    aria-label={key}
                     type="number"
                     min={0}
                     value={draft.values[key] ?? ''}

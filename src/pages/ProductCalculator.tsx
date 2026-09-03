@@ -4,9 +4,11 @@ import { calcConfiguredPrice, DOUBLE_HUNG_SURCHARGE, STANDARD_MESH } from '../li
 import { formatQuoteDescription } from '../lib/lineDescription'
 import { formatCurrency } from '../lib/formatCurrency'
 import { LINE_FIT_EXTRAS, fitExtraPhrase } from '../lib/lineExtras'
+import { productTone } from '../data/company'
 import { useQuote } from '../lib/quoteContext'
 import { usePricing } from '../lib/pricingContext'
 import PriceResultCard from '../components/PriceResultCard'
+import ProductQuoteNotes from '../components/ProductQuoteNotes'
 import { ROOM_TYPES } from '../lib/roomTypes'
 
 const OTHER_ROOM = 'Other'
@@ -97,12 +99,14 @@ export default function ProductCalculator() {
     setAdded(true)
   }
 
+  const tone = productTone(product.key)
+
   return (
     <div>
       <p>
         <Link to="/">&larr; Back to products</Link>
       </p>
-      <h1>{product.name}</h1>
+      <h1 className={`product-page-title product-tone product-tone--${tone}`}>{product.name}</h1>
       {issued && (
         <p className="price-result--error">
           {dealStatus !== 'open'
@@ -216,6 +220,7 @@ export default function ProductCalculator() {
           <label className="field-row__single">
             Room
             <select
+              aria-label="Room"
               value={room}
               onChange={(e) => {
                 setRoom(e.target.value)
@@ -265,6 +270,8 @@ export default function ProductCalculator() {
           )}
         </div>
       )}
+
+      <ProductQuoteNotes productKey={product.key} />
     </div>
   )
 }

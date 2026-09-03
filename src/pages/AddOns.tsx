@@ -42,6 +42,7 @@ export default function AddOns() {
         <label className="field-row__single">
           Room
           <select
+            aria-label="Room"
             value={room}
             onChange={(e) => {
               setRoom(e.target.value)
