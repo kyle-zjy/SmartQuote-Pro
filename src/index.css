@@ -562,6 +562,31 @@ textarea {
   color: var(--deal-open);
 }
 
+.status-badge {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  vertical-align: middle;
+}
+
+.status-badge--draft {
+  background: var(--color-bg);
+  color: var(--color-muted);
+}
+
+.status-badge--office-review {
+  background: var(--deal-abandoned-bg);
+  color: var(--deal-abandoned);
+}
+
+.status-badge--issued {
+  background: var(--deal-closed-bg);
+  color: var(--deal-closed);
+}
+
 .deal-action--abandoned {
   color: var(--deal-abandoned);
 }
@@ -1719,5 +1744,149 @@ textarea {
   .quote-table th:last-child,
   .quote-table td:last-child {
     display: none;
+  }
+}
+
+.quote-item-card {
+  display: flex;
+  gap: 0.75rem;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  background: var(--color-surface);
+  padding: 0.65rem 0.85rem;
+}
+
+.quote-item-card__thumb {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.quote-item-card__body {
+  flex: 1;
+  min-width: 0;
+}
+
+.quote-item-card__title {
+  margin: 0;
+  font-weight: 600;
+}
+
+.quote-item-card__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+}
+
+.quote-item-card__qty {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+}
+
+.quote-item-card__qty input {
+  width: 4rem;
+}
+
+.quote-item-card__price {
+  font-weight: 600;
+}
+
+.quote-item-card__actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.4rem;
+  font-size: 0.85rem;
+}
+
+.quote-workspace {
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.quote-workspace__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+}
+
+.quote-workspace__header h1 {
+  margin: 0;
+  font-size: 1.3rem;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.quote-workspace__header p {
+  margin: 0.2rem 0 0;
+}
+
+.quote-workspace__grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+  gap: 1.25rem;
+  align-items: start;
+}
+
+.quote-workspace__right {
+  position: sticky;
+  top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.quote-workspace__items {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.quote-workspace__add {
+  text-align: center;
+}
+
+.quote-workspace__totals {
+  border-top: 1px solid var(--color-border);
+  padding-top: 0.5rem;
+}
+
+.quote-workspace__totals p {
+  margin: 0.15rem 0;
+}
+
+.quote-workspace__total-line {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.quote-workspace__payment {
+  margin-top: 0.5rem;
+}
+
+.quote-workspace__payment label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 0.4rem;
+  max-width: 12rem;
+}
+
+@media (max-width: 900px) {
+  .quote-workspace__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quote-workspace__right {
+    position: static;
   }
 }

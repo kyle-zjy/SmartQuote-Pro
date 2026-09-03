@@ -9,3 +9,15 @@ export function displayFrameColour(frameColour: string, customFrameColour: strin
   if (isOtherFrameColour(frameColour) && custom) return custom
   return frameColour
 }
+
+/** Resolves the colour actually used for a quote item: its own override, or the quote's default. */
+export function effectiveFrameColour(
+  item: { frameColourMode?: 'default' | 'custom'; customFrameColour?: string },
+  quoteDefaultColour: string,
+  quoteCustomColour: string,
+): string {
+  if (item.frameColourMode === 'custom' && item.customFrameColour?.trim()) {
+    return item.customFrameColour.trim()
+  }
+  return displayFrameColour(quoteDefaultColour, quoteCustomColour)
+}

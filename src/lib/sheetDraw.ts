@@ -3,6 +3,9 @@ export interface DrawPoint {
   y: number
 }
 
+/** Same shape as DrawPoint — a marker's position on a diagram, as a % of the image's width/height. */
+export type MarkerPosition = DrawPoint
+
 export interface DrawStroke {
   color: string
   size: number

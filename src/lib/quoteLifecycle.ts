@@ -1,7 +1,7 @@
 import type { QuoteAction, QuoteState } from './quoteContext'
 import { calcQuoteTotals, money } from './quoteTotals'
 
-export type QuoteStatus = 'draft' | 'issued'
+export type QuoteStatus = 'draft' | 'office-review' | 'issued'
 export type DealStatus = 'open' | 'abandoned' | 'closed'
 
 export const DEAL_STATUSES: DealStatus[] = ['open', 'abandoned', 'closed']
@@ -49,8 +49,16 @@ const ALLOWED_WHEN_DEAL_SETTLED: ReadonlySet<QuoteAction['type']> = new Set([
   'SET_DEAL_STATUS',
 ])
 
-export function canIssueQuote(state: Pick<QuoteState, 'status' | 'items' | 'dealStatus'>): boolean {
+export function canSubmitForReview(state: Pick<QuoteState, 'status' | 'items' | 'dealStatus'>): boolean {
   return state.status === 'draft' && state.items.length > 0 && (state.dealStatus ?? 'open') === 'open'
+}
+
+export function canIssueQuote(state: Pick<QuoteState, 'status' | 'items' | 'dealStatus'>): boolean {
+  return (
+    (state.status === 'draft' || state.status === 'office-review') &&
+    state.items.length > 0 &&
+    (state.dealStatus ?? 'open') === 'open'
+  )
 }
 
 export function canReviseQuote(state: Pick<QuoteState, 'status' | 'dealStatus'>): boolean {

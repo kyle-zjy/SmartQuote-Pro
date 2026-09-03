@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { MouseEvent, PointerEvent as ReactPointerEvent } from 'react'
-import { appendDrawPoint, type DrawStroke } from '../lib/sheetDraw'
-import type { MarkerPosition } from '../lib/sheetMeasureStore'
+import { appendDrawPoint, type DrawStroke, type MarkerPosition } from '../lib/sheetDraw'
 
 export type DiagramTool = 'mark' | 'brush' | 'eraser'
 

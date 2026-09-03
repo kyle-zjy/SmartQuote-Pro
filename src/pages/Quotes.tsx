@@ -1,11 +1,12 @@
 import { useCallback, useState } from 'react'
-import { NavLink, Navigate, useNavigate, useParams } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
+import QuoteStatusBadge from '../components/QuoteStatusBadge'
 import RevisionSnapshot from '../components/RevisionSnapshot'
 import { displayQuoteNo, displayQuoteRevision } from '../lib/displayQuoteNo'
 import { formatCurrency } from '../lib/formatCurrency'
 import { partitionArchivedQuoteGroups, type ArchivedQuoteGroup } from '../lib/quoteArchive'
 import { useQuote } from '../lib/quoteContext'
-import type { DealStatus } from '../lib/quoteLifecycle'
+import type { DealStatus, QuoteStatus } from '../lib/quoteLifecycle'
 import {
   countSnapshotPhotos,
   formatSnapshotDate,
@@ -18,16 +19,25 @@ const SECTIONS: Array<{ status: DealStatus; slug: string; title: string; hint: s
   { status: 'closed', slug: 'closed', title: 'Closed', hint: 'Deal won — the job is proceeding.' },
 ]
 
-type SavedFilter = 'all' | DealStatus
+type DealFilter = 'all' | DealStatus
+type QuoteStatusFilter = 'all' | QuoteStatus
 
-function parseSavedFilter(value: string | undefined): SavedFilter | null {
-  if (!value || value === 'all') return 'all'
-  return SECTIONS.find((section) => section.slug === value || section.status === value)?.status ?? null
+const QUOTE_STATUS_FILTERS: Array<{ value: QuoteStatusFilter; label: string }> = [
+  { value: 'all', label: 'All' },
+  { value: 'draft', label: 'Draft' },
+  { value: 'office-review', label: 'Office Review' },
+  { value: 'issued', label: 'Issued' },
+]
+
+function filterGroupsByQuoteStatus(groups: ArchivedQuoteGroup[], filter: QuoteStatusFilter): ArchivedQuoteGroup[] {
+  if (filter === 'all') return groups
+  return groups.filter((group) => group.versions[0]?.quote.status === filter)
 }
 
-export default function SavedQuotes() {
+export default function Quotes() {
   const navigate = useNavigate()
-  const filter = parseSavedFilter(useParams().status)
+  const [dealFilter, setDealFilter] = useState<DealFilter>('all')
+  const [quoteStatusFilter, setQuoteStatusFilter] = useState<QuoteStatusFilter>('all')
   const {
     items,
     customer,
@@ -44,14 +54,14 @@ export default function SavedQuotes() {
   const [drafts, setDrafts] = useState<Record<string, string>>({})
   const [snapshot, setSnapshot] = useState<{ quoteNo: string; version: number } | null>(null)
   const closeSnapshot = useCallback(() => setSnapshot(null), [])
-  if (filter === null) return <Navigate to="/saved" replace />
   const snapshotRecord = snapshot
     ? savedQuotes.find((record) => record.quoteNo === snapshot.quoteNo && record.version === snapshot.version)
     : undefined
   const snapshotSiblings = snapshotRecord
     ? savedQuotes.filter((record) => record.quoteNo === snapshotRecord.quoteNo)
     : []
-  const visibleSections = filter === 'all' ? SECTIONS : SECTIONS.filter((section) => section.status === filter)
+  const visibleSections = dealFilter === 'all' ? SECTIONS : SECTIONS.filter((section) => section.status === dealFilter)
+  const totalCount = Object.values(boards).reduce((sum, groups) => sum + groups.length, 0)
 
   function commentKey(savedQuoteNo: string, savedVersion: number) {
     return `${savedQuoteNo}:${savedVersion}`
@@ -66,7 +76,7 @@ export default function SavedQuotes() {
       if (!ok) return
     }
     if (!loadSavedQuote(savedQuoteNo, savedVersion)) return
-    navigate('/quote')
+    navigate(`/quotes/${savedQuoteNo}`)
   }
 
   function handleDelete(savedQuoteNo: string, savedVersion: number, label: string) {
@@ -92,59 +102,79 @@ export default function SavedQuotes() {
 
   return (
     <div>
-      <h1>Saved quotes</h1>
+      <h1>Quotes</h1>
       <p className="muted">
-        Track whether each quote is still in progress, abandoned, or closed. Comments under a revision record why the
-        customer asked for a change. Use Snapshot to review a revision — including photos — without opening it.
+        Track whether each quote is still in progress, abandoned, or closed, and whether it is a draft, submitted
+        for office review, or issued. Comments under a revision record why the customer asked for a change. Use
+        Snapshot to review a revision — including photos — without opening it.
       </p>
 
-      <nav className="saved-subnav" aria-label="Filter saved quotes">
-        <NavLink to="/saved" end className="saved-subnav__item saved-subnav__item--all">
+      <nav className="saved-subnav" aria-label="Filter by deal status">
+        <button
+          type="button"
+          className={`saved-subnav__item saved-subnav__item--all${dealFilter === 'all' ? ' active' : ''}`}
+          onClick={() => setDealFilter('all')}
+        >
           All
-          <span className="saved-subnav__count">
-            {Object.values(boards).reduce((sum, groups) => sum + groups.length, 0)}
-          </span>
-        </NavLink>
+          <span className="saved-subnav__count">{totalCount}</span>
+        </button>
         {SECTIONS.map((section) => (
-          <NavLink
+          <button
             key={section.status}
-            to={`/saved/${section.slug}`}
-            className={`saved-subnav__item saved-subnav__item--${section.status}`}
+            type="button"
+            className={`saved-subnav__item saved-subnav__item--${section.status}${dealFilter === section.status ? ' active' : ''}`}
+            onClick={() => setDealFilter(section.status)}
           >
             <span className={`deal-dot deal-dot--${section.status}`} aria-hidden="true" />
             {section.title}
             <span className="saved-subnav__count">{boards[section.status].length}</span>
-          </NavLink>
+          </button>
+        ))}
+      </nav>
+
+      <nav className="saved-subnav" aria-label="Filter by quote status">
+        {QUOTE_STATUS_FILTERS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            className={`saved-subnav__item${quoteStatusFilter === option.value ? ' active' : ''}`}
+            onClick={() => setQuoteStatusFilter(option.value)}
+          >
+            {option.label}
+          </button>
         ))}
       </nav>
 
       {savedQuotes.length === 0 ? (
         <p className="muted">No saved quotes yet. Open a quote and choose Save quote or Issue quote.</p>
       ) : (
-        visibleSections.map((section) => (
-          <section key={section.status} className={`saved-board saved-board--${section.status}`}>
-            <h2 className={`saved-board__title saved-board__title--${section.status}`}>{section.title}</h2>
-            <p className="muted small">{section.hint}</p>
-            {boards[section.status].length === 0 ? (
-              <p className="muted small">None.</p>
-            ) : (
-              <QuoteGroupTable
-                groups={boards[section.status]}
-                dealStatus={section.status}
-                quoteNo={quoteNo}
-                version={version}
-                drafts={drafts}
-                setDrafts={setDrafts}
-                commentKey={commentKey}
-                onOpen={handleOpen}
-                onSnapshot={(savedQuoteNo, savedVersion) => setSnapshot({ quoteNo: savedQuoteNo, version: savedVersion })}
-                onDelete={handleDelete}
-                onAddComment={handleAddComment}
-                onDealStatus={handleDealStatus}
-              />
-            )}
-          </section>
-        ))
+        visibleSections.map((section) => {
+          const groups = filterGroupsByQuoteStatus(boards[section.status], quoteStatusFilter)
+          return (
+            <section key={section.status} className={`saved-board saved-board--${section.status}`}>
+              <h2 className={`saved-board__title saved-board__title--${section.status}`}>{section.title}</h2>
+              <p className="muted small">{section.hint}</p>
+              {groups.length === 0 ? (
+                <p className="muted small">None.</p>
+              ) : (
+                <QuoteGroupTable
+                  groups={groups}
+                  dealStatus={section.status}
+                  quoteNo={quoteNo}
+                  version={version}
+                  drafts={drafts}
+                  setDrafts={setDrafts}
+                  commentKey={commentKey}
+                  onOpen={handleOpen}
+                  onSnapshot={(savedQuoteNo, savedVersion) => setSnapshot({ quoteNo: savedQuoteNo, version: savedVersion })}
+                  onDelete={handleDelete}
+                  onAddComment={handleAddComment}
+                  onDealStatus={handleDealStatus}
+                />
+              )}
+            </section>
+          )
+        })
       )}
 
       {snapshotRecord ? (
@@ -199,10 +229,14 @@ function QuoteGroupTable({
           <article key={group.quoteNo} className={`saved-quote-card deal-row--${dealStatus}`}>
             <header className="saved-quote-card__head">
               <div>
-                <h3>{heading}</h3>
+                <h3>
+                  {heading} <QuoteStatusBadge status={latest.quote.status} />
+                </h3>
                 <p className="muted small">
                   {latest.quote.customer.name || 'No customer'}
                   {group.versions.length > 1 ? ` · ${group.versions.length} revisions` : ''}
+                  {' · Last updated '}
+                  {formatSnapshotDateTime(latest.savedAt)}
                 </p>
               </div>
               <div className="saved-quote-card__meta">

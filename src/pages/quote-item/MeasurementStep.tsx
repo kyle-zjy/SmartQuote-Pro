@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link, Navigate, useParams } from 'react-router-dom'
-import SheetDiagram, { type DiagramTool } from '../components/SheetDiagram'
+import { useMemo, useState } from 'react'
+import SheetDiagram, { type DiagramTool } from '../../components/SheetDiagram'
+import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
 import {
   calcSheetSize,
   configLabel,
@@ -9,75 +9,72 @@ import {
   measureKeys,
   measurePoints,
   openingFromMeasures,
-  suggestedScreenType,
-} from '../lib/quoteSheet'
-import { sheetCodeImage } from '../lib/sheetCodeImages'
-import { loadMeasureDraft, saveMeasureDraft } from '../lib/sheetMeasureStore'
+} from '../../lib/quoteSheet'
+import { sheetCodeImage } from '../../lib/sheetCodeImages'
 
-export default function SheetMeasure() {
-  const code = decodeURIComponent(useParams().code ?? '')
+export default function MeasurementStep({
+  code,
+  values,
+  markers,
+  strokes,
+  onValuesChange,
+  onMarkersChange,
+  onStrokesChange,
+  onNext,
+  onBack,
+}: {
+  code: string
+  values: Record<string, string>
+  markers: Record<string, MarkerPosition>
+  strokes: DrawStroke[]
+  onValuesChange: (values: Record<string, string>) => void
+  onMarkersChange: (markers: Record<string, MarkerPosition>) => void
+  onStrokesChange: (strokes: DrawStroke[]) => void
+  onNext: (size: { widthMm: number; heightMm: number } | null) => void
+  onBack: () => void
+}) {
   const config = findSheetConfig(code)
-  const image = sheetCodeImage(code)
+  const image = config ? sheetCodeImage(code) : undefined
   const points = config ? measurePoints(config) : { heights: [] as string[], widths: [] as string[] }
   const keys = config ? measureKeys(config) : []
 
-  const [draft, setDraft] = useState(() => loadMeasureDraft(code, suggestedScreenType(code)))
   const [selected, setSelected] = useState<string | null>(keys[0] ?? null)
   const [tool, setTool] = useState<DiagramTool>('brush')
   const [brushColor, setBrushColor] = useState('#b91c1c')
   const [brushSize, setBrushSize] = useState(1.6)
-  const [saved, setSaved] = useState(false)
-  const skipSave = useRef(true)
 
-  useEffect(() => {
-    skipSave.current = true
-    const next = findSheetConfig(code)
-    setDraft(loadMeasureDraft(code, suggestedScreenType(code)))
-    setSelected(next ? (measureKeys(next)[0] ?? null) : null)
-    setTool('brush')
-    setSaved(false)
-  }, [code])
-
-  useEffect(() => {
-    if (!config) return
-    if (skipSave.current) {
-      skipSave.current = false
-      return
-    }
-    const timer = window.setTimeout(() => saveMeasureDraft(code, draft), 300)
-    return () => window.clearTimeout(timer)
-  }, [code, config, draft])
-
-  const opening = useMemo(() => openingFromMeasures(draft.values), [draft.values])
+  const opening = useMemo(() => openingFromMeasures(values), [values])
   const size = config && opening ? calcSheetSize(config, opening.height, opening.width) : null
-  const missingMarks = keys.filter((key) => !draft.markers[key])
-  const missingValues = keys.filter((key) => !(Number(draft.values[key]) > 0))
+  const missingMarks = keys.filter((key) => !markers[key])
+  const missingValues = keys.filter((key) => !(Number(values[key]) > 0))
 
   if (!config || !image) {
-    return <Navigate to="/sheet" replace />
+    return (
+      <div>
+        <p className="price-result--error">Choose a configuration first.</p>
+        <button type="button" className="link-button" onClick={onBack}>
+          &larr; Back
+        </button>
+      </div>
+    )
   }
 
   function setValue(key: string, value: string) {
-    setDraft((current) => ({ ...current, values: { ...current.values, [key]: value } }))
-    setSaved(false)
+    onValuesChange({ ...values, [key]: value })
   }
 
-  function handleSave() {
-    saveMeasureDraft(code, draft)
-    setSaved(true)
+  function handleContinue() {
+    onNext(size ? { widthMm: Math.round(size.screenWidth), heightMm: Math.round(size.screenHeight) } : null)
   }
 
   return (
-    <div className="sheet-measure">
-      <p>
-        <Link to="/sheet">&larr; Back to configurations</Link>
-      </p>
-      <h1>{config.code}</h1>
+    <div>
+      <h2>Measure the opening</h2>
       <p className="muted">
-        {configLabel(config.code)} · {config.panels} panel{config.panels === 1 ? '' : 's'}
+        {config.code} · {configLabel(config.code)} · {config.panels} panel{config.panels === 1 ? '' : 's'}
       </p>
       <p className="muted small">
-        Brush is selected first so you can draw on the picture. Click H1 / W1 to drop measure marks. Eraser only
+        Brush is selected first so you can draw on the picture. Click a measure point to drop its mark. Eraser only
         removes drawing, not the marks.
       </p>
 
@@ -88,14 +85,14 @@ export default function SheetMeasure() {
               <button
                 key={key}
                 type="button"
-                className={`tab${tool === 'mark' && selected === key ? ' tab--active' : ''}${draft.markers[key] ? ' tab--marked' : ''}`}
+                className={`tab${tool === 'mark' && selected === key ? ' tab--active' : ''}${markers[key] ? ' tab--marked' : ''}`}
                 onClick={() => {
                   setTool('mark')
                   setSelected(key)
                 }}
               >
                 {key}
-                {draft.values[key] ? ` ${draft.values[key]}` : ''}
+                {values[key] ? ` ${values[key]}` : ''}
               </button>
             ))}
           </div>
@@ -105,7 +102,6 @@ export default function SheetMeasure() {
               className={`tab sheet-tool-tab${tool === 'brush' ? ' tab--active' : ''}`}
               onClick={() => setTool('brush')}
             >
-              <BrushIcon />
               Brush
             </button>
             <button
@@ -113,7 +109,6 @@ export default function SheetMeasure() {
               className={`tab sheet-tool-tab${tool === 'eraser' ? ' tab--active' : ''}`}
               onClick={() => setTool('eraser')}
             >
-              <EraserIcon />
               Eraser
             </button>
             {(['#b91c1c', '#1d4ed8', '#111827'] as const).map((color) => (
@@ -146,8 +141,8 @@ export default function SheetMeasure() {
             <button
               type="button"
               className="link-button"
-              onClick={() => setDraft((current) => ({ ...current, strokes: current.strokes.slice(0, -1) }))}
-              disabled={draft.strokes.length === 0}
+              onClick={() => onStrokesChange(strokes.slice(0, -1))}
+              disabled={strokes.length === 0}
             >
               Undo
             </button>
@@ -155,11 +150,11 @@ export default function SheetMeasure() {
               type="button"
               className="link-button"
               onClick={() => {
-                if (draft.strokes.length === 0) return
+                if (strokes.length === 0) return
                 if (!window.confirm('Clear the drawing on this picture? Measure marks are kept.')) return
-                setDraft((current) => ({ ...current, strokes: [] }))
+                onStrokesChange([])
               }}
-              disabled={draft.strokes.length === 0}
+              disabled={strokes.length === 0}
             >
               Clear drawing
             </button>
@@ -168,32 +163,20 @@ export default function SheetMeasure() {
             src={image}
             alt={configLabel(config.code)}
             points={keys}
-            markers={draft.markers}
-            values={draft.values}
+            markers={markers}
+            values={values}
             selected={selected}
             tool={tool}
             color={brushColor}
             size={brushSize}
-            strokes={draft.strokes}
+            strokes={strokes}
             onSelect={setSelected}
-            onPlace={(key, position) => {
-              setDraft((current) => ({ ...current, markers: { ...current.markers, [key]: position } }))
-              setSaved(false)
-            }}
-            onStrokesChange={(strokes) => {
-              setDraft((current) => ({ ...current, strokes }))
-              setSaved(false)
-            }}
+            onPlace={(key, position) => onMarkersChange({ ...markers, [key]: position })}
+            onStrokesChange={onStrokesChange}
           />
         </section>
 
-        <form
-          className="calculator"
-          onSubmit={(event) => {
-            event.preventDefault()
-            handleSave()
-          }}
-        >
+        <div className="calculator">
           <p className="small">Measurements (mm)</p>
           {points.heights.length > 0 && (
             <div className="field-row sheet-measure-fields">
@@ -204,7 +187,7 @@ export default function SheetMeasure() {
                     aria-label={key}
                     type="number"
                     min={0}
-                    value={draft.values[key] ?? ''}
+                    value={values[key] ?? ''}
                     onFocus={() => {
                       setTool('mark')
                       setSelected(key)
@@ -225,7 +208,7 @@ export default function SheetMeasure() {
                     aria-label={key}
                     type="number"
                     min={0}
-                    value={draft.values[key] ?? ''}
+                    value={values[key] ?? ''}
                     onFocus={() => {
                       setTool('mark')
                       setSelected(key)
@@ -260,34 +243,16 @@ export default function SheetMeasure() {
             <p className="muted small">Still to type: {missingValues.join(', ')}.</p>
           )}
 
-          <button type="submit" className="primary-button">
-            Save measurements
-          </button>
-          {saved && <p className="muted small">Saved on this browser. You can come back to this drawing later.</p>}
-        </form>
+          <div className="wizard-actions">
+            <button type="button" className="link-button" onClick={onBack}>
+              &larr; Back
+            </button>
+            <button type="button" className="primary-button" onClick={handleContinue}>
+              Continue
+            </button>
+          </div>
+        </div>
       </div>
     </div>
-  )
-}
-
-function BrushIcon() {
-  return (
-    <svg className="sheet-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zm17.71-10.21a1 1 0 0 0 0-1.41l-2.34-2.34a1 1 0 0 0-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"
-      />
-    </svg>
-  )
-}
-
-function EraserIcon() {
-  return (
-    <svg className="sheet-tool-icon" viewBox="0 0 24 24" aria-hidden="true">
-      <path
-        fill="currentColor"
-        d="M16.24 3.56 21 8.32a2 2 0 0 1 0 2.83l-7.9 7.9H21v2H8.83l-4.4-4.4a2 2 0 0 1 0-2.82l9.98-9.98a2 2 0 0 1 2.83 0zm-1.41 1.41L5.07 14.73 8.34 18h4.24l7.07-7.07-4.82-4.96z"
-      />
-    </svg>
   )
 }
