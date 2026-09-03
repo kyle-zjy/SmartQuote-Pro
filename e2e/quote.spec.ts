@@ -96,3 +96,42 @@ test.describe('quote totals', () => {
     expect(parseAud(totalText)).toBeGreaterThanOrEqual(parseAud(subtotalText))
   })
 })
+
+test.describe('room grouping', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetApp(page)
+    await startNewQuote(page)
+  })
+
+  test('groups items into one container per room', async ({ page }) => {
+    await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
+    await addOpening(page, { location: 'Living Room', configCode: 'WS', product: 'Fly Screens' })
+    await addOpening(page, { location: 'Kitchen', configCode: 'WS', product: 'Fly Screens' })
+
+    const rooms = page.locator('.quote-room-group')
+    await expect(rooms).toHaveCount(2)
+
+    await expect(rooms.nth(0).locator('.quote-room-group__title')).toHaveText('Living Room')
+    await expect(rooms.nth(0).getByText('2 items')).toBeVisible()
+    await expect(rooms.nth(0).locator('.quote-item-card')).toHaveCount(2)
+
+    await expect(rooms.nth(1).locator('.quote-room-group__title')).toHaveText('Kitchen')
+    await expect(rooms.nth(1).getByText('1 item')).toBeVisible()
+    await expect(rooms.nth(1).locator('.quote-item-card')).toHaveCount(1)
+  })
+
+  test('never merges numbered bedrooms into one group', async ({ page }) => {
+    await addOpening(page, { location: 'Bedroom 1', configCode: 'HDX-L' })
+    await addOpening(page, { location: 'Bedroom 2', configCode: 'HDX-L' })
+    await addOpening(page, { location: 'Bedroom 1', configCode: 'WS', product: 'Fly Screens' })
+
+    const rooms = page.locator('.quote-room-group')
+    await expect(rooms).toHaveCount(2)
+
+    await expect(rooms.nth(0).locator('.quote-room-group__title')).toHaveText('Bedroom 1')
+    await expect(rooms.nth(0).locator('.quote-item-card')).toHaveCount(2)
+
+    await expect(rooms.nth(1).locator('.quote-room-group__title')).toHaveText('Bedroom 2')
+    await expect(rooms.nth(1).locator('.quote-item-card')).toHaveCount(1)
+  })
+})

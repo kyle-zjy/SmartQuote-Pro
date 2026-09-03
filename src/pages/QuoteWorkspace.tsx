@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import colours from '../data/colours.json'
-import QuoteItemCard from '../components/QuoteItemCard'
 import QuotePdfPreview from '../components/QuotePdfPreview'
+import QuoteRoomGroup from '../components/QuoteRoomGroup'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
 import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
+import { groupQuoteItemsByLocation } from '../lib/groupQuoteItems'
 import { isOtherFrameColour } from '../lib/frameColour'
 import { suggestQuoteSuffix } from '../lib/lineDescription'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
@@ -98,6 +99,7 @@ export default function QuoteWorkspace() {
   const alreadySaved = savedQuotes.some((record) => record.quoteNo === quoteNo && record.version === version)
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const suggestedSuffix = suggestQuoteSuffix(items)
+  const roomGroups = groupQuoteItemsByLocation(items)
 
   function handleClear() {
     if (items.length === 0 || window.confirm('Clear all items on this quote?')) clear()
@@ -350,10 +352,10 @@ export default function QuoteWorkspace() {
         <section className="quote-workspace__right">
           <div className="quote-workspace__items">
             {items.length === 0 && <p className="muted">No openings added yet.</p>}
-            {items.map((item) => (
-              <QuoteItemCard
-                key={item.id}
-                item={item}
+            {roomGroups.map((group) => (
+              <QuoteRoomGroup
+                key={group.location}
+                group={group}
                 quoteId={quoteNo}
                 quoteFrameColour={frameColour}
                 quoteCustomFrameColour={customFrameColour}

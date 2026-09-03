@@ -211,6 +211,7 @@ export default function ItemWizard() {
         <OpeningLocationStep
           value={draft.location}
           existingLocations={existingLocations}
+          originalLocation={mode === 'reuse' ? (sourceItem?.location ?? sourceItem?.room) : undefined}
           onNext={(location) => {
             patchDraft({ location })
             goToStep('configuration')

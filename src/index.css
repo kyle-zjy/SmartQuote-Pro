@@ -231,6 +231,27 @@ h1 {
   max-width: 420px;
 }
 
+.reuse-location-banner {
+  margin: 0;
+  padding: 0.7rem 1rem;
+  background: #eef2ff;
+  border: 1px solid #c7d2fe;
+  border-radius: 10px;
+  color: #312e81;
+}
+
+.reuse-location-banner p {
+  margin: 0.15rem 0;
+}
+
+.location-picker__section {
+  margin: 0;
+}
+
+.location-picker__label {
+  margin: 0 0 0.35rem;
+}
+
 .product-quote-notes {
   margin-top: 1.5rem;
   max-width: 720px;
@@ -1747,13 +1768,53 @@ textarea {
   }
 }
 
-.quote-item-card {
-  display: flex;
-  gap: 0.75rem;
+.quote-room-group {
   border: 1px solid var(--color-border);
   border-radius: 10px;
   background: var(--color-surface);
-  padding: 0.65rem 0.85rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.quote-room-group__header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--color-border);
+  flex-wrap: wrap;
+}
+
+.quote-room-group__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.quote-room-group__items {
+  display: flex;
+  flex-direction: column;
+}
+
+.quote-room-group__footer {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 0.5rem;
+  margin-top: 0.15rem;
+  border-top: 1px solid var(--color-border);
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.quote-item-card {
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.65rem 0;
+  flex-wrap: wrap;
+}
+
+.quote-item-card + .quote-item-card {
+  border-top: 1px dashed var(--color-border);
 }
 
 .quote-item-card__thumb {
@@ -1779,6 +1840,7 @@ textarea {
   justify-content: space-between;
   gap: 0.75rem;
   margin-top: 0.4rem;
+  flex-wrap: wrap;
 }
 
 .quote-item-card__qty {
@@ -1798,6 +1860,7 @@ textarea {
 
 .quote-item-card__actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 0.4rem;
   font-size: 0.85rem;

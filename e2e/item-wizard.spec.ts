@@ -85,3 +85,42 @@ test.describe('item wizard', () => {
     await expect(card.getByText('Rumpus Room — Fly Screens')).toBeVisible()
   })
 })
+
+test.describe('duplicate and reuse location behaviour', () => {
+  test.beforeEach(async ({ page }) => {
+    await resetApp(page)
+    await startNewQuote(page)
+    await addOpening(page, { location: 'Bedroom 1', configCode: 'HDX-L' })
+  })
+
+  test('duplicate pre-fills the original location, ready to save as-is or change', async ({ page }) => {
+    await page.getByRole('link', { name: 'Duplicate' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Review & save' })).toBeVisible()
+    await expect(page.getByText('Bedroom 1', { exact: true })).toBeVisible()
+  })
+
+  test('reuse shows the original location and requires a fresh confirmation', async ({ page }) => {
+    await page.getByRole('link', { name: 'Reuse' }).click()
+
+    await expect(page.getByRole('heading', { name: 'Where is this opening?' })).toBeVisible()
+    await expect(page.getByText('Original location:')).toBeVisible()
+    await expect(page.getByText('Bedroom 1', { exact: true })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled()
+
+    await page.getByLabel('Use at').fill('Bedroom 2')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()
+  })
+
+  test('a custom location becomes reusable and groups with future items in it', async ({ page }) => {
+    await addOpening(page, { location: 'Study', configCode: 'WS', product: 'Fly Screens' })
+    await addOpening(page, { location: 'Study', configCode: 'HDX-L' })
+
+    const studyGroup = page.locator('.quote-room-group', { hasText: 'Study' })
+    await expect(studyGroup.locator('.quote-item-card')).toHaveCount(2)
+
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await expect(page.getByRole('button', { name: 'Study', exact: true })).toBeVisible()
+  })
+})
