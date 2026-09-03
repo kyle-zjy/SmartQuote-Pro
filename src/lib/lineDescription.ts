@@ -10,6 +10,38 @@ export function openingLabel(categoryKey: string, categoryLabel: string): string
   return categoryLabel.toLowerCase()
 }
 
+export interface StructuredDescriptionInput {
+  location?: string
+  productLabel?: string
+  widthMm?: number
+  heightMm?: number
+}
+
+/** Builds a readable line-item description from structured opening/product fields, e.g. "Living Room — Supascreen Sliding Door — 1234 x 2123 mm". */
+export function describeStructuredItem(input: StructuredDescriptionInput): string {
+  const parts: string[] = []
+  if (input.location?.trim()) parts.push(input.location.trim())
+  if (input.productLabel?.trim()) parts.push(input.productLabel.trim())
+  if (input.heightMm && input.widthMm && input.heightMm > 0 && input.widthMm > 0) {
+    parts.push(`${padMm(input.heightMm)} x ${padMm(input.widthMm)} mm`)
+  }
+  return parts.length > 0 ? parts.join(' — ') : 'New item'
+}
+
+const SUFFIX_CODES: Record<string, string> = {
+  supascreen: 'SS',
+  intrudaguard: 'IG',
+  '7mm-diamond': 'DG',
+  flyscreens: 'FS',
+}
+
+/** Suggests a quote suffix (e.g. "SS, DG") from the product keys used on the quote. Never overwrites a suffix the user already typed — callers decide when to apply it. */
+export function suggestQuoteSuffix(items: Array<{ productKey?: string }>): string {
+  const codes = [...new Set(items.map((item) => (item.productKey ? SUFFIX_CODES[item.productKey] : undefined)))]
+    .filter((code): code is string => Boolean(code))
+  return codes.join(', ')
+}
+
 export function formatQuoteDescription(input: {
   widthMm: number
   heightMm: number

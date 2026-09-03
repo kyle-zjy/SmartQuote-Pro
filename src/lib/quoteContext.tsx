@@ -17,6 +17,7 @@ import { DRAFT_PERSIST_MS, DRAFT_STORAGE_KEY, MEASURE_LEGACY_DRAFT_PERSIST, hasP
 import {
   canIssueQuote,
   canReviseQuote,
+  canSubmitForReview,
   createIssuedSnapshot,
   isActionLocked,
   parseDealStatus,
@@ -25,6 +26,11 @@ import {
   type IssuedSnapshot,
   type QuoteStatus,
 } from './quoteLifecycle'
+
+export interface QuoteAddon {
+  name: string
+  price: number
+}
 
 export interface QuoteLineItem {
   id: string
@@ -35,6 +41,17 @@ export interface QuoteLineItem {
   room: string
   note: string
   productKey?: string
+  // Structured fields for items built through the opening/item wizard.
+  // All optional so legacy flat items (description/detail/room only) keep working unchanged.
+  location?: string
+  configurationCode?: string
+  measurements?: Record<string, string>
+  openingWidthMm?: number
+  openingHeightMm?: number
+  material?: string
+  frameColourMode?: 'default' | 'custom'
+  customFrameColour?: string
+  addons?: QuoteAddon[]
 }
 
 export interface RoomPhoto {
@@ -85,7 +102,7 @@ export type QuoteAction =
   | { type: 'SET_QUOTE_DATE'; quoteDate: string }
   | { type: 'SET_QUOTE_SUFFIX'; quoteSuffix: string }
   | { type: 'SET_PAID'; paid: number }
-  | { type: 'NEW_QUOTE' }
+  | { type: 'NEW_QUOTE'; quoteNo: string }
   | { type: 'LOAD_QUOTE'; quote: QuoteState }
   | { type: 'ADD_PHOTO'; room: string; dataUrl: string }
   | { type: 'REMOVE_PHOTO'; room: string; id: string }
@@ -94,6 +111,7 @@ export type QuoteAction =
   | { type: 'ISSUE'; snapshot: IssuedSnapshot }
   | { type: 'REVISE' }
   | { type: 'SET_DEAL_STATUS'; dealStatus: DealStatus }
+  | { type: 'SUBMIT_FOR_REVIEW' }
 
 const SEQ_KEY = 'smartquote-pro:quote-seq'
 
@@ -153,7 +171,12 @@ export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: st
     colourExtraOverride: parsed.colourExtraOverride ?? null,
     paid: parsed.paid ?? 0,
     version: Math.max(1, parsed.version ?? 1),
-    status: parsed.status === 'issued' && parsed.issuedSnapshot ? 'issued' : 'draft',
+    status:
+      parsed.status === 'issued' && parsed.issuedSnapshot
+        ? 'issued'
+        : parsed.status === 'office-review'
+          ? 'office-review'
+          : 'draft',
     dealStatus: parseDealStatus(parsed.dealStatus),
     issuedSnapshot: parsed.status === 'issued' && parsed.issuedSnapshot ? parsed.issuedSnapshot : null,
   }
@@ -220,7 +243,7 @@ export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState
     case 'SET_PAID':
       return { ...state, paid: Math.max(0, action.paid) }
     case 'NEW_QUOTE':
-      return defaultState(nextQuoteNo())
+      return defaultState(action.quoteNo)
     case 'LOAD_QUOTE':
       return normalizeQuote(action.quote, action.quote.quoteNo)
     case 'ISSUE':
@@ -238,6 +261,9 @@ export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState
       }
     case 'SET_DEAL_STATUS':
       return { ...state, dealStatus: action.dealStatus }
+    case 'SUBMIT_FOR_REVIEW':
+      if (!canSubmitForReview(state)) return state
+      return { ...state, status: 'office-review' }
     case 'ADD_PHOTO': {
       const photo: RoomPhoto = { id: crypto.randomUUID(), dataUrl: action.dataUrl, caption: '' }
       const existing = state.roomPhotos[action.room] ?? []
@@ -290,9 +316,11 @@ interface QuoteContextValue extends QuoteState {
   setQuoteDate: (quoteDate: string) => void
   setQuoteSuffix: (quoteSuffix: string) => void
   setPaid: (paid: number) => void
+  submitForReview: () => boolean
   issueQuote: () => boolean
   reviseQuote: (reason?: string) => boolean
-  newQuote: () => void
+  /** Starts a fresh draft quote and returns its newly assigned quote number. */
+  newQuote: () => string
   saveCurrentQuote: () => ArchiveWriteResult
   loadSavedQuote: (quoteNo: string, version?: number) => boolean
   deleteSavedQuote: (quoteNo: string, version: number) => void
@@ -423,6 +451,11 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       setQuoteDate: (quoteDate) => dispatch({ type: 'SET_QUOTE_DATE', quoteDate }),
       setQuoteSuffix: (quoteSuffix) => dispatch({ type: 'SET_QUOTE_SUFFIX', quoteSuffix }),
       setPaid: (paid) => dispatch({ type: 'SET_PAID', paid }),
+      submitForReview: () => {
+        if (!canSubmitForReview(state) || !state.customer.name.trim() || !state.customer.address.trim()) return false
+        dispatch({ type: 'SUBMIT_FOR_REVIEW' })
+        return true
+      },
       issueQuote: () => {
         if (!canIssueQuote(state)) return false
         const snapshot = createIssuedSnapshot(state, liveColourExtra, settings.depositRate)
@@ -457,7 +490,11 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'LOAD_QUOTE', quote: revised })
         return true
       },
-      newQuote: () => dispatch({ type: 'NEW_QUOTE' }),
+      newQuote: () => {
+        const quoteNo = nextQuoteNo()
+        dispatch({ type: 'NEW_QUOTE', quoteNo })
+        return quoteNo
+      },
       saveCurrentQuote: () => {
         const result = upsertArchivedQuote(state, { total })
         setSavedQuotes(listArchivedQuotes())

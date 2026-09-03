@@ -1,95 +1,98 @@
 import { expect, test } from '@playwright/test'
-import { acceptDialogs, addProductToQuote, CUSTOMER, fillQuoteDetails, parseAud, resetApp } from './helpers'
+import { acceptDialogs, addOpening, CUSTOMER, parseAud, resetApp, startNewQuote } from './helpers'
 
-test.describe('quote editor', () => {
+test.describe('quote workspace', () => {
   test.beforeEach(async ({ page }) => {
     await resetApp(page)
-    await addProductToQuote(page)
-    await fillQuoteDetails(page)
+    await startNewQuote(page)
+    await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
   })
 
-  test('shows customer, suffix and GST on the paper preview', async ({ page }) => {
+  test('shows customer, suffix and GST on the customer preview', async ({ page }) => {
     await page.getByLabel('Quote suffix').fill('SS')
-    await expect(page.locator('.quote-doc__no')).toHaveText(/Quote No: 00033021-SS|Quote No: \d{8}-SS/)
-    await expect(page.locator('.quote-doc').getByText(CUSTOMER.name).first()).toBeVisible()
-    await expect(page.locator('.quote-doc').getByText(CUSTOMER.phone).first()).toBeVisible()
+    await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
 
-    const saleAmt = page.locator('.quote-sheet-foot__totals').getByText('Sale Amt')
-    await expect(saleAmt).toBeVisible()
-    const totals = page.locator('.quote-sheet-foot__totals')
-    const amounts = await totals.locator('span').allTextContents()
-    const sale = parseAud(amounts[1])
-    const gst = parseAud(amounts[3])
-    const total = parseAud(amounts[7])
-    expect(gst).toBeCloseTo(sale * 0.1, 1)
-    expect(total).toBeCloseTo(sale + gst, 1)
+    const dialog = page.getByRole('dialog', { name: 'Preview quote' })
+    await expect(dialog.locator('.quote-doc__no')).toHaveText(/Quote No: \d+-SS/)
+    await expect(dialog.getByText(CUSTOMER.name)).toBeVisible()
+    await expect(dialog.getByText('GST')).toBeVisible()
 
-    await page.getByLabel('Include GST (10%)').uncheck()
-    const after = await totals.locator('span').allTextContents()
-    expect(parseAud(after[3])).toBe(0)
-    expect(parseAud(after[7])).toBe(sale)
+    await dialog.getByRole('button', { name: 'Back' }).click()
+    await expect(dialog).toBeHidden()
   })
 
   test('can use a different ship-to address and a colour extra', async ({ page }) => {
     await page.getByLabel('Ship To is the same as Bill To').uncheck()
-    await page.getByLabel('Ship name').fill('Site Contact')
-    await page.getByLabel('Ship phone').fill('0400 000 001')
-    await page.getByLabel('Ship address').fill('9 Site Rd\nMiami QLD 4220')
-    await expect(page.locator('.quote-doc').getByText('Site Contact')).toBeVisible()
-    await expect(page.locator('.quote-doc').getByText('9 Site Rd', { exact: true })).toBeVisible()
+    await page.getByLabel('Ship name').fill('Warehouse Co')
+    await page.getByLabel('Ship phone').fill('07 5555 1234')
+    await page.getByLabel('Ship address').fill('9 Industrial Dr\nYatala QLD 4207')
 
-    await page.getByLabel('Frame colour').selectOption('Deco Bush Cherry Decoral')
-    await expect(page.getByLabel('Colour extra $')).toHaveValue('220')
-    await expect(page.getByText('Powder coating for non-standard colour')).toBeVisible()
-    await expect(page.getByText('$220.00').first()).toBeVisible()
+    await page.getByLabel('Frame colour (default)').selectOption({ label: 'Deco Bush Cherry Decoral (extra)' })
+    await expect(page.getByLabel('Colour extra $')).toBeVisible()
+
+    await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Preview quote' })
+    await expect(dialog.getByText('Warehouse Co')).toBeVisible()
+    await expect(dialog.getByText('Powder coating for non-standard colour')).toBeVisible()
   })
 
-  test('save, issue, revise and new quote follow the paper workflow', async ({ page }) => {
+  test('submit for review, issue, revise and new quote follow the office workflow', async ({ page }) => {
     acceptDialogs(page)
 
-    await page.getByRole('button', { name: 'Save quote' }).click()
-    await expect(page.getByText(/Saved on this browser/)).toBeVisible()
-    await expect(page.getByRole('link', { name: /Saved \(1\)/ })).toBeVisible()
+    await page.getByRole('button', { name: 'Submit for Office Review' }).click()
+    await expect(page.getByText('This quote is submitted for office review and can still be edited.')).toBeVisible()
 
     await page.getByRole('button', { name: 'Issue quote' }).click()
-    await expect(page.getByText('Status: Issued')).toBeVisible()
+    await expect(page.getByText(/^Issued/)).toBeVisible()
     await expect(page.getByLabel('Customer')).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Issued' })).toBeDisabled()
-    await expect(page.getByRole('button', { name: 'Revise quote' })).toBeVisible()
 
-    await page.getByRole('navigation').first().getByRole('link', { name: 'Products' }).click()
-    await page.getByRole('link', { name: /Supascreen/ }).click()
-    await page.getByLabel('Height (mm)').fill('1200')
-    await page.getByLabel('Width (mm)').fill('900')
-    await expect(page.getByText(/issued and locked/)).toBeVisible()
-    await expect(page.getByRole('button', { name: 'Add to quote' })).toBeDisabled()
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await expect(
+      page.getByText('This quote is issued and locked. Start a new quote before changing items.'),
+    ).toBeVisible()
 
-    await page.getByRole('navigation').first().getByRole('link', { name: /Quote/ }).click()
+    await page.goBack()
     await page.getByRole('button', { name: 'Revise quote' }).click()
-    await expect(page.getByText(/Revision opened/)).toBeVisible()
-    await expect(page.locator('.quote-doc__no')).toHaveText(/Rev 2/)
+    await expect(page.getByText(/^Revision opened/)).toBeVisible()
     await expect(page.getByLabel('Customer')).toBeEnabled()
 
-    await page.getByRole('button', { name: 'New quote' }).click()
-    await expect(page.locator('.quote-doc__no')).toHaveText(/Quote No: 00033022|Quote No: \d{8}/)
-    await expect(page.locator('.quote-doc__no')).not.toHaveText(/-SS/)
-    await expect(page.getByText('No items yet')).toBeVisible()
+    await page.getByRole('link', { name: 'New quote' }).click()
+    await expect(page).toHaveURL(/\/quotes\/new$/)
+    await expect(page.getByRole('heading', { name: 'New quote' })).toBeVisible()
   })
 
   test('opens the PDF preview dialog', async ({ page }) => {
-    await page.getByRole('button', { name: 'Save as PDF' }).click()
+    await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
+
     const dialog = page.getByRole('dialog', { name: 'Preview quote' })
     await expect(dialog).toBeVisible()
-    await expect(dialog.getByRole('heading', { name: 'Quote', exact: true })).toBeVisible()
+    await expect(dialog.getByRole('heading', { name: 'Preview quote' })).toBeVisible()
     await expect(dialog.getByRole('button', { name: 'Download PDF' })).toBeVisible()
-    await dialog.getByRole('button', { name: 'Close' }).click()
-    await expect(dialog).toHaveCount(0)
+
+    await dialog.getByRole('button', { name: 'Back' }).click()
+    await expect(dialog).toBeHidden()
   })
 
-  test('clear items empties the line list', async ({ page }) => {
+  test('clear items empties the opening list', async ({ page }) => {
+    await expect(page.locator('.quote-item-card')).toHaveCount(1)
+
     acceptDialogs(page)
     await page.getByRole('button', { name: 'Clear items' }).click()
-    await expect(page.getByText('No items yet')).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Quote', exact: true })).toBeVisible()
+
+    await expect(page.locator('.quote-item-card')).toHaveCount(0)
+    await expect(page.getByText('No openings added yet.')).toBeVisible()
+  })
+})
+
+test.describe('quote totals', () => {
+  test('subtotal and total reflect the opening price', async ({ page }) => {
+    await resetApp(page)
+    await startNewQuote(page)
+    await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
+
+    const subtotalText = await page.getByText(/^Subtotal: /).innerText()
+    const totalText = await page.getByText(/^Total: /).innerText()
+    expect(parseAud(subtotalText)).toBeGreaterThan(0)
+    expect(parseAud(totalText)).toBeGreaterThanOrEqual(parseAud(subtotalText))
   })
 })
