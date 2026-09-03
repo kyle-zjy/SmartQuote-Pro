@@ -143,3 +143,15 @@ export function acceptDialogs(page: Page, promptText = 'Customer asked for a cha
 export function parseAud(text: string): number {
   return Number(text.replace(/[^0-9.-]/g, ''))
 }
+
+/** Fails if the page has produced horizontal scroll -- content wider than the viewport. */
+export async function expectNoHorizontalOverflow(page: Page, context = '') {
+  const overflow = await page.evaluate(() => ({
+    scrollWidth: document.documentElement.scrollWidth,
+    clientWidth: document.documentElement.clientWidth,
+  }))
+  expect(
+    overflow.scrollWidth,
+    `horizontal overflow${context ? ` at ${context}` : ''}: scrollWidth ${overflow.scrollWidth} > clientWidth ${overflow.clientWidth}`,
+  ).toBeLessThanOrEqual(overflow.clientWidth + 1)
+}

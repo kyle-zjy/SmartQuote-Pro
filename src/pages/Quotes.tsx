@@ -247,6 +247,7 @@ function QuoteGroupTable({
                 </div>
               </div>
             </header>
+            <div className="saved-quotes-table-wrap">
             <table className="quote-table saved-quotes">
               <thead>
                 <tr>
@@ -375,6 +376,7 @@ function QuoteGroupTable({
                 })}
               </tbody>
             </table>
+            </div>
           </article>
         )
       })}

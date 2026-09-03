@@ -78,6 +78,19 @@ h1 {
   gap: 1.25rem;
 }
 
+@media (max-width: 480px) {
+  .topbar {
+    flex-wrap: wrap;
+    row-gap: 0.5rem;
+  }
+
+  .topnav {
+    flex-wrap: wrap;
+    gap: 0.6rem 1rem;
+    font-size: 0.9rem;
+  }
+}
+
 .topnav a {
   text-decoration: none;
   color: var(--color-muted);
@@ -100,6 +113,12 @@ h1 {
   max-width: none;
   background: #d8dbe0;
   padding: 0.75rem 1rem 2.5rem;
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 1.25rem 0.85rem 2.5rem;
+  }
 }
 
 .card-grid {
@@ -201,6 +220,7 @@ h1 {
 
 .tabs {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.5rem;
   margin: 1.25rem 0;
 }
@@ -218,6 +238,75 @@ h1 {
   background: var(--color-primary);
   border-color: var(--color-primary);
   color: white;
+}
+
+.wizard-steps {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 0.25rem;
+}
+
+.wizard-steps .tab {
+  flex-shrink: 0;
+}
+
+.wizard-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border);
+}
+
+.review-recap {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 0.75rem;
+  row-gap: 0.35rem;
+  margin: 1rem 0;
+}
+
+.review-recap dt {
+  color: var(--color-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.review-recap dd {
+  margin: 0;
+}
+
+.collapsible {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed var(--color-border);
+}
+
+@media (max-width: 480px) {
+  .wizard-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .wizard-actions .primary-button,
+  .wizard-actions .secondary-button,
+  .wizard-actions .link-button {
+    width: 100%;
+    text-align: center;
+  }
+
+  .review-recap {
+    grid-template-columns: 1fr;
+    row-gap: 0.15rem;
+  }
+
+  .review-recap dd {
+    margin-bottom: 0.3rem;
+  }
 }
 
 .calculator {
@@ -299,6 +388,12 @@ h1 {
 .field-row {
   display: flex;
   gap: 1rem;
+}
+
+@media (max-width: 480px) {
+  .field-row {
+    flex-direction: column;
+  }
 }
 
 .field-row label,
@@ -453,6 +548,14 @@ textarea {
 .saved-quote-card .quote-table {
   margin-top: 0.35rem;
   color: var(--color-text);
+}
+
+.saved-quotes-table-wrap {
+  overflow-x: auto;
+}
+
+.quote-table.saved-quotes {
+  min-width: 480px;
 }
 
 .saved-quote-card .deal-badge {
@@ -930,8 +1033,14 @@ textarea {
 
 .quote-editor__grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 0.5rem 0.85rem;
+}
+
+@media (max-width: 600px) {
+  .quote-editor__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .quote-editor__grid label {
@@ -1336,6 +1445,7 @@ textarea {
 
 .quote-paper--preview {
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  max-width: none;
 }
 
 .quote-preview__footer {
@@ -1433,7 +1543,7 @@ textarea {
 
 .snapshot-parties {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 1rem;
 }
 
@@ -1526,7 +1636,7 @@ textarea {
 
 @media (max-width: 800px) {
   .snapshot-parties {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1754,7 +1864,7 @@ textarea {
 
 @media (max-width: 800px) {
   .sheet-measure__layout {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1914,7 +2024,8 @@ textarea {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem 1rem;
   margin-bottom: 0.85rem;
 }
 
@@ -1985,10 +2096,47 @@ textarea {
 
 @media (max-width: 900px) {
   .quote-workspace__grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .quote-workspace__right {
     position: static;
+  }
+}
+
+@media (max-width: 1024px) {
+  .tab,
+  .primary-button,
+  .secondary-button {
+    min-height: 44px;
+  }
+
+  .tab {
+    padding: 0.55rem 1.1rem;
+  }
+
+  .primary-button,
+  .secondary-button {
+    padding: 0.7rem 1.3rem;
+  }
+
+  .quote-editor input[type='text'],
+  .quote-editor input[type='number'],
+  .quote-editor input[type='date'],
+  .quote-editor select,
+  .quote-editor textarea,
+  .calculator input,
+  .calculator select,
+  .admin-form input,
+  .admin-form select,
+  .admin-form textarea,
+  .field-row input,
+  .field-row select,
+  .field-row__single input,
+  .field-row__single select,
+  .field-row__single textarea,
+  .location-picker__section input {
+    min-height: 44px;
+    font-size: 1rem;
   }
 }
