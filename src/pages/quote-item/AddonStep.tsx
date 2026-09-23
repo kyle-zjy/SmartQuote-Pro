@@ -40,7 +40,7 @@ export default function AddonStep({
   }
 
   return (
-    <div>
+    <div className="wizard-panel">
       <h2>Add-ons</h2>
       <p className="muted">For {contextLabel}</p>
       {/* TODO(compat): no add-on/product compatibility data exists yet, so the full catalog is

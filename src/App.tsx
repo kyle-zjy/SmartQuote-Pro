@@ -11,7 +11,12 @@ const AdminCompany = lazy(() => import('./pages/AdminCompany'))
 const AdminPricing = lazy(() => import('./pages/AdminPricing'))
 
 function PageFallback() {
-  return <p className="muted">Loading…</p>
+  return (
+    <div className="page-fallback" role="status">
+      <span className="page-fallback__dot" aria-hidden="true" />
+      <p className="muted">Loading…</p>
+    </div>
+  )
 }
 
 export default function App() {
@@ -32,14 +37,21 @@ export default function App() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <NavLink to="/quotes" className="brand">
-          SmartQuote Pro
+        <NavLink to="/quotes" className="brand" aria-label="SmartQuote Pro">
+          <span className="brand-mark" aria-hidden="true">
+            SQ
+          </span>
+          <span>SmartQuote Pro</span>
         </NavLink>
         <nav className="topnav">
           <NavLink to="/quotes" end>
-            Quotes{savedQuoteCount > 0 ? ` (${savedQuoteCount})` : ''}
+            Quotes
+            {savedQuoteCount > 0 ? <span className="nav-count">{savedQuoteCount}</span> : null}
           </NavLink>
-          <NavLink to={`/quotes/${quoteNo}`}>Current Quote{itemCount > 0 ? ` (${itemCount})` : ''}</NavLink>
+          <NavLink to={`/quotes/${quoteNo}`}>
+            Current Quote
+            {itemCount > 0 ? <span className="nav-count">{itemCount}</span> : null}
+          </NavLink>
           <NavLink to="/admin">Admin</NavLink>
         </nav>
       </header>

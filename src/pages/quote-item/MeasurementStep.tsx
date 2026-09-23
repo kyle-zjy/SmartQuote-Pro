@@ -68,7 +68,7 @@ export default function MeasurementStep({
   }
 
   return (
-    <div>
+    <div className="wizard-panel">
       <h2>Measure the opening</h2>
       <p className="muted">
         {config.code} · {configLabel(config.code)} · {config.panels} panel{config.panels === 1 ? '' : 's'}

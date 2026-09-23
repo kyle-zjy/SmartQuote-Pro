@@ -31,8 +31,10 @@ export default function QuoteItemCard({
     if (window.confirm(`Remove "${item.description}" from this quote?`)) onRemove(item.id)
   }
 
+  const toneClass = item.productKey ? ` product-tone product-tone--${item.productKey}` : ''
+
   return (
-    <div className="quote-item-card">
+    <div className={`quote-item-card${toneClass}`}>
       {isStructured && item.configurationCode && (
         <img
           className="quote-item-card__thumb"
@@ -86,9 +88,31 @@ export default function QuoteItemCard({
         </div>
 
         <div className="quote-item-card__actions">
-          <Link to={`/quotes/${quoteId}/items/${item.id}/edit`}>Edit</Link>
-          <Link to={`/quotes/${quoteId}/items/new?basedOn=${item.id}&mode=duplicate`}>Duplicate</Link>
-          <Link to={`/quotes/${quoteId}/items/new?basedOn=${item.id}&mode=reuse`}>Reuse</Link>
+          {locked ? (
+            <>
+              <button type="button" className="link-button" disabled>
+                Edit
+              </button>
+              <button type="button" className="link-button" disabled>
+                Duplicate
+              </button>
+              <button type="button" className="link-button" disabled>
+                Reuse
+              </button>
+            </>
+          ) : (
+            <>
+              <Link className="link-button" to={`/quotes/${quoteId}/items/${item.id}/edit`}>
+                Edit
+              </Link>
+              <Link className="link-button" to={`/quotes/${quoteId}/items/new?basedOn=${item.id}&mode=duplicate`}>
+                Duplicate
+              </Link>
+              <Link className="link-button" to={`/quotes/${quoteId}/items/new?basedOn=${item.id}&mode=reuse`}>
+                Reuse
+              </Link>
+            </>
+          )}
           <button type="button" className="link-button" onClick={handleDelete} disabled={locked}>
             Delete
           </button>

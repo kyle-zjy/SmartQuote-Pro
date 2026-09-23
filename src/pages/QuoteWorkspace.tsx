@@ -351,7 +351,12 @@ export default function QuoteWorkspace() {
 
         <section className="quote-workspace__right">
           <div className="quote-workspace__items">
-            {items.length === 0 && <p className="muted">No openings added yet.</p>}
+            {items.length === 0 && (
+              <div className="empty-state empty-state--inline">
+                <p className="empty-state__title">No openings added yet</p>
+                <p className="muted">Add the first door or window to start building this quote.</p>
+              </div>
+            )}
             {roomGroups.map((group) => (
               <QuoteRoomGroup
                 key={group.location}
@@ -366,9 +371,22 @@ export default function QuoteWorkspace() {
             ))}
           </div>
 
-          <Link to={`/quotes/${quoteNo}/items/new`} className="primary-button quote-workspace__add">
-            + Add Opening
-          </Link>
+          {locked ? (
+            <>
+              <button type="button" className="primary-button quote-workspace__add" disabled>
+                + Add Opening
+              </button>
+              <p className="muted small quote-workspace__add-hint">
+                {dealSettled
+                  ? 'Reopen this quote from Quotes to add or change openings.'
+                  : 'Revise this quote to add or change openings.'}
+              </p>
+            </>
+          ) : (
+            <Link to={`/quotes/${quoteNo}/items/new`} className="primary-button quote-workspace__add">
+              + Add Opening
+            </Link>
+          )}
 
           <div className="quote-workspace__totals">
             <p>Subtotal: {formatCurrency(subtotal)}</p>

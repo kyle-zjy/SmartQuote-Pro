@@ -82,7 +82,7 @@ export default function ProductStep({
   }
 
   return (
-    <div>
+    <div className="wizard-panel">
       <h2>Product &amp; size</h2>
       {/* TODO(compat): no product/opening-configuration compatibility data exists yet, so every
           product is offered regardless of the configuration picked earlier. Revisit if/when that

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useQuote } from '../lib/quoteContext'
 
 function todayISO(): string {
@@ -33,8 +33,12 @@ export default function QuoteIntake() {
   }
 
   return (
-    <div className="quote-editor">
+    <div className="quote-editor quote-intake">
+      <p>
+        <Link to="/quotes">&larr; All quotes</Link>
+      </p>
       <h1>New quote</h1>
+      <p className="muted">Customer details can be finished later — start with whatever you have on site.</p>
       <div className="quote-editor__grid">
         <label>
           Customer

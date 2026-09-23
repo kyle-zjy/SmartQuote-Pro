@@ -30,7 +30,7 @@ export default function ConfigurationPicker({
   )
 
   return (
-    <div>
+    <div className="wizard-panel">
       <h2>Pick a configuration</h2>
       <p className="muted small">Filter by type, then pick the drawing that matches this opening.</p>
 

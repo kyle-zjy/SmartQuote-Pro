@@ -46,12 +46,19 @@ test.describe('quote workspace', () => {
     await expect(page.getByText(/^Issued/)).toBeVisible()
     await expect(page.getByLabel('Customer')).toBeDisabled()
 
-    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await expect(page.getByRole('button', { name: '+ Add Opening' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Edit' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Duplicate' })).toBeDisabled()
+    await expect(page.getByRole('button', { name: 'Reuse' })).toBeDisabled()
+    await expect(page.getByText('Revise this quote to add or change openings.')).toBeVisible()
+
+    await page.goto(`${page.url()}/items/new`)
     await expect(
       page.getByText('This quote is issued and locked. Start a new quote before changing items.'),
     ).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Where is this opening?' })).toHaveCount(0)
 
-    await page.goBack()
+    await page.getByRole('link', { name: 'Back to quote' }).click()
     await page.getByRole('button', { name: 'Revise quote' }).click()
     await expect(page.getByText(/^Revision opened/)).toBeVisible()
     await expect(page.getByLabel('Customer')).toBeEnabled()

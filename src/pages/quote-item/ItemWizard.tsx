@@ -83,6 +83,26 @@ export default function ItemWizard() {
     )
   }
 
+  if (locked) {
+    return (
+      <div className="wizard-shell">
+        <p>
+          <Link to={`/quotes/${id}`}>&larr; Back to quote</Link>
+        </p>
+        <header className="page-header page-header--compact">
+          <div>
+            <h1>{itemId ? 'Edit opening' : 'Add opening'}</h1>
+          </div>
+        </header>
+        <p className="quote-issued-banner quote-issued-banner--abandoned">
+          {dealStatus !== 'open'
+            ? 'This quote is abandoned or closed. Reopen it from Quotes, or start a new quote, before changing items.'
+            : 'This quote is issued and locked. Start a new quote before changing items.'}
+        </p>
+      </div>
+    )
+  }
+
   function patchDraft(patch: Partial<ItemDraft>) {
     setDraft((current) => ({ ...current, ...patch }))
     setError(null)
@@ -180,19 +200,16 @@ export default function ItemWizard() {
     .join(' / ')
 
   return (
-    <div>
+    <div className="wizard-shell">
       <p>
         <Link to={`/quotes/${id}`}>&larr; Back to quote</Link>
       </p>
-      <h1>{itemId ? 'Edit opening' : 'Add opening'}</h1>
-
-      {locked && (
-        <p className="price-result--error">
-          {dealStatus !== 'open'
-            ? 'This quote is abandoned or closed. Reopen it from Quotes, or start a new quote, before changing items.'
-            : 'This quote is issued and locked. Start a new quote before changing items.'}
-        </p>
-      )}
+      <header className="page-header page-header--compact">
+        <div>
+          <h1>{itemId ? 'Edit opening' : 'Add opening'}</h1>
+          {contextLabel ? <p className="muted small">{contextLabel}</p> : null}
+        </div>
+      </header>
 
       <div className="tabs wizard-steps">
         {STEP_ORDER.map((s) => (

@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
 import RevisionSnapshot from '../components/RevisionSnapshot'
 import { displayQuoteNo, displayQuoteRevision } from '../lib/displayQuoteNo'
@@ -101,13 +101,20 @@ export default function Quotes() {
   }
 
   return (
-    <div>
-      <h1>Quotes</h1>
-      <p className="muted">
-        Track whether each quote is still in progress, abandoned, or closed, and whether it is a draft, submitted
-        for office review, or issued. Comments under a revision record why the customer asked for a change. Use
-        Snapshot to review a revision — including photos — without opening it.
-      </p>
+    <div className="quotes-page">
+      <header className="page-header">
+        <div>
+          <h1>Quotes</h1>
+          <p className="muted">
+            Track whether each quote is still in progress, abandoned, or closed, and whether it is a draft, submitted
+            for office review, or issued. Comments under a revision record why the customer asked for a change. Use
+            Snapshot to review a revision — including photos — without opening it.
+          </p>
+        </div>
+        <Link to="/quotes/new" className="primary-button">
+          New quote
+        </Link>
+      </header>
 
       <nav className="saved-subnav" aria-label="Filter by deal status">
         <button
@@ -146,7 +153,13 @@ export default function Quotes() {
       </nav>
 
       {savedQuotes.length === 0 ? (
-        <p className="muted">No saved quotes yet. Open a quote and choose Save quote or Issue quote.</p>
+        <div className="empty-state">
+          <p className="empty-state__title">No saved quotes yet</p>
+          <p className="muted">No saved quotes yet. Open a quote and choose Save quote or Issue quote.</p>
+          <Link to="/quotes/new" className="primary-button">
+            New quote
+          </Link>
+        </div>
       ) : (
         visibleSections.map((section) => {
           const groups = filterGroupsByQuoteStatus(boards[section.status], quoteStatusFilter)

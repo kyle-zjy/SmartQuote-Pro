@@ -66,7 +66,7 @@ export default function ReviewItemStep({
   })
 
   return (
-    <div>
+    <div className="wizard-panel">
       <h2>Review &amp; save</h2>
 
       <dl className="review-recap">
