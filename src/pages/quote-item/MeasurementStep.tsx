@@ -301,7 +301,7 @@ export default function MeasurementStep({
                 (largest marked height and width)
               </p>
               <p>
-                Screen size: {size.screenLabel.replace('X', ' × ')} mm · {size.panels} panel
+                Size used for pricing: {size.screenLabel.replace('X', ' × ')} mm · {size.panels} panel
                 {size.panels === 1 ? '' : 's'}
               </p>
             </div>

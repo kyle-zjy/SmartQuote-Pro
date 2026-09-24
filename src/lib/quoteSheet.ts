@@ -106,11 +106,11 @@ export interface SheetSize {
   screenLabel: string
 }
 
-/** Matches the student sheet: opening H×W in, screen W = width/factor + offset, screen H = height × height factor. */
+/** Preserve the measured opening dimensions when carrying them into product pricing. */
 export function calcSheetSize(config: SheetConfig, height: number, width: number): SheetSize | null {
-  if (!(height > 0) || !(width > 0) || config.widthFactor <= 0) return null
-  const screenWidth = width / config.widthFactor + config.widthOffset
-  const screenHeight = config.heightFactor * height
+  if (!(height > 0) || !(width > 0)) return null
+  const screenWidth = width
+  const screenHeight = height
   return {
     panels: config.panels,
     openingHeight: height,

@@ -19,7 +19,7 @@ describe('quoteSheet', () => {
     expect(findSheetConfig('WS')?.widthFactor).toBe(1)
   })
 
-  it('calculates screen size the same way as the Excel sheet', () => {
+  it('preserves measured dimensions for every configuration', () => {
     expect(calcSheetSize(findSheetConfig('HDX-L')!, 2100, 900)).toMatchObject({
       panels: 1,
       openingLabel: '2100X900',
@@ -28,13 +28,13 @@ describe('quoteSheet', () => {
     expect(calcSheetSize(findSheetConfig('SDOX')!, 2100, 2400)).toMatchObject({
       panels: 1,
       screenHeight: 2100,
-      screenWidth: 1200,
-      screenLabel: '2100X1200',
+      screenWidth: 2400,
+      screenLabel: '2100X2400',
     })
     expect(calcSheetSize(findSheetConfig('SDOXX')!, 2100, 3600)).toMatchObject({
       panels: 2,
-      screenWidth: 1270,
-      screenLabel: '2100X1270',
+      screenWidth: 3600,
+      screenLabel: '2100X3600',
     })
   })
 
