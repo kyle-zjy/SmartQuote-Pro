@@ -111,9 +111,16 @@ export default function Quotes() {
             Snapshot to review a revision — including photos — without opening it.
           </p>
         </div>
-        <Link to="/quotes/new" className="primary-button">
-          New quote
-        </Link>
+        <div className="quote-actions">
+          {hasDraft && (
+            <Link to={`/quotes/${quoteNo}`} className="primary-button">
+              Continue quote {displayQuoteNo(quoteNo, '')}
+            </Link>
+          )}
+          <Link to="/quotes/new" className={hasDraft ? 'secondary-button' : 'primary-button'}>
+            New quote
+          </Link>
+        </div>
       </header>
 
       <nav className="saved-subnav" aria-label="Filter by deal status">
@@ -156,9 +163,11 @@ export default function Quotes() {
         <div className="empty-state">
           <p className="empty-state__title">No saved quotes yet</p>
           <p className="muted">No saved quotes yet. Open a quote and choose Save quote or Issue quote.</p>
-          <Link to="/quotes/new" className="primary-button">
-            New quote
-          </Link>
+          {hasDraft ? (
+            <Link to={`/quotes/${quoteNo}`} className="primary-button">Continue current quote</Link>
+          ) : (
+            <Link to="/quotes/new" className="primary-button">New quote</Link>
+          )}
         </div>
       ) : (
         visibleSections.map((section) => {
@@ -197,6 +206,7 @@ export default function Quotes() {
           siblings={snapshotSiblings}
           onClose={closeSnapshot}
           onChangeRevision={(version) => setSnapshot({ quoteNo: snapshotRecord.quoteNo, version })}
+          onReturnToCurrent={hasDraft ? () => navigate(`/quotes/${quoteNo}`) : undefined}
         />
       ) : null}
     </div>

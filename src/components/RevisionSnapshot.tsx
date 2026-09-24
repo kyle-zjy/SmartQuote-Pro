@@ -33,11 +33,13 @@ export default function RevisionSnapshot({
   siblings,
   onClose,
   onChangeRevision,
+  onReturnToCurrent,
 }: {
   record: ArchivedQuote
   siblings: ArchivedQuote[]
   onClose: () => void
   onChangeRevision: (version: number) => void
+  onReturnToCurrent?: () => void
 }) {
   const { settings } = useCompanySettings()
   const quote = record.quote
@@ -374,9 +376,12 @@ export default function RevisionSnapshot({
               {newer ? `Newer · ${displayQuoteRevision(newer.version)}` : 'No newer revision'}
             </button>
           </div>
-          <button type="button" className="secondary-button" onClick={onClose}>
-            Close
-          </button>
+          {onReturnToCurrent && (
+            <button type="button" className="primary-button" onClick={onReturnToCurrent}>
+              Continue current quote
+            </button>
+          )}
+          <button type="button" className="secondary-button" onClick={onClose}>Close</button>
         </footer>
       </div>
     </div>
