@@ -21,18 +21,15 @@ import MeasurementStep from './MeasurementStep'
 import OpeningLocationStep from './OpeningLocationStep'
 import ProductStep from './ProductStep'
 import ReviewItemStep from './ReviewItemStep'
-
-type Step = 'location' | 'configuration' | 'measurements' | 'product' | 'addons' | 'review'
-
-const STEP_LABELS: Record<Step, string> = {
-  location: 'Location',
-  configuration: 'Configuration',
-  measurements: 'Measurements',
-  product: 'Product',
-  addons: 'Add-ons',
-  review: 'Review',
-}
-const STEP_ORDER: Step[] = ['location', 'configuration', 'measurements', 'product', 'addons', 'review']
+import {
+  clearWizardDraft,
+  FROM_WIZARD_NAV_STATE,
+  loadWizardDraft,
+  saveWizardDraft,
+  WIZARD_DRAFT_PERSIST_MS,
+  type WizardDraftKey,
+} from './wizardDraftStore'
+import { STEP_LABELS, STEP_ORDER, type Step } from './wizardSteps'
 
 export default function ItemWizard() {
   const { id, itemId } = useParams<{ id: string; itemId?: string }>()
@@ -51,7 +48,24 @@ export default function ItemWizard() {
       ? items.find((i) => i.id === basedOnId)
       : undefined
 
+  const quoteNo = id ?? ''
+  const sessionKind: WizardDraftKey['kind'] = itemId
+    ? 'edit'
+    : basedOnId && mode === 'duplicate'
+      ? 'duplicate'
+      : basedOnId && mode === 'reuse'
+        ? 'reuse'
+        : 'new'
+  const sessionRefId = itemId ?? basedOnId ?? null
+  const draftKey: WizardDraftKey = { quoteNo, kind: sessionKind, refId: sessionRefId }
+
+  // A persisted in-progress wizard session (from a previous mount of this exact same
+  // wizard route) takes priority over the source item -- otherwise navigating away and
+  // back would silently discard unsaved edits and re-seed from the last saved values.
+  const [initialSnapshot] = useState(() => loadWizardDraft(draftKey))
+
   const [draft, setDraft] = useState<ItemDraft>(() => {
+    if (initialSnapshot) return initialSnapshot.draft
     if (itemId) return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
     if (basedOnId && mode === 'reuse') return sourceItem ? draftForReuse(sourceItem, data.products) : emptyItemDraft()
     if (basedOnId && mode === 'duplicate') return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
@@ -59,16 +73,22 @@ export default function ItemWizard() {
   })
 
   const isEditOrDuplicate = Boolean(itemId) || (Boolean(basedOnId) && mode === 'duplicate')
-  const initialStep: Step = isEditOrDuplicate ? 'review' : 'location'
+  const initialStep: Step = initialSnapshot?.step ?? (isEditOrDuplicate ? 'review' : 'location')
   const [step, setStep] = useState<Step>(initialStep)
   // Edit/Duplicate open with saved values already populated, so every tab must be reachable
   // immediately -- otherwise a blank categoryKey (or any other field) can strand the user on
   // Review with no way back to Product to fix it.
-  const [visited, setVisited] = useState<Set<Step>>(() => (isEditOrDuplicate ? new Set(STEP_ORDER) : new Set([initialStep])))
+  const [visited, setVisited] = useState<Set<Step>>(() =>
+    initialSnapshot
+      ? new Set(initialSnapshot.visited)
+      : isEditOrDuplicate
+        ? new Set(STEP_ORDER)
+        : new Set([initialStep]),
+  )
   const [error, setError] = useState<string | null>(null)
 
-  const [markers, setMarkers] = useState<Record<string, MarkerPosition>>({})
-  const [strokes, setStrokes] = useState<DrawStroke[]>([])
+  const [markers, setMarkers] = useState<Record<string, MarkerPosition>>(() => initialSnapshot?.markers ?? {})
+  const [strokes, setStrokes] = useState<DrawStroke[]>(() => initialSnapshot?.strokes ?? [])
   const prevConfigRef = useRef(draft.configurationCode)
 
   useEffect(() => {
@@ -79,11 +99,57 @@ export default function ItemWizard() {
     }
   }, [draft.configurationCode])
 
-  if ((itemId && !sourceItem) || (basedOnId && !sourceItem)) {
+  // finishedRef suppresses the debounced/unmount persistence below once the draft has been
+  // explicitly saved, discarded, or found stale -- otherwise those effects would silently
+  // re-write (resurrect) the very draft that was just cleared.
+  const finishedRef = useRef(false)
+
+  const notFound = (itemId && !sourceItem) || (basedOnId && !sourceItem)
+  useEffect(() => {
+    if (notFound) {
+      finishedRef.current = true
+      clearWizardDraft(draftKey)
+    }
+    // Only run once on mount for this session -- notFound/draftKey are stable for the life of the route.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  const latestSnapshotRef = useRef({ step, visited, draft, markers, strokes })
+  latestSnapshotRef.current = { step, visited, draft, markers, strokes }
+
+  useEffect(() => {
+    if (finishedRef.current) return
+    const timer = window.setTimeout(() => {
+      if (finishedRef.current) return
+      saveWizardDraft(draftKey, { step, visited: [...visited], draft, markers, strokes, updatedAt: Date.now() })
+    }, WIZARD_DRAFT_PERSIST_MS)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteNo, sessionKind, sessionRefId, step, visited, draft, markers, strokes])
+
+  useEffect(() => {
+    return () => {
+      if (finishedRef.current) return
+      const snap = latestSnapshotRef.current
+      saveWizardDraft(draftKey, {
+        step: snap.step,
+        visited: [...snap.visited],
+        draft: snap.draft,
+        markers: snap.markers,
+        strokes: snap.strokes,
+        updatedAt: Date.now(),
+      })
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteNo, sessionKind, sessionRefId])
+
+  if (notFound) {
     return (
       <div>
         <p className="price-result--error">That item could not be found on this quote.</p>
-        <Link to={`/quotes/${id}`}>&larr; Back to quote</Link>
+        <Link to={`/quotes/${id}`} state={FROM_WIZARD_NAV_STATE}>
+          &larr; Back to quote
+        </Link>
       </div>
     )
   }
@@ -92,7 +158,9 @@ export default function ItemWizard() {
     return (
       <div className="wizard-shell">
         <p>
-          <Link to={`/quotes/${id}`}>&larr; Back to quote</Link>
+          <Link to={`/quotes/${id}`} state={FROM_WIZARD_NAV_STATE}>
+            &larr; Back to quote
+          </Link>
         </p>
         <header className="page-header page-header--compact">
           <div>
@@ -210,14 +278,18 @@ export default function ItemWizard() {
 
     if (itemId) {
       updateItem(itemId, payload)
-      navigate(`/quotes/${id}`)
+      finishedRef.current = true
+      clearWizardDraft(draftKey)
+      navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
       return
     }
 
     const match = findMatchingItem(items, payload)
     if (match) {
       setQuantity(match.id, match.quantity + draft.quantity)
-      navigate(`/quotes/${id}`)
+      finishedRef.current = true
+      clearWizardDraft(draftKey)
+      navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
       return
     }
 
@@ -226,7 +298,16 @@ export default function ItemWizard() {
       setError('This quote is locked and cannot accept new items.')
       return
     }
-    navigate(`/quotes/${id}`)
+    finishedRef.current = true
+    clearWizardDraft(draftKey)
+    navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
+  }
+
+  function handleDiscard() {
+    if (!window.confirm('Discard this unsaved opening? Any changes on this item will be lost.')) return
+    finishedRef.current = true
+    clearWizardDraft(draftKey)
+    navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
   }
 
   const contextLabel = [
@@ -241,7 +322,13 @@ export default function ItemWizard() {
   return (
     <div className="wizard-shell">
       <p>
-        <Link to={`/quotes/${id}`}>&larr; Back to quote</Link>
+        <Link to={`/quotes/${id}`} state={FROM_WIZARD_NAV_STATE}>
+          &larr; Back to quote
+        </Link>
+        {' · '}
+        <button type="button" className="link-button" onClick={handleDiscard}>
+          Discard this opening
+        </button>
       </p>
       <header className="page-header page-header--compact">
         <div>

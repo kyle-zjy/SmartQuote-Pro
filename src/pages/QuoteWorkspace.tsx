@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import colours from '../data/colours.json'
 import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
@@ -12,6 +12,15 @@ import { suggestQuoteSuffix } from '../lib/lineDescription'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
 import { colourRecord, useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
+import { STEP_LABELS } from './quote-item/wizardSteps'
+import {
+  clearWizardDraft,
+  isFromWizardNav,
+  listWizardDrafts,
+  wizardDraftPath,
+  WIZARD_DRAFT_KIND_LABELS,
+  type WizardDraftKey,
+} from './quote-item/wizardDraftStore'
 
 function formatIssuedAt(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split('-')
@@ -22,6 +31,7 @@ function formatIssuedAt(iso: string): string {
 export default function QuoteWorkspace() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { settings } = useCompanySettings()
   const quote = useQuote()
   const {
@@ -69,6 +79,27 @@ export default function QuoteWorkspace() {
   const [previewOpen, setPreviewOpen] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
+  const [wizardDrafts, setWizardDrafts] = useState(() => listWizardDrafts(quoteNo))
+
+  const issued = status === 'issued'
+  const dealSettled = dealStatus !== 'open'
+  const locked = issued || dealSettled
+
+  useEffect(() => {
+    setWizardDrafts(listWizardDrafts(quoteNo))
+  }, [quoteNo])
+
+  // Coming back to a quote from anywhere else (Quotes list, the Current Quote nav link, a pasted
+  // URL) drops the user straight back into their unfinished opening. Leaving the wizard on purpose
+  // sets fromWizard, which keeps them here with the resume banner instead. Replacing rather than
+  // pushing matters: a pushed entry would send the browser Back button into this same redirect.
+  useEffect(() => {
+    if (locked || id !== quoteNo) return
+    if (isFromWizardNav(location.state)) return
+    const [newest] = listWizardDrafts(quoteNo)
+    if (!newest) return
+    navigate(wizardDraftPath(newest.key), { replace: true })
+  }, [id, quoteNo, locked, location.state, navigate])
 
   useEffect(() => {
     if (id && id !== quoteNo) {
@@ -100,10 +131,6 @@ export default function QuoteWorkspace() {
     return <p className="muted">Loading quote…</p>
   }
 
-  const issued = status === 'issued'
-  const dealSettled = dealStatus !== 'open'
-  const locked = issued || dealSettled
-
   const colour = colourRecord(frameColour)
   const usedProducts = [...new Set(items.map((i) => i.productKey).filter(Boolean))] as string[]
   const colourMismatch =
@@ -116,6 +143,12 @@ export default function QuoteWorkspace() {
 
   function handleClear() {
     if (items.length === 0 || window.confirm('Clear all items on this quote?')) clear()
+  }
+
+  function handleDiscardWizardDraft(key: WizardDraftKey) {
+    if (!window.confirm('Discard this unsaved opening? Any changes on it will be lost.')) return
+    clearWizardDraft(key)
+    setWizardDrafts(listWizardDrafts(quoteNo))
   }
 
   function handleSaveQuote() {
@@ -191,6 +224,25 @@ export default function QuoteWorkspace() {
       )}
       {status === 'office-review' && !locked && (
         <p className="quote-issued-banner">This quote is submitted for office review and can still be edited.</p>
+      )}
+
+      {wizardDrafts.length > 0 && (
+        <div className="wizard-resume-banner">
+          {wizardDrafts.map(({ key, snapshot }) => (
+            <div className="wizard-resume-banner__row" key={`${key.kind}:${key.refId ?? ''}`}>
+              <span>
+                {WIZARD_DRAFT_KIND_LABELS[key.kind]}
+                {snapshot.draft.location ? ` — "${snapshot.draft.location}"` : ''} · {STEP_LABELS[snapshot.step]} step
+              </span>
+              <Link to={wizardDraftPath(key)} className="link-button">
+                Resume
+              </Link>
+              <button type="button" className="link-button" onClick={() => handleDiscardWizardDraft(key)}>
+                Discard
+              </button>
+            </div>
+          ))}
+        </div>
       )}
 
       <div className="quote-workspace__grid">

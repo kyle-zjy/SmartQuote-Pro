@@ -29,7 +29,7 @@ export function hasPhotoData(roomPhotos: Record<string, RoomPhoto[]>): boolean {
   return photoDataChars(roomPhotos) > 0
 }
 
-function isQuotaError(error: unknown): boolean {
+export function isQuotaError(error: unknown): boolean {
   return (
     error instanceof DOMException &&
     (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')
