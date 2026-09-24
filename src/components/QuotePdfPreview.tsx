@@ -5,7 +5,7 @@ import { useQuote } from '../lib/quoteContext'
 import QuoteDocument from './QuoteDocument'
 
 export default function QuotePdfPreview({ onClose }: { onClose: () => void }) {
-  const { quoteNo, quoteSuffix, customer } = useQuote()
+  const { quoteNo, quoteNumber, customer } = useQuote()
   const paperRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -30,7 +30,7 @@ export default function QuotePdfPreview({ onClose }: { onClose: () => void }) {
     setSaving(true)
     setError(null)
     try {
-      await exportElementToPdf(paperRef.current, quotePdfFilename(displayQuoteNo(quoteNo, quoteSuffix), customer.name))
+      await exportElementToPdf(paperRef.current, quotePdfFilename(displayQuoteNo(quoteNo, quoteNumber), customer.name))
       onClose()
     } catch {
       setError('Could not create the PDF. Please try again.')

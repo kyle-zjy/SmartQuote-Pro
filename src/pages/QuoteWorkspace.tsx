@@ -8,7 +8,6 @@ import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
 import { groupQuoteItemsByLocation } from '../lib/groupQuoteItems'
 import { isOtherFrameColour } from '../lib/frameColour'
-import { suggestQuoteSuffix } from '../lib/lineDescription'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
 import { colourRecord, useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
@@ -34,8 +33,8 @@ export default function QuoteWorkspace() {
     setShipTo,
     quoteDate,
     setQuoteDate,
-    quoteSuffix,
-    setQuoteSuffix,
+    quoteNumber,
+    setQuoteNumber,
     frameColour,
     setFrameColour,
     customFrameColour,
@@ -111,8 +110,8 @@ export default function QuoteWorkspace() {
   const colourHasExtra = Boolean(colour?.additionalCharge)
   const alreadySaved = savedQuotes.some((record) => record.quoteNo === quoteNo && record.version === version)
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
-  const suggestedSuffix = suggestQuoteSuffix(items)
   const roomGroups = groupQuoteItemsByLocation(items)
+  const needsQuoteNumber = !quoteNumber.trim()
 
   function handleClear() {
     if (items.length === 0 || window.confirm('Clear all items on this quote?')) clear()
@@ -230,11 +229,11 @@ export default function QuoteWorkspace() {
               <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} disabled={locked} />
             </label>
             <label>
-              Quote suffix
+              Quote number *
               <input
-                value={quoteSuffix}
-                onChange={(e) => setQuoteSuffix(e.target.value)}
-                placeholder="SS, DG, IG"
+                value={quoteNumber}
+                onChange={(e) => setQuoteNumber(e.target.value)}
+                placeholder="e.g. 33021"
                 disabled={locked}
               />
             </label>
@@ -274,12 +273,6 @@ export default function QuoteWorkspace() {
               </label>
             )}
           </div>
-
-          {suggestedSuffix && suggestedSuffix !== quoteSuffix && !locked && (
-            <button type="button" className="link-button" onClick={() => setQuoteSuffix(suggestedSuffix)}>
-              Use suggested suffix ({suggestedSuffix})
-            </button>
-          )}
 
           {colourHasExtra && !locked && (
             <p className="muted small">
@@ -458,6 +451,9 @@ export default function QuoteWorkspace() {
             </Link>
             {message && <span className="muted small">{message}</span>}
           </div>
+          {needsQuoteNumber && !locked && (status === 'draft' || status === 'office-review') && (
+            <p className="muted small">Enter a quote number before submitting for review or issuing this quote.</p>
+          )}
         </section>
       </div>
 
