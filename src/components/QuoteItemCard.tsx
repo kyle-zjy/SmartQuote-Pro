@@ -59,6 +59,16 @@ export default function QuoteItemCard({
             {item.addons && item.addons.length > 0 && (
               <p className="muted small">Add-ons: {item.addons.map((a) => a.name).join(', ')}</p>
             )}
+            {(item.lockHeightMm || item.lockSide || item.centreTongue || item.bowed) && (
+              <p className="muted small">
+                {[
+                  item.lockHeightMm ? `Lock height: ${item.lockHeightMm} mm` : '',
+                  item.lockSide ? `Lock side: ${item.lockSide}` : '',
+                  item.centreTongue ? 'Centre tongue' : '',
+                  item.bowed ? 'Door bowed' : '',
+                ].filter(Boolean).join(' · ')}
+              </p>
+            )}
             {item.note && <p className="muted small">Note: {item.note}</p>}
           </>
         ) : (

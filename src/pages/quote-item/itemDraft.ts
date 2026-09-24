@@ -12,6 +12,10 @@ export interface ItemDraft {
   location: string
   configurationCode: string
   measurements: Record<string, string>
+  lockHeightMm: string
+  lockSide: 'left' | 'right' | ''
+  centreTongue: boolean
+  bowed: boolean
   productKey: string
   categoryKey: string
   widthMm: string
@@ -32,6 +36,10 @@ export function emptyItemDraft(): ItemDraft {
     location: '',
     configurationCode: '',
     measurements: {},
+    lockHeightMm: '',
+    lockSide: '',
+    centreTongue: false,
+    bowed: false,
     productKey: '',
     categoryKey: '',
     widthMm: '',
@@ -54,6 +62,10 @@ export function draftFromItem(item: QuoteLineItem): ItemDraft {
     location: item.location ?? item.room ?? '',
     configurationCode: item.configurationCode ?? '',
     measurements: item.measurements ?? {},
+    lockHeightMm: item.lockHeightMm == null ? '' : String(item.lockHeightMm),
+    lockSide: item.lockSide ?? '',
+    centreTongue: item.centreTongue ?? false,
+    bowed: item.bowed ?? false,
     productKey: item.productKey ?? '',
     categoryKey: '',
     widthMm: item.openingWidthMm ? String(item.openingWidthMm) : '',
@@ -84,6 +96,10 @@ interface ComparableItem {
   productKey?: string
   openingWidthMm?: number
   openingHeightMm?: number
+  lockHeightMm?: number | null
+  lockSide?: 'left' | 'right' | ''
+  centreTongue?: boolean
+  bowed?: boolean
   material?: string
   frameColourMode?: 'default' | 'custom'
   customFrameColour?: string
@@ -100,6 +116,10 @@ function itemSignature(item: ComparableItem): string {
     productKey: item.productKey ?? '',
     openingWidthMm: item.openingWidthMm ?? null,
     openingHeightMm: item.openingHeightMm ?? null,
+    lockHeightMm: item.lockHeightMm ?? null,
+    lockSide: item.lockSide ?? '',
+    centreTongue: item.centreTongue ?? false,
+    bowed: item.bowed ?? false,
     material: item.material ?? '',
     frameColourMode: item.frameColourMode ?? 'default',
     customFrameColour: item.customFrameColour ?? '',

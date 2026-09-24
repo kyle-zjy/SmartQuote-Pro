@@ -11,6 +11,7 @@ import { isOtherFrameColour } from '../lib/frameColour'
 import { suggestQuoteSuffix } from '../lib/lineDescription'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
 import { colourRecord, useQuote } from '../lib/quoteContext'
+import { formatPhone } from '../lib/phoneFormat'
 
 function formatIssuedAt(iso: string): string {
   const [year, month, day] = iso.slice(0, 10).split('-')
@@ -197,8 +198,8 @@ export default function QuoteWorkspace() {
               Phone
               <input
                 value={customer.phone}
-                onChange={(e) => setCustomer({ ...customer, phone: e.target.value })}
-                placeholder="04xx xxx xxx"
+                onChange={(e) => setCustomer({ ...customer, phone: formatPhone(e.target.value) })}
+                placeholder="0417-001-615"
                 disabled={locked}
               />
             </label>
@@ -306,8 +307,8 @@ export default function QuoteWorkspace() {
                 Ship phone
                 <input
                   value={shipTo.phone}
-                  onChange={(e) => setShipTo({ ...shipTo, phone: e.target.value })}
-                  placeholder="04xx xxx xxx"
+                  onChange={(e) => setShipTo({ ...shipTo, phone: formatPhone(e.target.value) })}
+                  placeholder="0417-001-615"
                   disabled={locked}
                 />
               </label>

@@ -48,9 +48,11 @@ describe('quoteSheet', () => {
       height: 2100,
       width: 900,
     })
-    expect(measurePoints(findSheetConfig('HDX-L')!).heights).toEqual(['H1', 'H2', 'H3'])
+    expect(measurePoints(findSheetConfig('HDX-L')!).heights).toEqual(['H1', 'H2'])
     expect(measurePoints(findSheetConfig('WS')!).widths).toEqual(['W1'])
-    expect(measurePoints(findSheetConfig('SDOXX')!).heights).toEqual(['H1', 'H2', 'H3'])
+    expect(measurePoints(findSheetConfig('SDOXX')!).heights).toEqual(['H1'])
+    expect(measurePoints(findSheetConfig('SDOX')!).heights).toEqual(['H1', 'H2', 'H3'])
+    expect(measurePoints(findSheetConfig('SDXO')!).heights).toEqual(['H1', 'H2', 'H3'])
   })
 
   it('suggests a screen type from the drawing code', () => {
@@ -58,6 +60,8 @@ describe('quoteSheet', () => {
     expect(suggestedScreenType('SDOXO-R')).toBe('Sliding Door')
     expect(suggestedScreenType('WS')).toBe('Window')
     expect(configLabel('HDX-L')).toContain('LHS')
+    expect(configLabel('SDOXX')).toContain('RHS')
+    expect(configLabel('SDXXO')).toContain('LHS')
   })
 
   it('looks up a matrix price from the calculated screen size', () => {

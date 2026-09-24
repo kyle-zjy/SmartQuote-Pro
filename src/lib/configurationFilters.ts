@@ -1,4 +1,4 @@
-import { configFamily, configLabel, type SheetConfig } from './quoteSheet'
+import { configFamily, configHanding, configLabel, type SheetConfig } from './quoteSheet'
 
 export type ConfigTypeFilter = 'door' | 'window'
 export type ConfigOperationFilter = 'hinged' | 'sliding'
@@ -23,9 +23,7 @@ export function configOperation(code: string): ConfigOperationFilter | undefined
 }
 
 export function configDirection(code: string): ConfigDirectionFilter | undefined {
-  if (code.endsWith('-L')) return 'LHS'
-  if (code.endsWith('-R')) return 'RHS'
-  return undefined
+  return configHanding(code) || undefined
 }
 
 export function configPanelsBucket(panels: number): ConfigPanelsFilter {

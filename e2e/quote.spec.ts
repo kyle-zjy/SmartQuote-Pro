@@ -91,6 +91,22 @@ test.describe('quote workspace', () => {
   })
 })
 
+test('uses the entered quote number in the customer preview and formats phone numbers', async ({ page }) => {
+  await resetApp(page)
+  await page.goto('/quotes/new')
+  await page.getByLabel('Quote number').fill('45678')
+  await page.getByLabel('Customer').fill('Test Customer')
+  await page.getByLabel('Phone').fill('0417001615')
+  await expect(page.getByLabel('Phone')).toHaveValue('0417-001-615')
+  await page.getByRole('button', { name: 'Start quote' }).click()
+  await expect(page.getByRole('heading', { name: /Quote 00045678/ })).toBeVisible()
+  await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
+  await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
+  const dialog = page.getByRole('dialog', { name: 'Preview quote' })
+  await expect(dialog.locator('.quote-doc__no')).toContainText('Quote No: 00045678')
+  await expect(dialog.getByText('0417-001-615').first()).toBeVisible()
+})
+
 test.describe('quote totals', () => {
   test('subtotal and total reflect the opening price', async ({ page }) => {
     await resetApp(page)

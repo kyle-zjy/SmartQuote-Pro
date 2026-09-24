@@ -3,6 +3,7 @@ import SheetDiagram, { type DiagramTool } from '../../components/SheetDiagram'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
 import {
   calcSheetSize,
+  configFamily,
   configLabel,
   findSheetConfig,
   formatSheetMm,
@@ -15,6 +16,11 @@ import { sheetCodeImage } from '../../lib/sheetCodeImages'
 export default function MeasurementStep({
   code,
   values,
+  lockHeightMm,
+  lockSide,
+  centreTongue,
+  bowed,
+  onHardwareChange,
   markers,
   strokes,
   onValuesChange,
@@ -25,6 +31,11 @@ export default function MeasurementStep({
 }: {
   code: string
   values: Record<string, string>
+  lockHeightMm: string
+  lockSide: 'left' | 'right' | ''
+  centreTongue: boolean
+  bowed: boolean
+  onHardwareChange: (patch: { lockHeightMm?: string; lockSide?: 'left' | 'right' | ''; centreTongue?: boolean; bowed?: boolean }) => void
   markers: Record<string, MarkerPosition>
   strokes: DrawStroke[]
   onValuesChange: (values: Record<string, string>) => void
@@ -34,6 +45,7 @@ export default function MeasurementStep({
   onBack: () => void
 }) {
   const config = findSheetConfig(code)
+  const isDoor = configFamily(code) !== 'window'
   const image = config ? sheetCodeImage(code) : undefined
   const points = config ? measurePoints(config) : { heights: [] as string[], widths: [] as string[] }
   const keys = config ? measureKeys(config) : []
@@ -218,6 +230,32 @@ export default function MeasurementStep({
                   />
                 </label>
               ))}
+            </div>
+          )}
+
+          {isDoor && (
+            <div className="sheet-hardware-fields">
+              <h3>Door hardware &amp; condition</h3>
+              <label>
+                Lock height (mm)
+                <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
+              </label>
+              <label>
+                Lock side
+                <select value={lockSide} onChange={(e) => onHardwareChange({ lockSide: e.target.value as 'left' | 'right' | '' })}>
+                  <option value="">Select side</option>
+                  <option value="left">Left</option>
+                  <option value="right">Right</option>
+                </select>
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={centreTongue} onChange={(e) => onHardwareChange({ centreTongue: e.target.checked })} />
+                Centre tongue
+              </label>
+              <label className="check-row">
+                <input type="checkbox" checked={bowed} onChange={(e) => onHardwareChange({ bowed: e.target.checked })} />
+                Door is bowed
+              </label>
             </div>
           )}
 

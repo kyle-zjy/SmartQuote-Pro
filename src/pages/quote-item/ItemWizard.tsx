@@ -6,6 +6,7 @@ import { describeStructuredItem, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { useQuote, type QuoteLineItem } from '../../lib/quoteContext'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
+import { configFamily } from '../../lib/quoteSheet'
 import AddonStep from './AddonStep'
 import ConfigurationPicker from './ConfigurationPicker'
 import {
@@ -124,6 +125,10 @@ export default function ItemWizard() {
     const category = product?.categories.find((c) => c.key === draft.categoryKey)
     const widthMm = Number(draft.widthMm)
     const heightMm = Number(draft.heightMm)
+    if (draft.lockHeightMm && !(Number(draft.lockHeightMm) > 0)) {
+      setError('Enter a valid lock height in millimetres.')
+      return
+    }
     if (!product || !category || !(widthMm > 0) || !(heightMm > 0)) {
       setError('Choose a product and enter a valid size before saving.')
       return
@@ -160,6 +165,10 @@ export default function ItemWizard() {
       location: draft.location,
       configurationCode: draft.configurationCode,
       measurements: draft.measurements,
+      lockHeightMm: draft.lockHeightMm ? Number(draft.lockHeightMm) : null,
+      lockSide: draft.lockSide,
+      centreTongue: draft.centreTongue,
+      bowed: draft.bowed,
       openingWidthMm: widthMm,
       openingHeightMm: heightMm,
       material: draft.meshOption,
@@ -241,7 +250,14 @@ export default function ItemWizard() {
         <ConfigurationPicker
           value={draft.configurationCode}
           onNext={(code) => {
-            patchDraft(code === draft.configurationCode ? {} : { configurationCode: code, measurements: {} })
+            patchDraft(code === draft.configurationCode ? {} : {
+              configurationCode: code,
+              measurements: {},
+              lockHeightMm: '',
+              lockSide: configFamily(code) === 'hinged' ? (code.endsWith('-L') ? 'left' : code.endsWith('-R') ? 'right' : '') : '',
+              centreTongue: false,
+              bowed: false,
+            })
             goToStep('measurements')
           }}
           onBack={() => goToStep('location')}
@@ -252,6 +268,11 @@ export default function ItemWizard() {
         <MeasurementStep
           code={draft.configurationCode}
           values={draft.measurements}
+          lockHeightMm={draft.lockHeightMm}
+          lockSide={draft.lockSide}
+          centreTongue={draft.centreTongue}
+          bowed={draft.bowed}
+          onHardwareChange={patchDraft}
           markers={markers}
           strokes={strokes}
           onValuesChange={(measurements) => patchDraft({ measurements })}

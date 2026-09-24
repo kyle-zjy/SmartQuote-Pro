@@ -57,6 +57,10 @@ export interface QuoteLineItem {
   location?: string
   configurationCode?: string
   measurements?: Record<string, string>
+  lockHeightMm?: number | null
+  lockSide?: 'left' | 'right' | ''
+  centreTongue?: boolean
+  bowed?: boolean
   openingWidthMm?: number
   openingHeightMm?: number
   material?: string
@@ -131,10 +135,14 @@ const emptyCustomer: QuoteCustomer = { name: '', address: '', phone: '' }
 
 function nextQuoteNo(): string {
   try {
-    const current = Number(localStorage.getItem(SEQ_KEY) ?? '33020')
-    const next = current + 1
-    localStorage.setItem(SEQ_KEY, String(next))
-    return String(next).padStart(8, '0')
+    let current = Number(localStorage.getItem(SEQ_KEY) ?? '33020')
+    let candidate: string
+    do {
+      current += 1
+      candidate = String(current).padStart(8, '0')
+    } while (getArchivedQuote(candidate))
+    localStorage.setItem(SEQ_KEY, String(current))
+    return candidate
   } catch {
     return String(Date.now()).slice(-8)
   }
@@ -332,7 +340,7 @@ interface QuoteContextValue extends QuoteState {
   issueQuote: () => boolean
   reviseQuote: (reason?: string) => boolean
   /** Starts a fresh draft quote and returns its newly assigned quote number. */
-  newQuote: () => string
+  newQuote: (requestedNo?: string) => string | null
   saveCurrentQuote: () => ArchiveWriteResult
   loadSavedQuote: (quoteNo: string, version?: number) => boolean
   deleteSavedQuote: (quoteNo: string, version: number) => void
@@ -502,8 +510,20 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'LOAD_QUOTE', quote: revised })
         return true
       },
-      newQuote: () => {
-        const quoteNo = nextQuoteNo()
+      newQuote: (requestedNo) => {
+        const quoteNo = requestedNo ? requestedNo.padStart(8, '0') : nextQuoteNo()
+        if (
+          getArchivedQuote(quoteNo) ||
+          (quoteNo === state.quoteNo && (state.items.length > 0 || Boolean(state.customer.name.trim())))
+        ) return null
+        if (requestedNo) {
+          try {
+            const current = Number(localStorage.getItem(SEQ_KEY) ?? '33020')
+            localStorage.setItem(SEQ_KEY, String(Math.max(current, Number(quoteNo))))
+          } catch {
+            // Browser storage may be unavailable; the quote remains usable in memory.
+          }
+        }
         dispatch({ type: 'NEW_QUOTE', quoteNo })
         return quoteNo
       },

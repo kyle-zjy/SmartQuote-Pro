@@ -1,6 +1,15 @@
 import type { QuoteLineItem } from '../lib/quoteContext'
 import { lineAmount } from '../lib/quoteTotals'
 
+function siteDetails(item: QuoteLineItem): string {
+  return [
+    item.lockHeightMm ? `Lock height: ${item.lockHeightMm} mm` : '',
+    item.lockSide ? `Lock side: ${item.lockSide}` : '',
+    item.centreTongue ? 'Centre tongue' : '',
+    item.bowed ? 'Door bowed' : '',
+  ].filter(Boolean).join(' · ')
+}
+
 export default function QuoteLineItemRow({
   item,
   onQuantityChange,
@@ -37,6 +46,7 @@ export default function QuoteLineItemRow({
         {readOnly ? (
           <>
             <div>{item.description}</div>
+            {siteDetails(item) && <div className="muted small">{siteDetails(item)}</div>}
             {item.note && <div className="muted small">Note: {item.note}</div>}
           </>
         ) : (
@@ -47,6 +57,7 @@ export default function QuoteLineItemRow({
               value={item.description}
               onChange={(e) => onDescriptionChange?.(e.target.value)}
             />
+            {siteDetails(item) && <div className="muted small">{siteDetails(item)}</div>}
             {item.note && <div className="muted small">Note: {item.note}</div>}
           </>
         )}

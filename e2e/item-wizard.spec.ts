@@ -24,6 +24,30 @@ test.describe('item wizard', () => {
     await expect(page.getByRole('button', { name: 'Doors', exact: true })).toHaveClass(/tab--active/)
   })
 
+  test('records door lock details and bowed condition through review and edit', async ({ page }) => {
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await page.getByLabel('Location').fill('Front door')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+    await expect(page.getByLabel('H3', { exact: true })).toHaveCount(0)
+    await page.getByLabel('H1', { exact: true }).fill('2100')
+    await page.getByLabel('W1', { exact: true }).fill('900')
+    await page.getByLabel('Lock height (mm)').fill('950')
+    await expect(page.getByLabel('Lock side')).toHaveValue('left')
+    await page.getByLabel('Centre tongue').check()
+    await page.getByLabel('Door is bowed').check()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByText('950 mm')).toBeVisible()
+    await expect(page.getByText('Door bowed')).toBeVisible()
+    await page.getByRole('button', { name: 'Save Item' }).click()
+    await expect(page.locator('.quote-item-card').getByText(/Lock height: 950 mm.*Door bowed/)).toBeVisible()
+    await page.getByRole('link', { name: 'Edit' }).click()
+    await expect(page.getByText('950 mm')).toBeVisible()
+    await expect(page.getByText('Door bowed')).toBeVisible()
+  })
+
   test('prices a size at the next matrix bracket, adds add-ons, saves the opening, and merges an identical repeat', async ({
     page,
   }) => {

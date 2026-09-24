@@ -2,6 +2,7 @@ import { productWarrantyNotes } from '../data/company'
 import { useCompanySettings } from '../lib/companySettings'
 import { displayFrameColour } from '../lib/frameColour'
 import { displayQuoteNo, displayQuoteRevision } from '../lib/displayQuoteNo'
+import { formatPhone } from '../lib/phoneFormat'
 import { useQuote } from '../lib/quoteContext'
 import { formatCurrency } from '../lib/formatCurrency'
 import { partyLines } from '../lib/partyLines'
@@ -46,9 +47,9 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
 
   const linesLocked = readOnly || status === 'issued' || dealStatus !== 'open'
 
-  const billLines = partyLines(customer.name, customer.address, customer.phone)
+  const billLines = partyLines(customer.name, customer.address, formatPhone(customer.phone))
   const shipParty = shipSameAsBill ? customer : shipTo
-  const shipLines = partyLines(shipParty.name, shipParty.address, shipParty.phone)
+  const shipLines = partyLines(shipParty.name, shipParty.address, formatPhone(shipParty.phone))
   const warrantyNotes = productWarrantyNotes(items.map((item) => item.productKey ?? ''))
   const rooms = [...new Set(items.map((item) => (item.room && item.room.trim() ? item.room : 'Unassigned')))]
 

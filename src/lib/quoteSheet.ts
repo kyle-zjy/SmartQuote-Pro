@@ -35,7 +35,7 @@ export function configFamily(code: string): 'hinged' | 'sliding' | 'window' | 'o
 }
 
 export function configLabel(code: string): string {
-  const handing = code.endsWith('-L') ? 'LHS' : code.endsWith('-R') ? 'RHS' : ''
+  const handing = configHanding(code)
   const body = code.replace(/-L$|-R$/, '')
   if (body === 'WS') return 'Window'
   if (body.startsWith('HD')) return ['Door — Hinged', handing].filter(Boolean).join(' — ')
@@ -44,6 +44,13 @@ export function configLabel(code: string): string {
     return ['Door — Sliding', layout, handing].filter(Boolean).join(' — ')
   }
   return code
+}
+
+/** Some source drawings include handedness in their title even though the sheet code has no suffix. */
+export function configHanding(code: string): 'LHS' | 'RHS' | '' {
+  if (code.endsWith('-L') || code === 'SDXXO' || code === 'SDXXXO') return 'LHS'
+  if (code.endsWith('-R') || code === 'SDOXX' || code === 'SDOXXX') return 'RHS'
+  return ''
 }
 
 export function measurePoints(config: SheetConfig): { heights: string[]; widths: string[] } {
@@ -55,7 +62,7 @@ export function measurePoints(config: SheetConfig): { heights: string[]; widths:
   }
   const family = configFamily(config.code)
   if (family === 'hinged') return { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] }
-  if (family === 'sliding') return { heights: ['H1', 'H2', 'H3'], widths: ['W1'] }
+  if (family === 'sliding') return { heights: ['H1'], widths: ['W1'] }
   return { heights: ['H1'], widths: ['W1'] }
 }
 

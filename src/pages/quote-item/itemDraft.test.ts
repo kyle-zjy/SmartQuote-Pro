@@ -58,4 +58,13 @@ describe('itemDraft photos', () => {
     const candidate = { ...existing }
     expect(findMatchingItem([existing], candidate)?.id).toBe(existing.id)
   })
+
+  it('keeps openings with different lock details or bowed condition separate', () => {
+    const existing = sampleItem({ lockHeightMm: 950, lockSide: 'left', centreTongue: true, bowed: false })
+    expect(findMatchingItem([existing], { ...existing, bowed: true })).toBeUndefined()
+    expect(findMatchingItem([existing], { ...existing, lockHeightMm: 1000 })).toBeUndefined()
+    expect(draftFromItem(existing)).toMatchObject({
+      lockHeightMm: '950', lockSide: 'left', centreTongue: true, bowed: false,
+    })
+  })
 })

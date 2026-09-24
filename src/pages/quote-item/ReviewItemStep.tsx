@@ -80,6 +80,18 @@ export default function ReviewItemStep({
         <dd>{product ? `${product.name} (${category?.label ?? ''})` : '—'}</dd>
         <dt>Size</dt>
         <dd>{widthMm > 0 && heightMm > 0 ? `${widthMm} × ${heightMm} mm` : '—'}</dd>
+        {draft.configurationCode !== 'WS' && (
+          <>
+            <dt>Lock height</dt>
+            <dd>{draft.lockHeightMm ? `${draft.lockHeightMm} mm` : 'Not recorded'}</dd>
+            <dt>Lock side</dt>
+            <dd>{draft.lockSide || 'Not recorded'}</dd>
+            <dt>Centre tongue</dt>
+            <dd>{draft.centreTongue ? 'Yes' : 'No'}</dd>
+            <dt>Door bowed</dt>
+            <dd>{draft.bowed ? 'Yes' : 'No'}</dd>
+          </>
+        )}
         <dt>Mesh</dt>
         <dd>{draft.meshOption !== STANDARD_MESH ? draft.meshOption : 'Standard'}</dd>
         <dt>Frame colour</dt>

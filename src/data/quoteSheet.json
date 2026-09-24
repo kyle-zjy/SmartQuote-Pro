@@ -36,8 +36,7 @@
       "heightFactor": 1,
       "heightPoints": [
         "H1",
-        "H2",
-        "H3"
+        "H2"
       ],
       "widthPoints": [
         "W1",
@@ -54,8 +53,7 @@
       "heightFactor": 1,
       "heightPoints": [
         "H1",
-        "H2",
-        "H3"
+        "H2"
       ],
       "widthPoints": [
         "W1",
@@ -122,14 +120,8 @@
       "widthFactor": 3,
       "widthOffset": 0,
       "heightFactor": 1,
-      "heightPoints": [
-        "H1",
-        "H2",
-        "H3"
-      ],
-      "widthPoints": [
-        "W1"
-      ]
+      "heightPoints": [],
+      "widthPoints": []
     },
     {
       "code": "SDOXO-R",
@@ -228,8 +220,8 @@
       "widthFactor": 2,
       "widthOffset": 0,
       "heightFactor": 1,
-      "heightPoints": [],
-      "widthPoints": []
+      "heightPoints": ["H1", "H2", "H3"],
+      "widthPoints": ["W1"]
     },
     {
       "code": "SDXXO",
