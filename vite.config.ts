@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 const pagesBase =
@@ -12,9 +12,5 @@ export default defineConfig({
     // edits made from the Linux side -- Vite's default watcher silently misses file changes and
     // keeps serving stale modules. Polling makes the dev server actually pick up edits.
     watch: { usePolling: true, interval: 300 },
-  },
-  test: {
-    environment: 'node',
-    include: ['src/**/*.test.ts'],
   },
 })
