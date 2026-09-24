@@ -48,6 +48,31 @@ test.describe('item wizard', () => {
     await expect(page.getByText('Door bowed')).toBeVisible()
   })
 
+  test('removes and replaces a measurement marker without clearing its value', async ({ page }) => {
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await page.getByLabel('Location').fill('Front door')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+
+    const diagram = page.locator('.sheet-diagram')
+    const h1Marker = diagram.locator('.sheet-marker', { hasText: 'H1' })
+    const removeMark = page.getByRole('button', { name: 'Remove H1 mark' })
+
+    await page.getByLabel('H1', { exact: true }).fill('2100')
+    await diagram.click({ position: { x: 100, y: 100 } })
+    await expect(h1Marker).toHaveCount(1)
+    await expect(removeMark).toBeEnabled()
+
+    await removeMark.click()
+    await expect(h1Marker).toHaveCount(0)
+    await expect(removeMark).toBeDisabled()
+    await expect(page.getByLabel('H1', { exact: true })).toHaveValue('2100')
+
+    await diagram.click({ position: { x: 160, y: 140 } })
+    await expect(h1Marker).toHaveCount(1)
+    await expect(removeMark).toBeEnabled()
+  })
+
   test('prices a size at the next matrix bracket, adds add-ons, saves the opening, and merges an identical repeat', async ({
     page,
   }) => {
