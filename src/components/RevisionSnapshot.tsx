@@ -94,7 +94,7 @@ export default function RevisionSnapshot({
     colourExtra: liveColourExtra,
     depositRate: settings.depositRate,
   })
-  const heading = displayQuoteNo(quote.quoteNo, quote.quoteSuffix)
+  const heading = displayQuoteNo(quote.quoteNo, quote.quoteNumber)
   const billLines = partyLines(quote.customer.name, quote.customer.address, quote.customer.phone)
   const shipParty = quote.shipSameAsBill ? quote.customer : quote.shipTo
   const shipLines = partyLines(shipParty.name, shipParty.address, shipParty.phone)

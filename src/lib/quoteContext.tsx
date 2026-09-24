@@ -98,7 +98,7 @@ export interface QuoteState {
   shipSameAsBill: boolean
   shipTo: QuoteCustomer
   quoteNo: string
-  quoteSuffix: string
+  quoteNumber: string
   quoteDate: string
   frameColour: string
   customFrameColour: string
@@ -124,7 +124,7 @@ export type QuoteAction =
   | { type: 'SET_CUSTOM_COLOUR'; customFrameColour: string }
   | { type: 'SET_COLOUR_EXTRA'; amount: number | null }
   | { type: 'SET_QUOTE_DATE'; quoteDate: string }
-  | { type: 'SET_QUOTE_SUFFIX'; quoteSuffix: string }
+  | { type: 'SET_QUOTE_NUMBER'; quoteNumber: string }
   | { type: 'SET_PAID'; paid: number }
   | { type: 'NEW_QUOTE'; quoteNo: string }
   | { type: 'LOAD_QUOTE'; quote: QuoteState }
@@ -169,7 +169,7 @@ function defaultState(quoteNo: string): QuoteState {
     shipSameAsBill: true,
     shipTo: emptyCustomer,
     quoteNo,
-    quoteSuffix: '',
+    quoteNumber: '',
     quoteDate: todayISO(),
     frameColour: 'White',
     customFrameColour: '',
@@ -207,7 +207,7 @@ export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: st
     customer: { ...emptyCustomer, ...parsed.customer },
     shipSameAsBill: parsed.shipSameAsBill ?? true,
     shipTo: { ...emptyCustomer, ...parsed.shipTo },
-    quoteSuffix: parsed.quoteSuffix ?? '',
+    quoteNumber: parsed.quoteNumber ?? '',
     quoteDate: parsed.quoteDate || todayISO(),
     frameColour: parsed.frameColour || 'White',
     customFrameColour: parsed.customFrameColour ?? '',
@@ -302,8 +302,8 @@ export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState
       return { ...state, colourExtraOverride: action.amount }
     case 'SET_QUOTE_DATE':
       return { ...state, quoteDate: action.quoteDate }
-    case 'SET_QUOTE_SUFFIX':
-      return { ...state, quoteSuffix: action.quoteSuffix }
+    case 'SET_QUOTE_NUMBER':
+      return { ...state, quoteNumber: action.quoteNumber }
     case 'SET_PAID':
       return { ...state, paid: Math.max(0, action.paid) }
     case 'NEW_QUOTE':
@@ -378,7 +378,7 @@ interface QuoteContextValue extends QuoteState {
   setCustomFrameColour: (customFrameColour: string) => void
   setColourExtraOverride: (amount: number | null) => void
   setQuoteDate: (quoteDate: string) => void
-  setQuoteSuffix: (quoteSuffix: string) => void
+  setQuoteNumber: (quoteNumber: string) => void
   setPaid: (paid: number) => void
   submitForReview: () => boolean
   issueQuote: () => boolean
@@ -515,7 +515,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       setCustomFrameColour: (customFrameColour) => dispatch({ type: 'SET_CUSTOM_COLOUR', customFrameColour }),
       setColourExtraOverride: (amount) => dispatch({ type: 'SET_COLOUR_EXTRA', amount }),
       setQuoteDate: (quoteDate) => dispatch({ type: 'SET_QUOTE_DATE', quoteDate }),
-      setQuoteSuffix: (quoteSuffix) => dispatch({ type: 'SET_QUOTE_SUFFIX', quoteSuffix }),
+      setQuoteNumber: (quoteNumber) => dispatch({ type: 'SET_QUOTE_NUMBER', quoteNumber }),
       setPaid: (paid) => dispatch({ type: 'SET_PAID', paid }),
       submitForReview: () => {
         if (!canSubmitForReview(state) || !state.customer.name.trim() || !state.customer.address.trim()) return false

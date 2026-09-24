@@ -4,6 +4,7 @@ import { quoteReducer } from './quoteContext'
 import {
   canIssueQuote,
   canReviseQuote,
+  canSubmitForReview,
   createIssuedSnapshot,
   isActionLocked,
   quoteFinancials,
@@ -18,7 +19,7 @@ function draftQuote(overrides: Partial<QuoteState> = {}): QuoteState {
     shipSameAsBill: true,
     shipTo: { name: '', address: '', phone: '' },
     quoteNo: '00033021',
-    quoteSuffix: '',
+    quoteNumber: '33021',
     quoteDate: '2026-08-23',
     frameColour: 'White',
     customFrameColour: '',
@@ -39,6 +40,14 @@ describe('quoteLifecycle', () => {
     expect(canIssueQuote(draftQuote({ status: 'issued' }))).toBe(false)
     expect(canIssueQuote(draftQuote({ dealStatus: 'abandoned' }))).toBe(false)
     expect(canIssueQuote(draftQuote({ dealStatus: 'closed' }))).toBe(false)
+  })
+
+  it('requires a quote number before it can be submitted for review or issued', () => {
+    expect(canSubmitForReview(draftQuote({ quoteNumber: '' }))).toBe(false)
+    expect(canSubmitForReview(draftQuote({ quoteNumber: '  ' }))).toBe(false)
+    expect(canSubmitForReview(draftQuote())).toBe(true)
+    expect(canIssueQuote(draftQuote({ quoteNumber: '' }))).toBe(false)
+    expect(canIssueQuote(draftQuote())).toBe(true)
   })
 
   it('freezes colour extra, GST and deposit at the current totals', () => {

@@ -267,7 +267,7 @@ function QuoteGroupTable({
       {groups.map((group) => {
         const latest = group.versions[0]
         if (!latest) return null
-        const heading = displayQuoteNo(latest.quote.quoteNo, latest.quote.quoteSuffix)
+        const heading = displayQuoteNo(latest.quote.quoteNo, latest.quote.quoteNumber)
         return (
           <article key={group.quoteNo} className={`saved-quote-card deal-row--${dealStatus}`}>
             <header className="saved-quote-card__head">

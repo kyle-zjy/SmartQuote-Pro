@@ -53,7 +53,7 @@ function sampleQuote(quoteNo: string, overrides: Partial<QuoteState> = {}): Quot
     shipSameAsBill: true,
     shipTo: { name: '', address: '', phone: '' },
     quoteNo,
-    quoteSuffix: '',
+    quoteNumber: '',
     quoteDate: '2026-08-23',
     frameColour: 'White',
     customFrameColour: '',
@@ -82,7 +82,7 @@ describe('quote number round-trip (Issue 2)', () => {
     const record = getArchivedQuote('33098', undefined, storage)
     expect(record?.quoteNo).toBe('33098')
     expect(record?.quote.quoteNo).toBe('33098')
-    expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteSuffix)).toBe('33098')
+    expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteNumber)).toBe('33098')
   })
 })
 
