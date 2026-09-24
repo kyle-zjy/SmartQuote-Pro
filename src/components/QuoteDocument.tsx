@@ -28,7 +28,7 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
     shipSameAsBill,
     shipTo,
     quoteNo,
-    quoteSuffix,
+    quoteNumber,
     quoteDate,
     version,
     frameColour,
@@ -76,7 +76,7 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
         <div className="quote-doc__meta">
           <p>Date: {formatQuoteDate(quoteDate)}</p>
           <p className="quote-doc__no">
-            Quote No: {displayQuoteNo(quoteNo, quoteSuffix)}
+            Quote No: {displayQuoteNo(quoteNo, quoteNumber)}
             {version > 1 ? ` · ${displayQuoteRevision(version)}` : ''}
           </p>
           {status === 'issued' && <p>Status: Issued</p>}

@@ -49,15 +49,23 @@ const ALLOWED_WHEN_DEAL_SETTLED: ReadonlySet<QuoteAction['type']> = new Set([
   'SET_DEAL_STATUS',
 ])
 
-export function canSubmitForReview(state: Pick<QuoteState, 'status' | 'items' | 'dealStatus'>): boolean {
-  return state.status === 'draft' && state.items.length > 0 && (state.dealStatus ?? 'open') === 'open'
+export function canSubmitForReview(
+  state: Pick<QuoteState, 'status' | 'items' | 'dealStatus' | 'quoteNumber'>,
+): boolean {
+  return (
+    state.status === 'draft' &&
+    state.items.length > 0 &&
+    (state.dealStatus ?? 'open') === 'open' &&
+    Boolean(state.quoteNumber?.trim())
+  )
 }
 
-export function canIssueQuote(state: Pick<QuoteState, 'status' | 'items' | 'dealStatus'>): boolean {
+export function canIssueQuote(state: Pick<QuoteState, 'status' | 'items' | 'dealStatus' | 'quoteNumber'>): boolean {
   return (
     (state.status === 'draft' || state.status === 'office-review') &&
     state.items.length > 0 &&
-    (state.dealStatus ?? 'open') === 'open'
+    (state.dealStatus ?? 'open') === 'open' &&
+    Boolean(state.quoteNumber?.trim())
   )
 }
 

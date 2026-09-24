@@ -49,7 +49,7 @@ function sampleQuote(quoteNo: string, name: string, version = 1): QuoteState {
     shipSameAsBill: true,
     shipTo: { name: '', address: '', phone: '' },
     quoteNo,
-    quoteSuffix: 'SS',
+    quoteNumber: 'SS',
     quoteDate: '2026-08-23',
     frameColour: 'White',
     customFrameColour: '',

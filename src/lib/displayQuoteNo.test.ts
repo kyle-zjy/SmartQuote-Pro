@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { displayQuoteNo, displayQuoteRevision } from './displayQuoteNo'
 
 describe('displayQuoteNo', () => {
-  it('appends a product suffix when present', () => {
-    expect(displayQuoteNo('00033012', 'SS')).toBe('00033012-SS')
-    expect(displayQuoteNo('00033012', ' dg ')).toBe('00033012-dg')
+  it('shows the entered quote number alone, trimmed', () => {
+    expect(displayQuoteNo('00033012', 'A-4521')).toBe('A-4521')
+    expect(displayQuoteNo('00033012', ' 4521 ')).toBe('4521')
   })
 
-  it('keeps the plain number when there is no suffix', () => {
+  it('falls back to the internal quote number when none was entered', () => {
     expect(displayQuoteNo('00033011', '')).toBe('00033011')
   })
 })
