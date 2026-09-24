@@ -24,6 +24,20 @@ test.describe('item wizard', () => {
     await expect(page.getByRole('button', { name: 'Doors', exact: true })).toHaveClass(/tab--active/)
   })
 
+  test('keeps W measurements unchanged when moving to product size', async ({ page }) => {
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await page.getByLabel('Location').fill('Patio')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^HDXX-L\b/ }).click()
+    await page.getByLabel('H1', { exact: true }).fill('2100')
+    await page.getByLabel('W1', { exact: true }).fill('900')
+    await page.getByLabel('W2', { exact: true }).fill('1000')
+    await expect(page.getByText(/Size used for pricing: 2100 × 1000 mm/)).toBeVisible()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByLabel('Width (mm)')).toHaveValue('1000')
+    await expect(page.getByLabel('Height (mm)')).toHaveValue('2100')
+  })
+
   test('records door lock details and bowed condition through review and edit', async ({ page }) => {
     await page.getByRole('link', { name: '+ Add Opening' }).click()
     await page.getByLabel('Location').fill('Front door')
