@@ -79,6 +79,13 @@ export default function MeasurementStep({
     onNext(size ? { widthMm: Math.round(size.screenWidth), heightMm: Math.round(size.screenHeight) } : null)
   }
 
+  function removeSelectedMark() {
+    if (!selected || !markers[selected]) return
+    const nextMarkers = { ...markers }
+    delete nextMarkers[selected]
+    onMarkersChange(nextMarkers)
+  }
+
   return (
     <div className="wizard-panel">
       <h2>Measure the opening</h2>
@@ -86,8 +93,8 @@ export default function MeasurementStep({
         {config.code} · {configLabel(config.code)} · {config.panels} panel{config.panels === 1 ? '' : 's'}
       </p>
       <p className="muted small">
-        Brush is selected first so you can draw on the picture. Click a measure point to drop its mark. Eraser only
-        removes drawing, not the marks.
+        Brush is selected first so you can draw on the picture. Click a measure point to drop its mark. Select a
+        marked point and use Remove mark to reposition it.
       </p>
 
       <div className="sheet-measure__layout">
@@ -169,6 +176,14 @@ export default function MeasurementStep({
               disabled={strokes.length === 0}
             >
               Clear drawing
+            </button>
+            <button
+              type="button"
+              className="link-button"
+              onClick={removeSelectedMark}
+              disabled={!selected || !markers[selected]}
+            >
+              {selected ? `Remove ${selected} mark` : 'Remove mark'}
             </button>
           </div>
           <SheetDiagram
