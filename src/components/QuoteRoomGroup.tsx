@@ -10,6 +10,7 @@ export default function QuoteRoomGroup({
   locked,
   onRemove,
   onSetQuantity,
+  onOverridePrice,
 }: {
   group: RoomGroupData
   quoteId: string
@@ -18,6 +19,7 @@ export default function QuoteRoomGroup({
   locked: boolean
   onRemove: (id: string) => void
   onSetQuantity: (id: string, quantity: number) => void
+  onOverridePrice: (id: string, finalPrice: number) => void
 }) {
   return (
     <div className="quote-room-group">
@@ -39,6 +41,7 @@ export default function QuoteRoomGroup({
             locked={locked}
             onRemove={onRemove}
             onSetQuantity={onSetQuantity}
+            onOverridePrice={onOverridePrice}
           />
         ))}
       </div>

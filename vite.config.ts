@@ -7,6 +7,12 @@ const pagesBase =
 export default defineConfig({
   base: pagesBase,
   plugins: [react()],
+  server: {
+    // This repo lives on a WSL2 DrvFS-mounted drive, where the OS never emits inotify events for
+    // edits made from the Linux side -- Vite's default watcher silently misses file changes and
+    // keeps serving stale modules. Polling makes the dev server actually pick up edits.
+    watch: { usePolling: true, interval: 300 },
+  },
   test: {
     environment: 'node',
     include: ['src/**/*.test.ts'],

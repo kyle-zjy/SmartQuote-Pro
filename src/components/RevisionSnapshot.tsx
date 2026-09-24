@@ -9,7 +9,7 @@ import type { ArchivedQuote } from '../lib/quoteArchive'
 import type { DealStatus } from '../lib/quoteLifecycle'
 import { quoteFinancials } from '../lib/quoteLifecycle'
 import { loadRoomPhotos } from '../lib/quotePhotoStore'
-import { GST_RATE, lineAmount } from '../lib/quoteTotals'
+import { GST_RATE, itemPrice, lineAmount } from '../lib/quoteTotals'
 import {
   adjacentRevisions,
   countSnapshotPhotos,
@@ -259,8 +259,8 @@ export default function RevisionSnapshot({
                         <td>{item.detail || '—'}</td>
                         <td>{item.room.trim() || 'Unassigned'}</td>
                         <td>{snapshotProductName(item.productKey)}</td>
-                        <td>{formatCurrency(item.unitPrice)}</td>
-                        <td>{formatCurrency(lineAmount(item.unitPrice, item.quantity))}</td>
+                        <td>{formatCurrency(itemPrice(item))}</td>
+                        <td>{formatCurrency(lineAmount(itemPrice(item), item.quantity))}</td>
                       </tr>
                     ))}
                     {financials.colourExtra > 0 ? (

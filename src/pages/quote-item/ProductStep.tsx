@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo } from 'react'
 import colours from '../../data/colours.json'
 import PriceResultCard from '../../components/PriceResultCard'
 import { calcConfiguredPrice, DOUBLE_HUNG_SURCHARGE, STANDARD_MESH } from '../../lib/configuredPrice'
@@ -28,6 +28,17 @@ export default function ProductStep({
   const product = data.products.find((p) => p.key === draft.productKey) ?? data.products[0]
   const category = product?.categories.find((c) => c.key === draft.categoryKey) ?? product?.categories[0]
   const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
+
+  // draft.productKey/categoryKey can be blank (new draft, or a legacy item with no stored category) --
+  // the fallbacks above pick something to display, but Review/Save must see the same value, so write
+  // it back as soon as it's resolved.
+  useEffect(() => {
+    if (product && product.key !== draft.productKey) {
+      onChange({ productKey: product.key })
+    } else if (category && category.key !== draft.categoryKey) {
+      onChange({ categoryKey: category.key })
+    }
+  }, [product, category, draft.productKey, draft.categoryKey, onChange])
 
   const widthMm = Number(draft.widthMm)
   const heightMm = Number(draft.heightMm)

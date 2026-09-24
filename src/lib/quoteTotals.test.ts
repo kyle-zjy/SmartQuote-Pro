@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { calcQuoteTotals, GST_RATE, lineAmount } from './quoteTotals'
+import { calcQuoteTotals, GST_RATE, itemPrice, lineAmount } from './quoteTotals'
 
 describe('lineAmount', () => {
   it('multiplies unit price by quantity', () => {
@@ -66,6 +66,24 @@ describe('calcQuoteTotals', () => {
       total: 275,
       paid: 100,
       balance: 175,
+    })
+  })
+})
+
+describe('manual price override (Issue 8)', () => {
+  it('itemPrice prefers finalPrice over unitPrice when both are present', () => {
+    expect(itemPrice({ unitPrice: 610, finalPrice: 650 })).toBe(650)
+  })
+
+  it('itemPrice falls back to unitPrice for a legacy item with no finalPrice', () => {
+    expect(itemPrice({ unitPrice: 610 })).toBe(610)
+  })
+
+  it('totals use the overridden finalPrice, not the originally calculated unitPrice', () => {
+    const overridden = [{ unitPrice: 610, finalPrice: 650, quantity: 1 }]
+    expect(calcQuoteTotals(overridden, false)).toMatchObject({
+      subtotal: 650,
+      total: 650,
     })
   })
 })

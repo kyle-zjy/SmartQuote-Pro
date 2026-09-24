@@ -52,15 +52,19 @@ export default function ItemWizard() {
       : undefined
 
   const [draft, setDraft] = useState<ItemDraft>(() => {
-    if (itemId) return sourceItem ? draftFromItem(sourceItem) : emptyItemDraft()
-    if (basedOnId && mode === 'reuse') return sourceItem ? draftForReuse(sourceItem) : emptyItemDraft()
-    if (basedOnId && mode === 'duplicate') return sourceItem ? draftFromItem(sourceItem) : emptyItemDraft()
+    if (itemId) return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
+    if (basedOnId && mode === 'reuse') return sourceItem ? draftForReuse(sourceItem, data.products) : emptyItemDraft()
+    if (basedOnId && mode === 'duplicate') return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
     return emptyItemDraft()
   })
 
-  const initialStep: Step = itemId || (basedOnId && mode === 'duplicate') ? 'review' : 'location'
+  const isEditOrDuplicate = Boolean(itemId) || (Boolean(basedOnId) && mode === 'duplicate')
+  const initialStep: Step = isEditOrDuplicate ? 'review' : 'location'
   const [step, setStep] = useState<Step>(initialStep)
-  const [visited, setVisited] = useState<Set<Step>>(() => new Set([initialStep]))
+  // Edit/Duplicate open with saved values already populated, so every tab must be reachable
+  // immediately -- otherwise a blank categoryKey (or any other field) can strand the user on
+  // Review with no way back to Product to fix it.
+  const [visited, setVisited] = useState<Set<Step>>(() => (isEditOrDuplicate ? new Set(STEP_ORDER) : new Set([initialStep])))
   const [error, setError] = useState<string | null>(null)
 
   const [markers, setMarkers] = useState<Record<string, MarkerPosition>>({})
@@ -149,7 +153,27 @@ export default function ItemWizard() {
       0,
     )
     const addonsTotal = draft.addons.reduce((sum, a) => sum + a.price, 0)
-    const unitPrice = configured.unitPrice + fitExtraTotal + addonsTotal
+    const calculatedPrice = configured.unitPrice + fitExtraTotal + addonsTotal
+
+    let finalPrice = calculatedPrice
+    let priceOverridden = false
+    if (itemId && sourceItem?.priceOverridden) {
+      const priceChanged = sourceItem.calculatedPrice != null && sourceItem.calculatedPrice !== calculatedPrice
+      const previousFinal = sourceItem.finalPrice ?? sourceItem.unitPrice
+      if (!priceChanged) {
+        finalPrice = previousFinal
+        priceOverridden = true
+      } else {
+        const keepOverride = window.confirm(
+          `This item's price was manually set to ${previousFinal.toFixed(2)}. The recalculated price ` +
+            `is now ${calculatedPrice.toFixed(2)} -- click OK to keep your manual price, or Cancel to use the new calculated price.`,
+        )
+        if (keepOverride) {
+          finalPrice = previousFinal
+          priceOverridden = true
+        }
+      }
+    }
 
     const productLabel = `${product.name} ${openingLabel(category.key, category.label)}`
     const description = describeStructuredItem({ location: draft.location, productLabel, widthMm, heightMm })
@@ -158,10 +182,14 @@ export default function ItemWizard() {
       description,
       detail: `${widthMm} x ${heightMm} mm`,
       quantity: draft.quantity,
-      unitPrice,
+      unitPrice: finalPrice,
+      calculatedPrice,
+      finalPrice,
+      priceOverridden,
       room: draft.location,
       note: draft.note.trim(),
       productKey: draft.productKey,
+      categoryKey: draft.categoryKey,
       location: draft.location,
       configurationCode: draft.configurationCode,
       measurements: draft.measurements,
@@ -172,6 +200,8 @@ export default function ItemWizard() {
       openingWidthMm: widthMm,
       openingHeightMm: heightMm,
       material: draft.meshOption,
+      doubleHung: isFlyscreenWindows && draft.doubleHung,
+      fitExtras: draft.fitExtras,
       frameColourMode: draft.frameColourMode,
       customFrameColour: draft.customFrameColour,
       addons: draft.addons,

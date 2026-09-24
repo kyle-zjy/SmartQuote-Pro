@@ -68,6 +68,14 @@ export interface QuoteLineItem {
   customFrameColour?: string
   addons?: QuoteAddon[]
   photos?: ItemPhoto[]
+  categoryKey?: string
+  doubleHung?: boolean
+  fitExtras?: string[]
+  /** Last system-computed unit price (before any manual override). */
+  calculatedPrice?: number
+  /** The price actually used for totals -- equals calculatedPrice unless manually overridden. Kept in sync with unitPrice. */
+  finalPrice?: number
+  priceOverridden?: boolean
 }
 
 export interface RoomPhoto {
@@ -139,7 +147,7 @@ function nextQuoteNo(): string {
     let candidate: string
     do {
       current += 1
-      candidate = String(current).padStart(8, '0')
+      candidate = String(current)
     } while (getArchivedQuote(candidate))
     localStorage.setItem(SEQ_KEY, String(current))
     return candidate
@@ -174,11 +182,26 @@ function defaultState(quoteNo: string): QuoteState {
   }
 }
 
+/** Legacy items never persisted these fields; backfill them from unitPrice so totals/overrides behave consistently. */
+function normalizeItem(item: QuoteLineItem): QuoteLineItem {
+  const finalPrice = item.finalPrice ?? item.unitPrice
+  return {
+    ...item,
+    categoryKey: item.categoryKey ?? '',
+    doubleHung: item.doubleHung ?? false,
+    fitExtras: item.fitExtras ?? [],
+    calculatedPrice: item.calculatedPrice ?? item.unitPrice,
+    finalPrice,
+    priceOverridden: item.priceOverridden ?? false,
+    unitPrice: finalPrice,
+  }
+}
+
 export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: string): QuoteState {
   const quoteNo = parsed.quoteNo || fallbackQuoteNo || nextQuoteNo()
   return {
     ...defaultState(quoteNo),
-    items: parsed.items ?? [],
+    items: (parsed.items ?? []).map(normalizeItem),
     gstEnabled: parsed.gstEnabled ?? true,
     roomPhotos: parsed.roomPhotos ?? {},
     customer: { ...emptyCustomer, ...parsed.customer },
@@ -199,6 +222,27 @@ export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: st
           : 'draft',
     dealStatus: parseDealStatus(parsed.dealStatus),
     issuedSnapshot: parsed.status === 'issued' && parsed.issuedSnapshot ? parsed.issuedSnapshot : null,
+  }
+}
+
+/**
+ * Deep-clones an archived quote into a brand-new, independent draft: new quote number, fresh
+ * lifecycle (draft/open, version 1, no issued snapshot, no payments), and new item ids so the
+ * duplicate can never share a mutable reference -- or an id `updateItem` could match -- with the
+ * original.
+ */
+export function buildDuplicatedQuote(source: QuoteState, newQuoteNo: string): QuoteState {
+  const cloned = JSON.parse(JSON.stringify(source)) as QuoteState
+  return {
+    ...cloned,
+    quoteNo: newQuoteNo,
+    version: 1,
+    status: 'draft',
+    dealStatus: 'open',
+    issuedSnapshot: null,
+    paid: 0,
+    quoteDate: todayISO(),
+    items: cloned.items.map((item) => ({ ...item, id: crypto.randomUUID() })),
   }
 }
 
@@ -343,6 +387,8 @@ interface QuoteContextValue extends QuoteState {
   newQuote: (requestedNo?: string) => string | null
   saveCurrentQuote: () => ArchiveWriteResult
   loadSavedQuote: (quoteNo: string, version?: number) => boolean
+  /** Deep-clones an archived quote into a brand-new, independent draft (new quote number, new item ids, fresh lifecycle). Returns the new quote number, or null if the source can't be found. */
+  duplicateQuote: (quoteNo: string, version?: number) => string | null
   deleteSavedQuote: (quoteNo: string, version: number) => void
   addSavedQuoteComment: (quoteNo: string, version: number, text: string) => boolean
   setQuoteDealStatus: (quoteNo: string, dealStatus: DealStatus) => void
@@ -511,7 +557,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         return true
       },
       newQuote: (requestedNo) => {
-        const quoteNo = requestedNo ? requestedNo.padStart(8, '0') : nextQuoteNo()
+        const quoteNo = requestedNo ? requestedNo.trim() : nextQuoteNo()
         if (
           getArchivedQuote(quoteNo) ||
           (quoteNo === state.quoteNo && (state.items.length > 0 || Boolean(state.customer.name.trim())))
@@ -537,6 +583,20 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         if (!record) return false
         dispatch({ type: 'LOAD_QUOTE', quote: record.quote })
         return true
+      },
+      duplicateQuote: (quoteNo, version) => {
+        const record = getArchivedQuote(quoteNo, version)
+        if (!record) return null
+        const newQuoteNo = nextQuoteNo()
+        const duplicated = buildDuplicatedQuote(record.quote, newQuoteNo)
+        try {
+          const financials = quoteFinancials(duplicated, { colourExtra: 0, depositRate: settings.depositRate })
+          upsertArchivedQuote(duplicated, { total: financials.total })
+          setSavedQuotes(listArchivedQuotes())
+        } catch {
+          // Archive write failed; the caller can still navigate to the new quote number in memory.
+        }
+        return newQuoteNo
       },
       deleteSavedQuote: (quoteNo, version) => {
         deleteArchivedQuote(quoteNo, version)

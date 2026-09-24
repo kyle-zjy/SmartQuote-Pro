@@ -145,7 +145,12 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
                   readOnly={linesLocked}
                   onQuantityChange={linesLocked ? undefined : (q) => setQuantity(item.id, q)}
                   onDescriptionChange={linesLocked ? undefined : (description) => updateItem(item.id, { description })}
-                  onUnitPriceChange={linesLocked ? undefined : (unitPrice) => updateItem(item.id, { unitPrice })}
+                  onUnitPriceChange={
+                    linesLocked
+                      ? undefined
+                      : (unitPrice) =>
+                          updateItem(item.id, { unitPrice, finalPrice: unitPrice, priceOverridden: true })
+                  }
                   onRemove={linesLocked ? undefined : () => removeItem(item.id)}
                   formatCurrency={formatCurrency}
                 />

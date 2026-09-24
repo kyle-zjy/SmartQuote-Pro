@@ -56,8 +56,35 @@ export function emptyItemDraft(): ItemDraft {
   }
 }
 
+/**
+ * Best-effort category resolution for a saved item. Prefers the persisted categoryKey; falls back to
+ * matching the item's configuration family (door/sliding/window) against the recorded product's own
+ * categories, for legacy items saved before categoryKey was persisted. Leaves it blank only if nothing
+ * can be resolved -- ProductStep's own fallback + write-back then takes over from there.
+ */
+function resolveCategoryKey(item: QuoteLineItem, products: Product[]): string {
+  if (item.categoryKey) return item.categoryKey
+  const product = products.find((p) => p.key === item.productKey)
+  if (!product) return ''
+  if (!item.configurationCode) return product.categories[0]?.key ?? ''
+  const family = configFamily(item.configurationCode)
+  const preferredCategoryKeys =
+    family === 'window'
+      ? ['windows']
+      : family === 'hinged'
+        ? ['hinged-doors', 'doors']
+        : family === 'sliding'
+          ? ['sliding-doors', 'doors']
+          : []
+  for (const key of preferredCategoryKeys) {
+    const match = product.categories.find((c) => c.key === key)
+    if (match) return match.key
+  }
+  return product.categories[0]?.key ?? ''
+}
+
 /** Builds a draft from an existing item, for Edit or Duplicate. */
-export function draftFromItem(item: QuoteLineItem): ItemDraft {
+export function draftFromItem(item: QuoteLineItem, products: Product[] = []): ItemDraft {
   return {
     location: item.location ?? item.room ?? '',
     configurationCode: item.configurationCode ?? '',
@@ -67,12 +94,12 @@ export function draftFromItem(item: QuoteLineItem): ItemDraft {
     centreTongue: item.centreTongue ?? false,
     bowed: item.bowed ?? false,
     productKey: item.productKey ?? '',
-    categoryKey: '',
+    categoryKey: resolveCategoryKey(item, products),
     widthMm: item.openingWidthMm ? String(item.openingWidthMm) : '',
     heightMm: item.openingHeightMm ? String(item.openingHeightMm) : '',
     meshOption: item.material ?? STANDARD_MESH,
-    doubleHung: false,
-    fitExtras: [],
+    doubleHung: item.doubleHung ?? false,
+    fitExtras: item.fitExtras ?? [],
     frameColourMode: item.frameColourMode ?? 'default',
     customFrameColour: item.customFrameColour ?? '',
     addons: item.addons ?? [],
@@ -86,8 +113,8 @@ export function draftFromItem(item: QuoteLineItem): ItemDraft {
  * Reuse must always force a fresh location confirmation, so it never silently reuses the original.
  * Reference photos are tied to the original opening, so they don't carry over either.
  */
-export function draftForReuse(item: QuoteLineItem): ItemDraft {
-  return { ...draftFromItem(item), location: '', photos: [] }
+export function draftForReuse(item: QuoteLineItem, products: Product[] = []): ItemDraft {
+  return { ...draftFromItem(item, products), location: '', photos: [] }
 }
 
 interface ComparableItem {

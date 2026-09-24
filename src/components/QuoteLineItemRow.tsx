@@ -1,5 +1,5 @@
 import type { QuoteLineItem } from '../lib/quoteContext'
-import { lineAmount } from '../lib/quoteTotals'
+import { itemPrice, lineAmount } from '../lib/quoteTotals'
 
 function siteDetails(item: QuoteLineItem): string {
   return [
@@ -64,19 +64,19 @@ export default function QuoteLineItemRow({
       </td>
       <td className="quote-sheet__price">
         {readOnly ? (
-          formatCurrency(item.unitPrice)
+          formatCurrency(itemPrice(item))
         ) : (
           <input
             type="number"
             min={0}
             step={1}
-            value={item.unitPrice}
+            value={itemPrice(item)}
             onChange={(e) => onUnitPriceChange?.(Number(e.target.value))}
             className="price-input"
           />
         )}
       </td>
-      <td className="quote-sheet__price">{formatCurrency(lineAmount(item.unitPrice, item.quantity))}</td>
+      <td className="quote-sheet__price">{formatCurrency(lineAmount(itemPrice(item), item.quantity))}</td>
       {!readOnly && (
         <td className="no-print">
           <button type="button" className="link-button" onClick={onRemove}>

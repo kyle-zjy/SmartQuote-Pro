@@ -4,6 +4,7 @@ import { effectiveFrameColour } from '../lib/frameColour'
 import { usePricing } from '../lib/pricingContext'
 import type { QuoteLineItem } from '../lib/quoteContext'
 import { configLabel } from '../lib/quoteSheet'
+import { itemPrice } from '../lib/quoteTotals'
 import { sheetCodeImage } from '../lib/sheetCodeImages'
 
 export default function QuoteItemCard({
@@ -14,6 +15,7 @@ export default function QuoteItemCard({
   locked,
   onRemove,
   onSetQuantity,
+  onOverridePrice,
 }: {
   item: QuoteLineItem
   quoteId: string
@@ -22,6 +24,7 @@ export default function QuoteItemCard({
   locked: boolean
   onRemove: (id: string) => void
   onSetQuantity: (id: string, quantity: number) => void
+  onOverridePrice: (id: string, finalPrice: number) => void
 }) {
   const { data } = usePricing()
   const product = item.productKey ? data.products.find((p) => p.key === item.productKey) : undefined
@@ -92,8 +95,20 @@ export default function QuoteItemCard({
               onChange={(e) => onSetQuantity(item.id, Math.max(1, Number(e.target.value) || 1))}
             />
           </label>
+          <label className="quote-item-card__qty">
+            Unit price
+            <input
+              type="number"
+              min={0}
+              step={1}
+              value={itemPrice(item)}
+              disabled={locked}
+              onChange={(e) => onOverridePrice(item.id, Number(e.target.value))}
+            />
+          </label>
           <span className="quote-item-card__price">
-            {formatCurrency(item.unitPrice)} × {item.quantity} = {formatCurrency(item.unitPrice * item.quantity)}
+            × {item.quantity} = {formatCurrency(itemPrice(item) * item.quantity)}
+            {item.priceOverridden && <span className="muted small"> · manually overridden</span>}
           </span>
         </div>
 

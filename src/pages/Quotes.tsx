@@ -46,6 +46,7 @@ export default function Quotes() {
     savedQuotes,
     loadSavedQuote,
     deleteSavedQuote,
+    duplicateQuote,
     addSavedQuoteComment,
     setQuoteDealStatus,
   } = useQuote()
@@ -82,6 +83,22 @@ export default function Quotes() {
   function handleDelete(savedQuoteNo: string, savedVersion: number, label: string) {
     if (!window.confirm(`Delete ${label}? Older/newer revisions of this quote number are kept.`)) return
     deleteSavedQuote(savedQuoteNo, savedVersion)
+  }
+
+  function handleDuplicate(savedQuoteNo: string, savedVersion: number) {
+    if (hasDraft) {
+      const ok = window.confirm(
+        'Duplicate this quote? The quote you are editing now will be replaced by the duplicate. Save it first if you still need it.',
+      )
+      if (!ok) return
+    }
+    const newQuoteNo = duplicateQuote(savedQuoteNo, savedVersion)
+    if (!newQuoteNo) {
+      window.alert('Could not duplicate this quote.')
+      return
+    }
+    if (!loadSavedQuote(newQuoteNo)) return
+    navigate(`/quotes/${newQuoteNo}`)
   }
 
   function handleAddComment(savedQuoteNo: string, savedVersion: number) {
@@ -190,6 +207,7 @@ export default function Quotes() {
                   onOpen={handleOpen}
                   onSnapshot={(savedQuoteNo, savedVersion) => setSnapshot({ quoteNo: savedQuoteNo, version: savedVersion })}
                   onDelete={handleDelete}
+                  onDuplicate={handleDuplicate}
                   onAddComment={handleAddComment}
                   onDealStatus={handleDealStatus}
                 />
@@ -224,6 +242,7 @@ function QuoteGroupTable({
   onOpen,
   onSnapshot,
   onDelete,
+  onDuplicate,
   onAddComment,
   onDealStatus,
 }: {
@@ -237,6 +256,7 @@ function QuoteGroupTable({
   onOpen: (quoteNo: string, version: number) => void
   onSnapshot: (quoteNo: string, version: number) => void
   onDelete: (quoteNo: string, version: number, label: string) => void
+  onDuplicate: (quoteNo: string, version: number) => void
   onAddComment: (quoteNo: string, version: number) => void
   onDealStatus: (quoteNo: string, status: DealStatus) => void
 }) {
@@ -321,6 +341,13 @@ function QuoteGroupTable({
                         </button>
                         <button type="button" className="link-button" onClick={() => onOpen(record.quoteNo, record.version)}>
                           Open
+                        </button>
+                        <button
+                          type="button"
+                          className="link-button"
+                          onClick={() => onDuplicate(record.quoteNo, record.version)}
+                        >
+                          Duplicate
                         </button>
                         <button
                           type="button"

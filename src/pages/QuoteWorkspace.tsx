@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import colours from '../data/colours.json'
 import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
@@ -21,6 +21,7 @@ function formatIssuedAt(iso: string): string {
 
 export default function QuoteWorkspace() {
   const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
   const { settings } = useCompanySettings()
   const quote = useQuote()
   const {
@@ -60,6 +61,7 @@ export default function QuoteWorkspace() {
     reviseQuote,
     removeItem,
     setQuantity,
+    updateItem,
     loadSavedQuote,
     clear,
   } = quote
@@ -70,6 +72,16 @@ export default function QuoteWorkspace() {
 
   useEffect(() => {
     if (id && id !== quoteNo) {
+      const hasDraft = items.length > 0 || Boolean(customer.name.trim())
+      if (hasDraft) {
+        const ok = window.confirm(
+          'Open this saved quote? The quote you are editing now will be replaced. Save it first if you still need it.',
+        )
+        if (!ok) {
+          navigate(`/quotes/${quoteNo}`, { replace: true })
+          return
+        }
+      }
       const ok = loadSavedQuote(id)
       setNotFound(!ok)
     }
@@ -368,6 +380,7 @@ export default function QuoteWorkspace() {
                 locked={locked}
                 onRemove={removeItem}
                 onSetQuantity={setQuantity}
+                onOverridePrice={(id, finalPrice) => updateItem(id, { finalPrice, priceOverridden: true })}
               />
             ))}
           </div>
