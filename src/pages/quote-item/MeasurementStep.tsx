@@ -72,7 +72,27 @@ export default function MeasurementStep({
   }
 
   function setValue(key: string, value: string) {
-    onValuesChange({ ...values, [key]: value })
+    const isHeightPrimary = points.heights[0] === key
+    const isWidthPrimary = points.widths[0] === key
+
+    if (!isHeightPrimary && !isWidthPrimary) {
+      onValuesChange({ ...values, [key]: value })
+      return
+    }
+
+    // Copy first entered user measurement to the others
+    // keep changing them with changes to that field, but once another is edited it is 
+    // detached. Re attached when cleared.
+    const previous = values[key] ?? ''
+    const secondaryKeys = isHeightPrimary ? points.heights.slice(1) : points.widths.slice(1)
+    const next = { ...values, [key]: value }
+    for (const secondaryKey of secondaryKeys) {
+      const current = values[secondaryKey] ?? ''
+      if (current === '' || current === previous) {
+        next[secondaryKey] = value
+      }
+    }
+    onValuesChange(next)
   }
 
   function handleContinue() {
