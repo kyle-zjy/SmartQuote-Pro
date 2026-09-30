@@ -65,6 +65,7 @@ export default function QuoteWorkspace() {
     total,
     savedQuotes,
     saveCurrentQuote,
+    saveAsSeparateQuote,
     submitForReview,
     issueQuote,
     reviseQuote,
@@ -162,6 +163,20 @@ export default function QuoteWorkspace() {
   function handleSubmitForReview() {
     if (!submitForReview()) return
     setMessage('Submitted for office review.')
+  }
+
+  function handleSaveAsSeparateQuote() {
+    try {
+      const result = saveAsSeparateQuote()
+      navigate(`/quotes/${result.record.quoteNo}`, { replace: true })
+      setMessage(
+        result.photosOmitted
+          ? `Saved as separate quote ${result.record.quoteNo}. The original saved quote is unchanged. Photos were too large to store in the saved copy.`
+          : `Saved as separate quote ${result.record.quoteNo}. The original saved quote is unchanged.`,
+      )
+    } catch {
+      setMessage('Could not save a separate quote. Your edits are still here. Free up browser storage and try again.')
+    }
   }
 
   function handleIssueQuote() {
@@ -495,6 +510,11 @@ export default function QuoteWorkspace() {
             <button type="button" className="secondary-button" onClick={handleSaveQuote}>
               {alreadySaved ? 'Update saved quote' : 'Save quote'}
             </button>
+            {!locked && (
+              <button type="button" className="secondary-button" onClick={handleSaveAsSeparateQuote}>
+                Save as separate quote
+              </button>
+            )}
             <button type="button" className="link-button" onClick={handleClear} disabled={locked}>
               Clear items
             </button>

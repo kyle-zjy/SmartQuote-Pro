@@ -386,6 +386,7 @@ interface QuoteContextValue extends QuoteState {
   /** Starts a fresh draft quote and returns its newly assigned quote number. */
   newQuote: (requestedNo?: string) => string | null
   saveCurrentQuote: () => ArchiveWriteResult
+  saveAsSeparateQuote: () => ArchiveWriteResult
   loadSavedQuote: (quoteNo: string, version?: number) => boolean
   /** Deep-clones an archived quote into a brand-new, independent draft (new quote number, new item ids, fresh lifecycle). Returns the new quote number, or null if the source can't be found. */
   duplicateQuote: (quoteNo: string, version?: number) => string | null
@@ -575,7 +576,32 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       },
       saveCurrentQuote: () => {
         const result = upsertArchivedQuote(state, { total })
+        try {
+          persistDraftQuote(state, localStorage)
+        } catch {
+          // The archive is saved even when draft storage is unavailable.
+        }
         setSavedQuotes(listArchivedQuotes())
+        return result
+      },
+      saveAsSeparateQuote: () => {
+        const newQuoteNo = nextQuoteNo()
+        const separate = buildDuplicatedQuote(state, newQuoteNo)
+        // The customer-facing number must also identify the new quote.
+        separate.quoteNumber = newQuoteNo
+        const financials = quoteFinancials(separate, {
+          colourExtra: liveColourExtra,
+          depositRate: settings.depositRate,
+        })
+        // Only switch away from the edited quote after the archive write succeeds.
+        const result = upsertArchivedQuote(separate, { total: financials.total })
+        try {
+          persistDraftQuote(separate, localStorage)
+        } catch {
+          // The archive is saved even when draft storage is unavailable.
+        }
+        setSavedQuotes(listArchivedQuotes())
+        dispatch({ type: 'LOAD_QUOTE', quote: separate })
         return result
       },
       loadSavedQuote: (quoteNo, version) => {
