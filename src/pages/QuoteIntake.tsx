@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
+import { isValidQuoteNumber } from '../lib/quoteNumberValidation'
 import QuoteAddresses from '../components/QuoteAddresses'
 
 function todayISO(): string {
@@ -23,8 +24,8 @@ export default function QuoteIntake() {
   const [date, setDate] = useState(todayISO())
 
   function handleCreate() {
-    if (quoteNumber.trim() && !/^\d{1,8}$/.test(quoteNumber.trim())) {
-      setError('Enter a quote number with up to 8 digits.')
+    if (quoteNumber.trim() && !isValidQuoteNumber(quoteNumber.trim())) {
+      setError('Enter a quote number with up to 50 letters and numbers.')
       return
     }
     const hasDraft = items.length > 0 || Boolean(customer.name.trim())
@@ -79,7 +80,7 @@ export default function QuoteIntake() {
         </label>
         <label>
           Quote number
-          <input inputMode="numeric" value={quoteNumber} onChange={(e) => { setQuoteNumber(e.target.value); setError('') }} placeholder="e.g. 33021" />
+          <input value={quoteNumber} onChange={(e) => { setQuoteNumber(e.target.value); setError('') }} placeholder="e.g. A123" />
           <span className="muted small">Enter your quote number, or leave blank to generate the next one.</span>
         </label>
       </div>

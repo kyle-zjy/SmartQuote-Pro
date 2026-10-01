@@ -162,6 +162,15 @@ function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
+/**
+ * The auto-numbering sequence only advances for purely numeric quote numbers.
+ * An alphanumeric quote number (e.g. "A123") would otherwise turn `Number(quoteNo)`
+ * into NaN and permanently corrupt every future auto-generated quote number.
+ */
+export function nextSequenceValue(current: number, quoteNo: string): number {
+  return /^\d+$/.test(quoteNo) ? Math.max(current, Number(quoteNo)) : current
+}
+
 function defaultState(quoteNo: string): QuoteState {
   return {
     items: [],
@@ -588,7 +597,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         if (requestedNo) {
           try {
             const current = Number(localStorage.getItem(SEQ_KEY) ?? '33020')
-            localStorage.setItem(SEQ_KEY, String(Math.max(current, Number(quoteNo))))
+            localStorage.setItem(SEQ_KEY, String(nextSequenceValue(current, quoteNo)))
           } catch {
             // Browser storage may be unavailable; the quote remains usable in memory.
           }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { displayQuoteNo } from './displayQuoteNo'
 import { getArchivedQuote, upsertArchivedQuote } from './quoteArchive'
-import { buildDuplicatedQuote, normalizeQuote, type QuoteLineItem, type QuoteState } from './quoteContext'
+import { buildDuplicatedQuote, nextSequenceValue, normalizeQuote, type QuoteLineItem, type QuoteState } from './quoteContext'
 
 class MemoryStorage implements Storage {
   private data = new Map<string, string>()
@@ -83,6 +83,33 @@ describe('quote number round-trip (Issue 2)', () => {
     expect(record?.quoteNo).toBe('33098')
     expect(record?.quote.quoteNo).toBe('33098')
     expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteNumber)).toBe('33098')
+  })
+
+  it('an alphanumeric quote number runss through the archive untouched', () => {
+    const storage = new MemoryStorage()
+    upsertArchivedQuote(sampleQuote('A123'), { total: 610 }, storage)
+    const record = getArchivedQuote('A123', undefined, storage)
+    expect(record?.quoteNo).toBe('A123')
+    expect(record?.quote.quoteNo).toBe('A123')
+    expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteNumber)).toBe('A123')
+  })
+})
+
+describe('nextSequenceValue (auto-numbering guard for alphanumeric quote numbers)', () => {
+  it('advances the sequence when the entered quote number is purely numeric and higher', () => {
+    expect(nextSequenceValue(33020, '33098')).toBe(33098)
+  })
+
+  it('keeps the current sequence when the entered quote number is purely numeric but lower', () => {
+    expect(nextSequenceValue(33020, '100')).toBe(33020)
+  })
+
+  it('leaves the sequence untouched for an alphanumeric quote number', () => {
+    expect(nextSequenceValue(33020, 'A123')).toBe(33020)
+  })
+
+  it('never returns NaN for a non-numeric quote number, which would otherwise corrupt future auto-generated numbers', () => {
+    expect(Number.isNaN(nextSequenceValue(33020, 'ABCDEF'))).toBe(false)
   })
 })
 
