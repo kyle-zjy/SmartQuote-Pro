@@ -1,10 +1,10 @@
 import { expect, test, type Page } from '@playwright/test'
-import { acceptDialogs, addOpening, goTo, resetApp, startNewQuote } from './helpers'
+import { acceptDialogs, addOpening, fillRoomLocation, goTo, resetApp, startNewQuote } from './helpers'
 
 /** Starts an opening and stops on the Measurements step with partial values, nothing saved. */
 async function startUnfinishedOpening(page: Page, location = 'Living Room Test') {
   await page.getByRole('link', { name: '+ Add Opening' }).click()
-  await page.getByLabel('Location').fill(location)
+  await fillRoomLocation(page, location)
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('button', { name: /^HDX-L\b/ }).click()
 
@@ -30,7 +30,7 @@ test.describe('wizard draft persistence', () => {
   test.describe('Back to quote is an explicit exit: stay on the workspace', () => {
     test('offers Resume/Discard instead of redirecting back into the wizard', async ({ page }) => {
       await page.getByRole('link', { name: '+ Add Opening' }).click()
-      await page.getByLabel('Location').fill('Bedroom 2')
+      await fillRoomLocation(page, 'Bedroom 2')
       await page.getByRole('button', { name: 'Continue' }).click()
       await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()
 
