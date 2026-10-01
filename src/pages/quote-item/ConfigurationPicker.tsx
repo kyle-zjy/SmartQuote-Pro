@@ -1,5 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  MAX_PANELS_FILTER,
+  MAX_PANELS_FILTER_HINGED,
+  MIN_PANELS_FILTER,
   filterConfigs,
   type ConfigDirectionFilter,
   type ConfigOperationFilter,
@@ -23,15 +26,54 @@ export default function ConfigurationPicker({
   const [panels, setPanels] = useState<ConfigPanelsFilter | undefined>(undefined)
   const [direction, setDirection] = useState<ConfigDirectionFilter | undefined>(undefined)
   const [search, setSearch] = useState('')
+  const [filterOpen, setFilterOpen] = useState(false)
+  const filterRef = useRef<HTMLDivElement>(null)
 
-  function handleTypeChange(nextType: ConfigTypeFilter | undefined) {
-    setType(nextType)
+  const isWindow = type === 'window'
+  const maxPanels = operation === 'hinged' ? MAX_PANELS_FILTER_HINGED : MAX_PANELS_FILTER
+
+  function toggleWindows() {
+    if (isWindow) {
+      setType(undefined)
+      return
+    }
+    setType('window')
     setOperation(undefined)
-    if (nextType === 'window') {
-      setPanels(undefined)
-      setDirection(undefined)
+    setPanels(undefined)
+    setDirection(undefined)
+  }
+
+  function chooseOperation(next: ConfigOperationFilter) {
+    const nextOperation = operation === next ? undefined : next
+    setOperation(nextOperation)
+    if (nextOperation === 'hinged' && panels !== undefined && panels > MAX_PANELS_FILTER_HINGED) {
+      setPanels(MAX_PANELS_FILTER_HINGED)
     }
   }
+
+  function chooseDirection(next: ConfigDirectionFilter) {
+    setDirection(direction === next ? undefined : next)
+  }
+
+  const activeFilterCount = [type, operation, panels, direction].filter((v) => v !== undefined).length
+
+  useEffect(() => {
+    if (!filterOpen) return
+    function handlePointerDown(event: MouseEvent) {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setFilterOpen(false)
+      }
+    }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') setFilterOpen(false)
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [filterOpen])
 
   const configs = useMemo(
     () => filterConfigs(QUOTE_SHEET.configs, { type, operation, panels, direction, search }),
@@ -43,97 +85,108 @@ export default function ConfigurationPicker({
       <h2>Pick a configuration</h2>
       <p className="muted small">Filter by type, then pick the drawing that matches this opening.</p>
 
-      <div className="tabs">
-        <button type="button" className={`tab${type === undefined ? ' tab--active' : ''}`} onClick={() => handleTypeChange(undefined)}>
-          All types
-        </button>
-        <button type="button" className={`tab${type === 'door' ? ' tab--active' : ''}`} onClick={() => handleTypeChange('door')}>
-          Doors
-        </button>
-        <button type="button" className={`tab${type === 'window' ? ' tab--active' : ''}`} onClick={() => handleTypeChange('window')}>
-          Windows
-        </button>
-      </div>
-
-      {type === 'door' && (
-        <div className="tabs">
-          <button
-            type="button"
-            className={`tab${operation === undefined ? ' tab--active' : ''}`}
-            onClick={() => setOperation(undefined)}
-          >
-            Any operation
-          </button>
-          <button
-            type="button"
-            className={`tab${operation === 'hinged' ? ' tab--active' : ''}`}
-            onClick={() => setOperation('hinged')}
-          >
-            Hinged
-          </button>
-          <button
-            type="button"
-            className={`tab${operation === 'sliding' ? ' tab--active' : ''}`}
-            onClick={() => setOperation('sliding')}
-          >
-            Sliding
-          </button>
-        </div>
-      )}
-
-      {type !== 'window' && (
-        <>
-          <div className="tabs">
-            <button type="button" className={`tab${panels === undefined ? ' tab--active' : ''}`} onClick={() => setPanels(undefined)}>
-              Any panels
-            </button>
-            {([1, 2, '3+'] as const).map((option) => (
-              <button
-                key={option}
-                type="button"
-                className={`tab${panels === option ? ' tab--active' : ''}`}
-                onClick={() => setPanels(option)}
-              >
-                {option} panel{option === 1 ? '' : 's'}
-              </button>
-            ))}
-          </div>
-
-          <div className="tabs">
-            <button
-              type="button"
-              className={`tab${direction === undefined ? ' tab--active' : ''}`}
-              onClick={() => setDirection(undefined)}
-            >
-              Any direction
-            </button>
-            <button
-              type="button"
-              className={`tab${direction === 'LHS' ? ' tab--active' : ''}`}
-              onClick={() => setDirection('LHS')}
-            >
-              LHS
-            </button>
-            <button
-              type="button"
-              className={`tab${direction === 'RHS' ? ' tab--active' : ''}`}
-              onClick={() => setDirection('RHS')}
-            >
-              RHS
-            </button>
-          </div>
-        </>
-      )}
-
-      <label className="field-row__single">
-        Search
+      <div className="search-filter-row" ref={filterRef}>
         <input
           type="text"
+          className="search-filter-row__input"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="e.g. SDOX, hinged"
+          placeholder="Search e.g. SDOX, hinged"
+          aria-label="Search configurations"
         />
-      </label>
+        <button
+          type="button"
+          className="filter-trigger"
+          aria-expanded={filterOpen}
+          onClick={() => setFilterOpen((open) => !open)}
+        >
+          Filter
+          {activeFilterCount > 0 && <span className="filter-trigger__badge">{activeFilterCount}</span>}
+        </button>
+
+        {filterOpen && (
+          <div className="filter-popover" role="dialog" aria-label="Configuration filters">
+            <div className="filter-popover__row">
+              <button type="button" className={`tab${isWindow ? ' tab--active' : ''}`} onClick={toggleWindows}>
+                Windows
+              </button>
+            </div>
+
+            <div className="filter-popover__row">
+              <button
+                type="button"
+                className={`tab${operation === 'hinged' ? ' tab--active' : ''}`}
+                disabled={isWindow}
+                onClick={() => chooseOperation('hinged')}
+              >
+                Hinged
+              </button>
+              <button
+                type="button"
+                className={`tab${operation === 'sliding' ? ' tab--active' : ''}`}
+                disabled={isWindow}
+                onClick={() => chooseOperation('sliding')}
+              >
+                Slide
+              </button>
+            </div>
+
+            <div className="filter-popover__section">
+              <div className="filter-popover__label">
+                <span>Panel count</span>
+                <span className="muted small">{panels ?? 'Any'}</span>
+              </div>
+              <input
+                type="range"
+                min={MIN_PANELS_FILTER}
+                max={maxPanels}
+                step={1}
+                value={panels ?? MIN_PANELS_FILTER}
+                disabled={isWindow}
+                onChange={(e) => setPanels(Number(e.target.value))}
+                aria-label="Panel count"
+              />
+            </div>
+
+            <div className="filter-popover__row">
+              <button
+                type="button"
+                className={`tab${direction === 'LHS' ? ' tab--active' : ''}`}
+                disabled={isWindow}
+                onClick={() => chooseDirection('LHS')}
+              >
+                LHS
+              </button>
+              <button
+                type="button"
+                className={`tab${direction === 'RHS' ? ' tab--active' : ''}`}
+                disabled={isWindow}
+                onClick={() => chooseDirection('RHS')}
+              >
+                RHS
+              </button>
+            </div>
+
+            <div className="filter-popover__footer">
+              <button
+                type="button"
+                className="link-button"
+                onClick={() => {
+                  setType(undefined)
+                  setOperation(undefined)
+                  setPanels(undefined)
+                  setDirection(undefined)
+                }}
+              >
+                Clear filters
+              </button>
+              <button type="button" className="secondary-button" onClick={() => setFilterOpen(false)}>
+                Done
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="card-grid">
         {configs.map((config) => {
