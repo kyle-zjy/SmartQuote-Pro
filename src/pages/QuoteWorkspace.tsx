@@ -39,13 +39,8 @@ export default function QuoteWorkspace() {
     customer,
     setCustomer,
     shipSameAsBill,
-    setShipSameAsBill,
     shipTo,
     setShipTo,
-    quoteDate,
-    setQuoteDate,
-    quoteNumber,
-    setQuoteNumber,
     frameColour,
     setFrameColour,
     customFrameColour,
@@ -140,7 +135,6 @@ export default function QuoteWorkspace() {
   const alreadySaved = savedQuotes.some((record) => record.quoteNo === quoteNo && record.version === version)
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const roomGroups = groupQuoteItemsByLocation(items)
-  const needsQuoteNumber = !quoteNumber.trim()
 
   function handleClear() {
     if (items.length === 0 || window.confirm('Clear all items on this quote?')) clear()
@@ -305,25 +299,7 @@ export default function QuoteWorkspace() {
                 else setShipTo({ ...shipTo, address })
               }}
               onBillingChange={(address) => setCustomer({ ...customer, address })}
-              onSameChange={(same) => {
-                if (same) setCustomer({ ...customer, address: shipTo.address })
-                else setShipTo({ ...shipTo, address: customer.address })
-                setShipSameAsBill(same)
-              }}
             />
-            <label>
-              Quote date
-              <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} disabled={locked} />
-            </label>
-            <label>
-              Quote number *
-              <input
-                value={quoteNumber}
-                onChange={(e) => setQuoteNumber(e.target.value)}
-                placeholder="e.g. 33021"
-                disabled={locked}
-              />
-            </label>
             <label>
               Frame colour (default)
               <select value={frameColour} onChange={(e) => setFrameColour(e.target.value)} disabled={locked}>
@@ -524,9 +500,6 @@ export default function QuoteWorkspace() {
             </Link>
             {message && <span className="muted small">{message}</span>}
           </div>
-          {needsQuoteNumber && !locked && (status === 'draft' || status === 'office-review') && (
-            <p className="muted small">Enter a quote number before submitting for review or issuing this quote.</p>
-          )}
         </section>
       </div>
 

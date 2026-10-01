@@ -5,7 +5,6 @@ test('saves current edits independently and subsequent saves only update the new
   await resetApp(page)
   await startNewQuote(page)
   await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
-  await page.getByLabel('Quote number *', { exact: true }).fill('CUSTOM-123')
   await page.getByRole('button', { name: 'Save quote', exact: true }).click()
   const originalURL = page.url()
   const originalArchive = await page.evaluate(() => localStorage.getItem('smartquote-pro:archive'))
@@ -17,7 +16,7 @@ test('saves current edits independently and subsequent saves only update the new
   await expect(page.getByLabel('Customer', { exact: true })).toHaveValue('Edited customer')
 
   const newQuoteNo = page.url().split('/').pop()!
-  await expect(page.getByLabel('Quote number *', { exact: true })).toHaveValue(newQuoteNo)
+  await expect(page.getByLabel('Quote number')).toHaveCount(0)
   await page.getByLabel('Customer', { exact: true }).fill('Updated separate customer')
   await page.getByRole('button', { name: 'Update saved quote', exact: true }).click()
   await page.reload()
@@ -28,6 +27,7 @@ test('saves current edits independently and subsequent saves only update the new
   expect(records).toHaveLength(2)
   expect(records.find((record: { quoteNo: string }) => record.quoteNo === original.quoteNo)).toEqual(original)
   const separate = records.find((record: { quoteNo: string }) => record.quoteNo === newQuoteNo)
+  expect(separate.quote.quoteNumber).toBe(newQuoteNo)
   expect(separate.quote.customer.name).toBe('Updated separate customer')
   expect(separate.total).toBe(original.total)
   expect(separate.quote.items).toHaveLength(1)

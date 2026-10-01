@@ -7,7 +7,7 @@ export default function QuoteAddresses({
   disabled?: boolean
   onSiteChange: (address: string) => void
   onBillingChange: (address: string) => void
-  onSameChange: (same: boolean) => void
+  onSameChange?: (same: boolean) => void
 }) {
   return (
     <>
@@ -16,10 +16,12 @@ export default function QuoteAddresses({
         <textarea aria-label="Site address" value={siteAddress} onChange={(e) => onSiteChange(e.target.value)}
           placeholder={'Street\nSuburb STATE'} rows={3} disabled={disabled} />
       </label>
-      <label className="checkbox-row quote-editor__wide">
-        <input type="checkbox" checked={same} onChange={(e) => onSameChange(e.target.checked)} disabled={disabled} />
-        Billing address is the same as site address
-      </label>
+      {onSameChange && (
+        <label className="checkbox-row quote-editor__wide">
+          <input type="checkbox" checked={same} onChange={(e) => onSameChange(e.target.checked)} disabled={disabled} />
+          Billing address is the same as site address
+        </label>
+      )}
       <label className="quote-editor__wide">
         Billing address
         <textarea aria-label="Billing address" value={same ? siteAddress : billingAddress} onChange={(e) => onBillingChange(e.target.value)}

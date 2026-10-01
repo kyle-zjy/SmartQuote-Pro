@@ -22,10 +22,16 @@ test.describe('quote workspace', () => {
   })
 
   test('can use a different ship-to address and a colour extra', async ({ page }) => {
+    await page.goto('/quotes/new')
+    await page.getByLabel('Customer').fill(CUSTOMER.name)
+    await page.getByLabel('Site address', { exact: true }).fill('9 Industrial Dr\nYatala QLD 4207')
     await page.getByLabel('Billing address is the same as site address').uncheck()
+    await page.getByLabel('Billing address', { exact: true }).fill(CUSTOMER.address)
+    page.once('dialog', (dialog) => dialog.accept())
+    await page.getByRole('button', { name: 'Start quote' }).click()
+    await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
     await page.getByLabel('Site contact name').fill('Warehouse Co')
     await page.getByLabel('Site contact phone').fill('07 5555 1234')
-    await page.getByLabel('Site address', { exact: true }).fill('9 Industrial Dr\nYatala QLD 4207')
 
     await page.getByLabel('Frame colour (default)').selectOption({ label: 'Deco Bush Cherry Decoral (extra)' })
     await expect(page.getByLabel('Colour extra $')).toBeVisible()
