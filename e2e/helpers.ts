@@ -30,7 +30,7 @@ export async function startNewQuote(page: Page, customer = CUSTOMER) {
   await expect(page.getByRole('heading', { name: 'New quote' })).toBeVisible()
   await page.getByLabel('Customer').fill(customer.name)
   await page.getByLabel('Phone').fill(customer.phone)
-  await page.getByLabel('Address').fill(customer.address)
+  await page.getByLabel('Site address', { exact: true }).fill(customer.address)
   await page.getByRole('button', { name: 'Start quote' }).click()
   await expect(page.getByRole('heading', { name: /^Quote \d/ })).toBeVisible()
 }

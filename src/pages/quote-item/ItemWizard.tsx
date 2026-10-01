@@ -10,6 +10,7 @@ import { configFamily } from '../../lib/quoteSheet'
 import AddonStep from './AddonStep'
 import ConfigurationPicker from './ConfigurationPicker'
 import {
+  compatibleCategories,
   defaultProductSelection,
   draftForReuse,
   draftFromItem,
@@ -203,6 +204,10 @@ export default function ItemWizard() {
     }
     if (!product || !category || !(widthMm > 0) || !(heightMm > 0)) {
       setError('Choose a product and enter a valid size before saving.')
+      return
+    }
+    if (!compatibleCategories(product, draft.configurationCode).some((candidate) => candidate.key === category.key)) {
+      setError('The selected product category does not match this opening configuration.')
       return
     }
 

@@ -22,10 +22,10 @@ test.describe('quote workspace', () => {
   })
 
   test('can use a different ship-to address and a colour extra', async ({ page }) => {
-    await page.getByLabel('Ship To is the same as Bill To').uncheck()
-    await page.getByLabel('Ship name').fill('Warehouse Co')
-    await page.getByLabel('Ship phone').fill('07 5555 1234')
-    await page.getByLabel('Ship address').fill('9 Industrial Dr\nYatala QLD 4207')
+    await page.getByLabel('Billing address is the same as site address').uncheck()
+    await page.getByLabel('Site contact name').fill('Warehouse Co')
+    await page.getByLabel('Site contact phone').fill('07 5555 1234')
+    await page.getByLabel('Site address', { exact: true }).fill('9 Industrial Dr\nYatala QLD 4207')
 
     await page.getByLabel('Frame colour (default)').selectOption({ label: 'Deco Bush Cherry Decoral (extra)' })
     await expect(page.getByLabel('Colour extra $')).toBeVisible()
