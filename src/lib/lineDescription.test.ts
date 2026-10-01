@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { formatQuoteDescription, padMm } from './lineDescription'
+import { formatItemDimensions, formatQuoteDescription, padMm } from './lineDescription'
 
 describe('padMm', () => {
   it('pads quote sizes the way Goldco PDFs do', () => {
@@ -22,5 +22,11 @@ describe('formatQuoteDescription', () => {
         room: 'Lounge',
       }),
     ).toBe('2100 x 0925 Supascreen sliding door with 316 stainless mesh with top track *Lounge')
+  })
+})
+
+describe('formatItemDimensions', () => {
+  it('always displays the complete item as Height × Width in millimetres', () => {
+    expect(formatItemDimensions(2100, 1800)).toBe('2100 × 1800 mm')
   })
 })

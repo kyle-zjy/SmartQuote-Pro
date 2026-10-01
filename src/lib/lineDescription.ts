@@ -10,6 +10,11 @@ export function openingLabel(categoryKey: string, categoryLabel: string): string
   return categoryLabel.toLowerCase()
 }
 
+/** Formats the complete item size in the customer-facing Height × Width convention. */
+export function formatItemDimensions(heightMm: number, widthMm: number): string {
+  return `${Math.round(heightMm)} × ${Math.round(widthMm)} mm`
+}
+
 export interface StructuredDescriptionInput {
   location?: string
   productLabel?: string

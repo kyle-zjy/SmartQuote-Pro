@@ -6,9 +6,9 @@ import { calcConfiguredPrice, STANDARD_MESH } from '../../lib/configuredPrice'
 import { effectiveFrameColour } from '../../lib/frameColour'
 import { formatCurrency } from '../../lib/formatCurrency'
 import { fitExtraPhrase, LINE_FIT_EXTRAS } from '../../lib/lineExtras'
-import { describeStructuredItem, openingLabel } from '../../lib/lineDescription'
+import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
-import { configLabel } from '../../lib/quoteSheet'
+import { calcSheetSize, configLabel, findSheetConfig } from '../../lib/quoteSheet'
 import type { ItemDraft } from './itemDraft'
 
 export default function ReviewItemStep({
@@ -38,14 +38,16 @@ export default function ReviewItemStep({
   const widthMm = Number(draft.widthMm)
   const heightMm = Number(draft.heightMm)
   const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
+  const config = findSheetConfig(draft.configurationCode)
+  const pricingSize = config ? calcSheetSize(config, heightMm, widthMm) : null
 
   const configured = useMemo(() => {
-    if (!category || !(widthMm > 0) || !(heightMm > 0)) return null
-    return calcConfiguredPrice(category, widthMm, heightMm, {
+    if (!category || !pricingSize) return null
+    return calcConfiguredPrice(category, pricingSize.screenWidth, pricingSize.screenHeight, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     })
-  }, [category, widthMm, heightMm, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
+  }, [category, pricingSize, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
 
   const fitExtraItems = LINE_FIT_EXTRAS.map((extra) => ({
     ...extra,
@@ -80,7 +82,7 @@ export default function ReviewItemStep({
         <dt>Product</dt>
         <dd>{product ? `${product.name} (${category?.label ?? ''})` : '—'}</dd>
         <dt>Size</dt>
-        <dd>{widthMm > 0 && heightMm > 0 ? `${widthMm} × ${heightMm} mm` : '—'}</dd>
+        <dd>{widthMm > 0 && heightMm > 0 ? formatItemDimensions(heightMm, widthMm) : '—'}</dd>
         {draft.configurationCode !== 'WS' && (
           <>
             <dt>Lock height</dt>

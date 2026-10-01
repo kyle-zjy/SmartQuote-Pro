@@ -73,6 +73,25 @@ describe('quoteArchive', () => {
     expect(listed[0]?.quote.customer.name).toBe('Ben')
   })
 
+  it('preserves complete item dimensions when a saved quote is reopened', () => {
+    const storage = new MemoryStorage()
+    const quote = sampleQuote('00033021', 'Ada')
+    quote.items[0] = {
+      ...quote.items[0],
+      configurationCode: 'SDOXXX',
+      openingHeightMm: 2100,
+      openingWidthMm: 1800,
+    }
+
+    upsertArchivedQuote(quote, { total: 110 }, storage)
+
+    expect(getArchivedQuote('00033021', undefined, storage)?.quote.items[0]).toMatchObject({
+      configurationCode: 'SDOXXX',
+      openingHeightMm: 2100,
+      openingWidthMm: 1800,
+    })
+  })
+
   it('keeps older revisions when the same quote number is saved as a new version', () => {
     const storage = new MemoryStorage()
     upsertArchivedQuote(sampleQuote('00033021', 'Ada', 1), { total: 110 }, storage)

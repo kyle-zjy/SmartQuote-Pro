@@ -7,6 +7,7 @@ import { formatCurrency } from '../../lib/formatCurrency'
 import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
 import { usePricing } from '../../lib/pricingContext'
 import { colourRecord } from '../../lib/quoteContext'
+import { calcSheetSize, findSheetConfig } from '../../lib/quoteSheet'
 import { compatibleCategories, type ItemDraft } from './itemDraft'
 
 export default function ProductStep({
@@ -56,14 +57,16 @@ export default function ProductStep({
   const widthMm = Number(draft.widthMm)
   const heightMm = Number(draft.heightMm)
   const hasValidInput = widthMm > 0 && heightMm > 0
+  const config = findSheetConfig(draft.configurationCode)
+  const pricingSize = config && hasValidInput ? calcSheetSize(config, heightMm, widthMm) : null
 
   const configured = useMemo(() => {
-    if (!category || !hasValidInput) return null
-    return calcConfiguredPrice(category, widthMm, heightMm, {
+    if (!category || !pricingSize) return null
+    return calcConfiguredPrice(category, pricingSize.screenWidth, pricingSize.screenHeight, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     })
-  }, [category, hasValidInput, heightMm, widthMm, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
+  }, [category, pricingSize, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
 
   const result = configured?.lookup ?? null
   const meshExtras = configured?.extras ?? 0

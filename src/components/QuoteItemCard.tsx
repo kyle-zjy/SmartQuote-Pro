@@ -7,6 +7,7 @@ import { configLabel } from '../lib/quoteSheet'
 import { customerQuoteNote, extraLabel, productPrice, quoteExtras } from '../lib/quotePrint'
 import { itemPrice } from '../lib/quoteTotals'
 import { sheetCodeImage } from '../lib/sheetCodeImages'
+import { formatItemDimensions } from '../lib/lineDescription'
 
 export default function QuoteItemCard({
   item,
@@ -59,7 +60,7 @@ export default function QuoteItemCard({
             <p className="muted small">
               {item.configurationCode} · {configLabel(item.configurationCode ?? '')}
               {item.openingWidthMm && item.openingHeightMm
-                ? ` · ${item.openingWidthMm} × ${item.openingHeightMm} mm`
+                ? ` · ${formatItemDimensions(item.openingHeightMm, item.openingWidthMm)}`
                 : ''}
               {' · '}
               {effectiveFrameColour(item, quoteFrameColour, quoteCustomFrameColour)}

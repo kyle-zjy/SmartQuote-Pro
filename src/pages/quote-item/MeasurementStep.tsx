@@ -96,7 +96,11 @@ export default function MeasurementStep({
   }
 
   function handleContinue() {
-    onNext(size ? { widthMm: Math.round(size.screenWidth), heightMm: Math.round(size.screenHeight) } : null)
+    onNext(
+      size
+        ? { widthMm: Math.round(size.openingWidth), heightMm: Math.round(size.openingHeight) }
+        : null,
+    )
   }
 
   function removeSelectedMark() {
