@@ -17,7 +17,7 @@ const STORAGE_KEY = 'smartquote-pro:wizard-drafts'
 export const WIZARD_DRAFT_PERSIST_MS = 300
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 
-export type WizardDraftKind = 'new' | 'edit' | 'duplicate' | 'reuse'
+export type WizardDraftKind = 'new' | 'service' | 'edit' | 'duplicate' | 'reuse'
 
 export interface WizardDraftKey {
   quoteNo: string
@@ -144,11 +144,13 @@ export function wizardDraftPath(key: WizardDraftKey): string {
   if (key.kind === 'edit' && key.refId) return `${base}/${key.refId}/edit`
   if (key.kind === 'duplicate' && key.refId) return `${base}/new?basedOn=${key.refId}&mode=duplicate`
   if (key.kind === 'reuse' && key.refId) return `${base}/new?basedOn=${key.refId}&mode=reuse`
+  if (key.kind === 'service') return `${base}/new?service=1`
   return `${base}/new`
 }
 
 export const WIZARD_DRAFT_KIND_LABELS: Record<WizardDraftKind, string> = {
   new: 'New opening',
+  service: 'Extra / repair',
   edit: 'Edit opening',
   duplicate: 'Duplicate opening',
   reuse: 'Reused opening',

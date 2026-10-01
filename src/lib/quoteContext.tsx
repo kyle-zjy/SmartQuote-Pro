@@ -60,7 +60,16 @@ export interface QuoteLineItem {
   lockHeightMm?: number | null
   lockSide?: 'left' | 'right' | ''
   centreTongue?: boolean
+  lockTopMm?: number | null
+  lockCentreMm?: number | null
+  lockBottomMm?: number | null
+  midRailRequired?: boolean
+  midRailHeightMm?: number | null
+  interlockAdjustment?: 'add' | 'remove' | ''
   bowed?: boolean
+  serviceOnly?: boolean
+  serviceDescription?: string
+  servicePrice?: number
   openingWidthMm?: number
   openingHeightMm?: number
   material?: string

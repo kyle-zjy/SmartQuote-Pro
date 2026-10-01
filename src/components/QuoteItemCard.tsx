@@ -62,12 +62,16 @@ export default function QuoteItemCard({
             {item.addons && item.addons.length > 0 && (
               <p className="muted small">Add-ons: {item.addons.map((a) => a.name).join(', ')}</p>
             )}
-            {(item.lockHeightMm || item.lockSide || item.centreTongue || item.bowed) && (
+            {(item.lockHeightMm || item.lockSide || item.centreTongue || item.bowed || item.midRailRequired || item.interlockAdjustment) && (
               <p className="muted small">
                 {[
-                  item.lockHeightMm ? `Lock height: ${item.lockHeightMm} mm` : '',
+                  item.centreTongue ? 'Lock height: N/A' : item.lockHeightMm ? `Lock height: ${item.lockHeightMm} mm` : '',
                   item.lockSide ? `Lock side: ${item.lockSide}` : '',
                   item.centreTongue ? 'Centre tongue' : '',
+                  item.centreTongue && item.lockTopMm && item.lockCentreMm && item.lockBottomMm
+                    ? `Locks: top ${item.lockTopMm}, centre ${item.lockCentreMm}, bottom ${item.lockBottomMm} mm` : '',
+                  item.midRailRequired && item.midRailHeightMm ? `Mid-rail: ${item.midRailHeightMm} mm` : '',
+                  item.interlockAdjustment ? `Interlock: 5 mm ${item.interlockAdjustment === 'add' ? 'added' : 'removed'}` : '',
                   item.bowed ? 'Door bowed' : '',
                 ].filter(Boolean).join(' · ')}
               </p>

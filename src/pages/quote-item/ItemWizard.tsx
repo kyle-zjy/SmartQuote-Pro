@@ -11,7 +11,6 @@ import AddonStep from './AddonStep'
 import ConfigurationPicker from './ConfigurationPicker'
 import {
   compatibleCategories,
-  defaultProductSelection,
   draftForReuse,
   draftFromItem,
   emptyItemDraft,
@@ -20,7 +19,7 @@ import {
 } from './itemDraft'
 import MeasurementStep from './MeasurementStep'
 import OpeningLocationStep from './OpeningLocationStep'
-import ProductStep from './ProductStep'
+import ProductSelectionStep from './ProductSelectionStep'
 import ReviewItemStep from './ReviewItemStep'
 import {
   clearWizardDraft,
@@ -42,6 +41,7 @@ export default function ItemWizard() {
 
   const basedOnId = searchParams.get('basedOn')
   const mode = searchParams.get('mode')
+  const serviceRoute = !itemId && !basedOnId && searchParams.get('service') === '1'
 
   const sourceItem: QuoteLineItem | undefined = itemId
     ? items.find((i) => i.id === itemId)
@@ -56,7 +56,7 @@ export default function ItemWizard() {
       ? 'duplicate'
       : basedOnId && mode === 'reuse'
         ? 'reuse'
-        : 'new'
+        : serviceRoute ? 'service' : 'new'
   const sessionRefId = itemId ?? basedOnId ?? null
   const draftKey: WizardDraftKey = { quoteNo, kind: sessionKind, refId: sessionRefId }
 
@@ -70,7 +70,7 @@ export default function ItemWizard() {
     if (itemId) return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
     if (basedOnId && mode === 'reuse') return sourceItem ? draftForReuse(sourceItem, data.products) : emptyItemDraft()
     if (basedOnId && mode === 'duplicate') return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
-    return emptyItemDraft()
+    return serviceRoute ? { ...emptyItemDraft(), serviceOnly: true } : emptyItemDraft()
   })
 
   const isEditOrDuplicate = Boolean(itemId) || (Boolean(basedOnId) && mode === 'duplicate')
@@ -198,25 +198,45 @@ export default function ItemWizard() {
     const category = product?.categories.find((c) => c.key === draft.categoryKey)
     const widthMm = Number(draft.widthMm)
     const heightMm = Number(draft.heightMm)
-    if (draft.lockHeightMm && !(Number(draft.lockHeightMm) > 0)) {
+    if (!draft.location.trim()) {
+      setError('Choose a location before saving.')
+      return
+    }
+    if (draft.serviceOnly && !draft.serviceDescription.trim()) {
+      setError('Describe the extra or repair before saving.')
+      return
+    }
+    if (draft.serviceOnly && (!Number.isFinite(Number(draft.servicePrice)) || Number(draft.servicePrice) < 0)) {
+      setError('Enter a valid service price.')
+      return
+    }
+    if (!draft.serviceOnly && !draft.centreTongue && draft.lockHeightMm && !(Number(draft.lockHeightMm) > 0)) {
       setError('Enter a valid lock height in millimetres.')
       return
     }
-    if (!product || !category || !(widthMm > 0) || !(heightMm > 0)) {
+    if (!draft.serviceOnly && draft.centreTongue && [draft.lockTopMm, draft.lockCentreMm, draft.lockBottomMm].some((value) => !(Number(value) > 0))) {
+      setError('Enter the top, centre and bottom lock positions in millimetres.')
+      return
+    }
+    if (!draft.serviceOnly && draft.midRailRequired && !(Number(draft.midRailHeightMm) > 0)) {
+      setError('Enter the mid-rail height in millimetres.')
+      return
+    }
+    if (!draft.serviceOnly && (!product || !category || !(widthMm > 0) || !(heightMm > 0))) {
       setError('Choose a product and enter a valid size before saving.')
       return
     }
-    if (!compatibleCategories(product, draft.configurationCode).some((candidate) => candidate.key === category.key)) {
+    if (!draft.serviceOnly && product && category && !compatibleCategories(product, draft.configurationCode).some((candidate) => candidate.key === category.key)) {
       setError('The selected product category does not match this opening configuration.')
       return
     }
 
-    const isFlyscreenWindows = product.key === 'flyscreens' && category.key === 'windows'
-    const configured = calcConfiguredPrice(category, widthMm, heightMm, {
+    const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
+    const configured = !draft.serviceOnly && category ? calcConfiguredPrice(category, widthMm, heightMm, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
-    })
-    if (!configured.lookup.ok || configured.unitPrice == null) {
+    }) : null
+    if (!draft.serviceOnly && (!configured?.lookup.ok || configured.unitPrice == null)) {
       setError('This size is not available for the selected product and category.')
       return
     }
@@ -226,7 +246,7 @@ export default function ItemWizard() {
       0,
     )
     const addonsTotal = draft.addons.reduce((sum, a) => sum + a.price, 0)
-    const calculatedPrice = configured.unitPrice + fitExtraTotal + addonsTotal
+    const calculatedPrice = (draft.serviceOnly ? Number(draft.servicePrice || 0) : configured?.unitPrice ?? 0) + fitExtraTotal + addonsTotal
 
     let finalPrice = calculatedPrice
     let priceOverridden = false
@@ -248,12 +268,14 @@ export default function ItemWizard() {
       }
     }
 
-    const productLabel = `${product.name} ${openingLabel(category.key, category.label)}`
-    const description = describeStructuredItem({ location: draft.location, productLabel, widthMm, heightMm })
+    const productLabel = product && category ? `${product.name} ${openingLabel(category.key, category.label)}` : ''
+    const description = draft.serviceOnly
+      ? `${draft.location} — ${draft.serviceDescription.trim()}`
+      : describeStructuredItem({ location: draft.location, productLabel, widthMm, heightMm })
 
     const payload: Omit<QuoteLineItem, 'id'> = {
       description,
-      detail: `${widthMm} x ${heightMm} mm`,
+      detail: draft.serviceOnly ? '' : `${heightMm} x ${widthMm} mm`,
       quantity: draft.quantity,
       unitPrice: finalPrice,
       calculatedPrice,
@@ -269,11 +291,20 @@ export default function ItemWizard() {
       lockHeightMm: draft.lockHeightMm ? Number(draft.lockHeightMm) : null,
       lockSide: draft.lockSide,
       centreTongue: draft.centreTongue,
+      lockTopMm: draft.centreTongue ? Number(draft.lockTopMm) : null,
+      lockCentreMm: draft.centreTongue ? Number(draft.lockCentreMm) : null,
+      lockBottomMm: draft.centreTongue ? Number(draft.lockBottomMm) : null,
+      midRailRequired: draft.midRailRequired,
+      midRailHeightMm: draft.midRailRequired ? Number(draft.midRailHeightMm) : null,
+      interlockAdjustment: draft.interlockAdjustment,
       bowed: draft.bowed,
-      openingWidthMm: widthMm,
-      openingHeightMm: heightMm,
+      serviceOnly: draft.serviceOnly,
+      serviceDescription: draft.serviceDescription.trim(),
+      servicePrice: draft.serviceOnly ? Number(draft.servicePrice || 0) : 0,
+      openingWidthMm: draft.serviceOnly ? undefined : widthMm,
+      openingHeightMm: draft.serviceOnly ? undefined : heightMm,
       material: draft.meshOption,
-      doubleHung: isFlyscreenWindows && draft.doubleHung,
+      doubleHung: Boolean(isFlyscreenWindows && draft.doubleHung),
       fitExtras: draft.fitExtras,
       frameColourMode: draft.frameColourMode,
       customFrameColour: draft.customFrameColour,
@@ -337,13 +368,13 @@ export default function ItemWizard() {
       </p>
       <header className="page-header page-header--compact">
         <div>
-          <h1>{itemId ? 'Edit opening' : 'Add opening'}</h1>
+          <h1>{itemId ? 'Edit opening' : serviceRoute ? 'Add extra / repair' : 'Add opening'}</h1>
           {contextLabel ? <p className="muted small">{contextLabel}</p> : null}
         </div>
       </header>
 
       <div className="tabs wizard-steps">
-        {STEP_ORDER.map((s) => (
+        {STEP_ORDER.filter((s) => !draft.serviceOnly || (s !== 'configuration' && s !== 'product' && s !== 'measurements')).map((s) => (
           <button
             key={s}
             type="button"
@@ -363,24 +394,45 @@ export default function ItemWizard() {
           originalLocation={mode === 'reuse' ? (sourceItem?.location ?? sourceItem?.room) : undefined}
           onNext={(location) => {
             patchDraft({ location })
-            goToStep('configuration')
+            goToStep(draft.serviceOnly ? 'addons' : 'configuration')
           }}
+        />
+      )}
+
+      {step === 'product' && (
+        <ProductSelectionStep
+          draft={draft}
+          onChange={patchDraft}
+          onNext={() => goToStep('measurements')}
+          onBack={() => goToStep('configuration')}
         />
       )}
 
       {step === 'configuration' && (
         <ConfigurationPicker
           value={draft.configurationCode}
+          productKey={draft.productKey}
           onNext={(code) => {
-            patchDraft(code === draft.configurationCode ? {} : {
+            const product = data.products.find((candidate) => candidate.key === draft.productKey)
+            const category = product ? compatibleCategories(product, code)[0] : undefined
+            patchDraft(code === draft.configurationCode ? { categoryKey: category?.key ?? '' } : {
               configurationCode: code,
+              categoryKey: category?.key ?? '',
               measurements: {},
+              widthMm: '',
+              heightMm: '',
               lockHeightMm: '',
+              lockTopMm: '',
+              lockCentreMm: '',
+              lockBottomMm: '',
               lockSide: configFamily(code) === 'hinged' ? (code.endsWith('-L') ? 'left' : code.endsWith('-R') ? 'right' : '') : '',
               centreTongue: false,
+              midRailRequired: false,
+              midRailHeightMm: '',
+              interlockAdjustment: '',
               bowed: false,
             })
-            goToStep('measurements')
+            goToStep('product')
           }}
           onBack={() => goToStep('location')}
         />
@@ -389,10 +441,17 @@ export default function ItemWizard() {
       {step === 'measurements' && (
         <MeasurementStep
           code={draft.configurationCode}
+          productKey={draft.productKey}
           values={draft.measurements}
           lockHeightMm={draft.lockHeightMm}
           lockSide={draft.lockSide}
           centreTongue={draft.centreTongue}
+          lockTopMm={draft.lockTopMm}
+          lockCentreMm={draft.lockCentreMm}
+          lockBottomMm={draft.lockBottomMm}
+          midRailRequired={draft.midRailRequired}
+          midRailHeightMm={draft.midRailHeightMm}
+          interlockAdjustment={draft.interlockAdjustment}
           bowed={draft.bowed}
           onHardwareChange={patchDraft}
           markers={markers}
@@ -404,25 +463,10 @@ export default function ItemWizard() {
             const patch: Partial<ItemDraft> = size
               ? { widthMm: String(size.widthMm), heightMm: String(size.heightMm) }
               : {}
-            if (!draft.productKey) {
-              const defaults = defaultProductSelection(draft.configurationCode, data.products)
-              if (defaults) Object.assign(patch, defaults)
-            }
             patchDraft(patch)
-            goToStep('product')
+            goToStep('addons')
           }}
-          onBack={() => goToStep('configuration')}
-        />
-      )}
-
-      {step === 'product' && (
-        <ProductStep
-          draft={draft}
-          quoteFrameColour={frameColour}
-          quoteCustomFrameColour={customFrameColour}
-          onChange={patchDraft}
-          onNext={() => goToStep('addons')}
-          onBack={() => goToStep('measurements')}
+          onBack={() => goToStep('product')}
         />
       )}
 
@@ -430,9 +474,11 @@ export default function ItemWizard() {
         <AddonStep
           draft={draft}
           contextLabel={contextLabel}
+          quoteFrameColour={frameColour}
+          quoteCustomFrameColour={customFrameColour}
           onChange={patchDraft}
           onNext={() => goToStep('review')}
-          onBack={() => goToStep('product')}
+          onBack={() => goToStep(draft.serviceOnly ? 'location' : 'measurements')}
         />
       )}
 

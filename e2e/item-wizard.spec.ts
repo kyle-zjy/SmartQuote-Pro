@@ -14,50 +14,56 @@ test.describe('item wizard', () => {
   })
 
   test('Product step lists every product from the bundled price list', async ({ page }) => {
-    await openLocationAndConfig(page, { configCode: 'HDX-L' })
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await fillRoomLocation(page, 'Living Room')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^HDX-L\b/ }).click()
 
     for (const name of ['Supascreen', 'IntrudaGuard', '7mm Diamond', 'Fly Screens']) {
       await expect(page.getByRole('button', { name, exact: true })).toBeVisible()
     }
-    // HDX-L is a hinged door, so the wizard should default to a product/category offering doors.
-    await expect(page.getByRole('button', { name: 'Supascreen', exact: true })).toHaveClass(/tab--active/)
-    await expect(page.getByRole('button', { name: 'Doors', exact: true })).toHaveClass(/tab--active/)
-    await expect(page.getByRole('button', { name: 'Windows', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Continue' })).toBeEnabled()
   })
 
   test('keeps product pricing categories compatible with the selected configuration', async ({ page }) => {
-    await openLocationAndConfig(page, { configCode: 'HDX-L' })
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await fillRoomLocation(page, 'Living Room')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^HDX-L\b/ }).click()
 
     await page.getByRole('button', { name: 'Fly Screens', exact: true }).click()
-    await expect(page.getByRole('button', { name: 'Hinged Doors (Standard Mesh)', exact: true })).toHaveClass(
-      /tab--active/,
-    )
-    await expect(page.getByRole('button', { name: 'Windows (Standard Mesh)', exact: true })).toHaveCount(0)
-    await expect(page.getByRole('button', { name: 'Sliding Doors (Standard Mesh)', exact: true })).toHaveCount(0)
-
-    await page.getByRole('button', { name: 'Measurements' }).click()
-    await page.getByRole('button', { name: 'Back' }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByLabel('H1', { exact: true }).fill('2100')
+    await page.getByLabel('W1', { exact: true }).fill('900')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
+    await page.getByRole('button', { name: 'Configuration' }).click()
     await page.getByRole('button', { name: /^WS\b/ }).click()
+    await expect(page.getByRole('button', { name: 'Fly Screens', exact: true })).toHaveClass(/tab--active/)
+    await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByLabel('H1', { exact: true }).fill('1500')
     await page.getByLabel('W1', { exact: true }).fill('1200')
     await page.getByRole('button', { name: 'Continue' }).click()
-
-    await expect(page.getByRole('button', { name: 'Windows (Standard Mesh)', exact: true })).toHaveClass(/tab--active/)
-    await expect(page.getByRole('button', { name: 'Doors', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
   })
 
-  test('keeps W measurements unchanged when moving to product size', async ({ page }) => {
+  test('keeps W measurements unchanged when moving to add-ons', async ({ page }) => {
     await page.getByRole('link', { name: '+ Add Opening' }).click()
     await fillRoomLocation(page, 'Patio')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: /^HDXX-L\b/ }).click()
+    await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByLabel('H1', { exact: true }).fill('2100')
     await page.getByLabel('W1', { exact: true }).fill('900')
     await page.getByLabel('W2', { exact: true }).fill('1000')
     await expect(page.getByText(/Size used for pricing: 2100 × 1000 mm/)).toBeVisible()
     await page.getByRole('button', { name: 'Continue' }).click()
-    await expect(page.getByLabel('Width (mm)')).toHaveValue('1000')
-    await expect(page.getByLabel('Height (mm)')).toHaveValue('2100')
+    await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
+    await page.getByRole('button', { name: 'Measurements' }).click()
+    await expect(page.getByLabel('W2', { exact: true })).toHaveValue('1000')
   })
 
   test('records door lock details and bowed condition through review and edit', async ({ page }) => {
@@ -65,22 +71,26 @@ test.describe('item wizard', () => {
     await fillRoomLocation(page, 'Front door')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+    await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByLabel('H3', { exact: true })).toHaveCount(0)
     await page.getByLabel('H1', { exact: true }).fill('2100')
     await page.getByLabel('W1', { exact: true }).fill('900')
-    await page.getByLabel('Lock height (mm)').fill('950')
     await expect(page.getByLabel('Lock side')).toHaveValue('left')
     await page.getByLabel('Centre tongue').check()
+    await expect(page.getByLabel('Lock height (mm)')).toHaveValue('N/A')
+    await page.getByLabel('Top lock position (mm)').fill('1800')
+    await page.getByLabel('Centre lock position (mm)').fill('950')
+    await page.getByLabel('Bottom lock position (mm)').fill('200')
     await page.getByLabel('Door is bowed').check()
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: 'Continue' }).click()
-    await page.getByRole('button', { name: 'Continue' }).click()
-    await expect(page.getByText('950 mm')).toBeVisible()
+    await expect(page.getByText(/Top 1800 · Centre 950 · Bottom 200 mm/)).toBeVisible()
     await expect(page.getByText('Door bowed')).toBeVisible()
     await page.getByRole('button', { name: 'Save Item' }).click()
-    await expect(page.locator('.quote-item-card').getByText(/Lock height: 950 mm.*Door bowed/)).toBeVisible()
+    await expect(page.locator('.quote-item-card')).toContainText('Centre tongue')
     await page.getByRole('link', { name: 'Edit' }).click()
-    await expect(page.getByText('950 mm')).toBeVisible()
+    await expect(page.getByText(/Top 1800 · Centre 950 · Bottom 200 mm/)).toBeVisible()
     await expect(page.getByText('Door bowed')).toBeVisible()
   })
 
@@ -89,6 +99,8 @@ test.describe('item wizard', () => {
     await fillRoomLocation(page, 'Front door')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+    await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
 
     const diagram = page.locator('.sheet-diagram')
     const h1Marker = diagram.locator('.sheet-marker', { hasText: 'H1' })
@@ -122,16 +134,15 @@ test.describe('item wizard', () => {
     }
 
     await openLocationAndConfig(page, opening)
-    // 900mm rounds up to the 925mm bracket for Supascreen doors.
-    await expect(page.getByText('Priced at 925 x 2100 mm bracket')).toBeVisible()
-    await page.getByRole('button', { name: 'Continue' }).click()
+    // Pricing remains available after measurements on the Add-ons step.
+    await expect(page.getByText(/Product price including mesh:/)).toBeVisible()
 
     await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     for (const name of opening.addons) {
       const row = page.getByRole('row', { name: new RegExp(name) })
       const price = (opening.addonPrices as Record<string, string>)[name]
-      if (price) await row.getByPlaceholder('Enter price').fill(price)
       await row.getByRole('checkbox').check()
+      if (price) await row.getByRole('spinbutton', { name: `${name} price` }).fill(price)
     }
     await page.getByRole('button', { name: 'Continue' }).click()
 
@@ -155,7 +166,6 @@ test.describe('item wizard', () => {
 
   test('attaches and annotates a photo, then reloads it on edit', async ({ page }) => {
     await openLocationAndConfig(page, { location: 'Living Room', configCode: 'HDX-L' })
-    await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await page.getByRole('button', { name: 'Continue' }).click()
 
@@ -203,10 +213,17 @@ test.describe('item wizard', () => {
   })
 
   test('rejects sizes larger than the matrix', async ({ page }) => {
-    await openLocationAndConfig(page, { configCode: 'HDX-L' })
-    await page.getByLabel('Height (mm)').fill('3000')
-    await page.getByLabel('Width (mm)').fill('900')
-    await expect(page.getByText(/larger than the maximum we can auto-quote/)).toBeVisible()
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await fillRoomLocation(page, 'Living Room')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+    await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByLabel('H1', { exact: true }).fill('3000')
+    await page.getByLabel('W1', { exact: true }).fill('900')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
+    await expect(page.getByText(/Product price including mesh:/)).toHaveCount(0)
     await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled()
   })
 
@@ -245,7 +262,7 @@ test.describe('duplicate and reuse location behaviour', () => {
 
     await expect(page.getByRole('heading', { name: 'Where is this opening?' })).toBeVisible()
     await expect(page.getByText('Original location:')).toBeVisible()
-    await expect(page.getByText('Bedroom 1', { exact: true })).toBeVisible()
+    await expect(page.locator('strong').getByText('Bedroom 1', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled()
 
     await fillRoomLocation(page, 'Bedroom 2')

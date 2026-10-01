@@ -427,6 +427,9 @@ export default function QuoteWorkspace() {
               <button type="button" className="primary-button quote-workspace__add" disabled>
                 + Add Opening
               </button>
+              <button type="button" className="primary-button quote-workspace__add" disabled>
+                + Add Extra / Repair
+              </button>
               <p className="muted small quote-workspace__add-hint">
                 {dealSettled
                   ? 'Reopen this quote from Quotes to add or change openings.'
@@ -434,9 +437,14 @@ export default function QuoteWorkspace() {
               </p>
             </>
           ) : (
-            <Link to={`/quotes/${quoteNo}/items/new`} className="primary-button quote-workspace__add">
-              + Add Opening
-            </Link>
+            <>
+              <Link to={`/quotes/${quoteNo}/items/new`} className="primary-button quote-workspace__add">
+                + Add Opening
+              </Link>
+              <Link to={`/quotes/${quoteNo}/items/new?service=1`} className="primary-button quote-workspace__add">
+                + Add Extra / Repair
+              </Link>
+            </>
           )}
 
           <div className="quote-workspace__totals">
