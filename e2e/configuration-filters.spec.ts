@@ -1,11 +1,11 @@
 import { expect, test } from '@playwright/test'
-import { resetApp, startNewQuote } from './helpers'
+import { fillRoomLocation, resetApp, startNewQuote } from './helpers'
 
 test('door operation filters do not leak into All types or Windows', async ({ page }) => {
   await resetApp(page)
   await startNewQuote(page)
   await page.getByRole('link', { name: '+ Add Opening' }).click()
-  await page.getByLabel('Location', { exact: true }).fill('Living Room')
+  await fillRoomLocation(page, 'Living Room')
   await page.getByRole('button', { name: 'Continue', exact: true }).click()
   await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()
 
