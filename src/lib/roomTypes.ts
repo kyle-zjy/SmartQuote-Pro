@@ -1,8 +1,16 @@
-// Room type options offered when adding an opening. "Custom" lets staff type a location
-// that isn't one of the presets -- it is a UI sentinel only and is never itself printed.
-export const ROOM_TYPE_OPTIONS = ['Bedroom', 'Living Room', 'Bathrooms', 'Front Door']
+// Common room type suggestions offered (via predictive text, not a fixed dropdown) when
+// adding an opening. Staff can always type something else entirely -- these are starting
+// points, not the only valid values.
+export const NUMBERED_ROOM_TYPES = ['Bedroom', 'Bathroom']
 
-export const CUSTOM_ROOM_TYPE = 'Custom'
+export const SINGLE_ROOM_TYPES = ['Front Door', 'Living Room', 'Dining Room', 'Garage', 'Laundry', 'Kitchen']
+
+export const ROOM_TYPE_OPTIONS = [...NUMBERED_ROOM_TYPES, ...SINGLE_ROOM_TYPES]
+
+/** Room types houses typically have more than one of -- selecting these suggests the next number. */
+export function isNumberedRoomType(roomType: string): boolean {
+  return NUMBERED_ROOM_TYPES.includes(roomType)
+}
 
 /**
  * Normalizes a location for comparison only (trims whitespace, lower-cases, collapses
@@ -13,21 +21,19 @@ export function normalizeLocationKey(location: string): string {
   return location.trim().toLowerCase().replace(/\s+/g, ' ')
 }
 
-/** Combines a dropdown room type with its optional free-text detail into a single location string. */
-export function composeRoomLocation(roomType: string, detail: string): string {
-  const trimmedDetail = detail.trim()
-  if (roomType === CUSTOM_ROOM_TYPE) return trimmedDetail
-  if (!roomType) return trimmedDetail
-  return trimmedDetail ? `${roomType} ${trimmedDetail}` : roomType
-}
-
-/** Splits a stored location string back into a dropdown room type + its detail text, for editing. */
-export function splitRoomLocation(location: string): { roomType: string; detail: string } {
-  const trimmed = location.trim()
-  if (!trimmed) return { roomType: '', detail: '' }
-  for (const option of ROOM_TYPE_OPTIONS) {
-    if (trimmed === option) return { roomType: option, detail: '' }
-    if (trimmed.startsWith(`${option} `)) return { roomType: option, detail: trimmed.slice(option.length + 1).trim() }
+/**
+ * Finds the next free number for a numbered room type (e.g. "Bedroom" -> 1, then 2, ...),
+ * based on the highest number already used among existing locations on the quote.
+ */
+export function nextRoomNumber(roomType: string, existingLocations: string[]): number {
+  const prefix = normalizeLocationKey(roomType)
+  let highest = 0
+  for (const location of existingLocations) {
+    const normalized = normalizeLocationKey(location)
+    if (!normalized.startsWith(`${prefix} `)) continue
+    const suffix = normalized.slice(prefix.length + 1).trim()
+    const n = Number(suffix)
+    if (Number.isInteger(n) && n > highest) highest = n
   }
-  return { roomType: CUSTOM_ROOM_TYPE, detail: trimmed }
+  return highest + 1
 }

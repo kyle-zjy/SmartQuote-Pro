@@ -458,12 +458,59 @@ h3 {
   margin: 0.15rem 0;
 }
 
-.location-picker__section {
-  margin: 0;
+.location-autocomplete {
+  position: relative;
+  max-width: 360px;
 }
 
-.location-picker__label {
-  margin: 0 0 0.35rem;
+.location-autocomplete__control {
+  position: relative;
+}
+
+.location-autocomplete__list {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-md);
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.location-autocomplete__group {
+  margin: 0.4rem 0.5rem 0.15rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-muted);
+}
+
+.location-autocomplete__group:first-child {
+  margin-top: 0.1rem;
+}
+
+.location-autocomplete__option {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 0.45rem 0.6rem;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  color: var(--color-text);
+  cursor: pointer;
+}
+
+.location-autocomplete__option:hover,
+.location-autocomplete__option--active {
+  background: var(--color-primary-soft);
 }
 
 .product-quote-notes {
@@ -2513,8 +2560,7 @@ textarea:disabled {
   .field-row select,
   .field-row__single input,
   .field-row__single select,
-  .field-row__single textarea,
-  .location-picker__section input {
+  .field-row__single textarea {
     min-height: 44px;
     font-size: 1rem;
   }

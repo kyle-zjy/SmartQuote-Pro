@@ -187,6 +187,8 @@ export default function ItemWizard() {
     setStep(next)
   }
 
+  const existingLocations = [...new Set(items.map((i) => (i.location ?? i.room)?.trim()).filter(Boolean))] as string[]
+
   function handleSave() {
     if (locked) {
       setError('This quote is locked and cannot accept item changes.')
@@ -357,6 +359,7 @@ export default function ItemWizard() {
       {step === 'location' && (
         <OpeningLocationStep
           value={draft.location}
+          existingLocations={existingLocations}
           originalLocation={mode === 'reuse' ? (sourceItem?.location ?? sourceItem?.room) : undefined}
           onNext={(location) => {
             patchDraft({ location })
