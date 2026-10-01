@@ -1,7 +1,7 @@
 import { STANDARD_MESH } from '../../lib/configuredPrice'
 import type { ItemPhoto, QuoteAddon, QuoteLineItem } from '../../lib/quoteContext'
 import { configFamily } from '../../lib/quoteSheet'
-import type { Product } from '../../types/pricing'
+import type { PriceCategory, Product } from '../../types/pricing'
 
 /**
  * Local, wizard-only shape for the opening being built. Diagram markers/strokes are
@@ -56,6 +56,27 @@ export function emptyItemDraft(): ItemDraft {
   }
 }
 
+function preferredCategoryKeys(configurationCode: string): string[] {
+  const family = configurationCode ? configFamily(configurationCode) : 'other'
+  return family === 'window'
+    ? ['windows']
+    : family === 'hinged'
+      ? ['hinged-doors', 'doors']
+      : family === 'sliding'
+        ? ['sliding-doors', 'doors']
+        : []
+}
+
+/** Returns only the price categories that match the opening configuration, in most-specific-first order. */
+export function compatibleCategories(product: Product, configurationCode: string): PriceCategory[] {
+  const preferredKeys = preferredCategoryKeys(configurationCode)
+  if (preferredKeys.length === 0) return product.categories
+  return preferredKeys.flatMap((key) => {
+    const category = product.categories.find((candidate) => candidate.key === key)
+    return category ? [category] : []
+  })
+}
+
 /**
  * Best-effort category resolution for a saved item. Prefers the persisted categoryKey; falls back to
  * matching the item's configuration family (door/sliding/window) against the recorded product's own
@@ -63,24 +84,12 @@ export function emptyItemDraft(): ItemDraft {
  * can be resolved -- ProductStep's own fallback + write-back then takes over from there.
  */
 function resolveCategoryKey(item: QuoteLineItem, products: Product[]): string {
-  if (item.categoryKey) return item.categoryKey
+  if (products.length === 0) return item.categoryKey ?? ''
   const product = products.find((p) => p.key === item.productKey)
-  if (!product) return ''
-  if (!item.configurationCode) return product.categories[0]?.key ?? ''
-  const family = configFamily(item.configurationCode)
-  const preferredCategoryKeys =
-    family === 'window'
-      ? ['windows']
-      : family === 'hinged'
-        ? ['hinged-doors', 'doors']
-        : family === 'sliding'
-          ? ['sliding-doors', 'doors']
-          : []
-  for (const key of preferredCategoryKeys) {
-    const match = product.categories.find((c) => c.key === key)
-    if (match) return match.key
-  }
-  return product.categories[0]?.key ?? ''
+  if (!product) return item.categoryKey ?? ''
+  const categories = compatibleCategories(product, item.configurationCode ?? '')
+  if (item.categoryKey && categories.some((category) => category.key === item.categoryKey)) return item.categoryKey
+  return categories[0]?.key ?? ''
 }
 
 /** Builds a draft from an existing item, for Edit or Duplicate. */
@@ -168,35 +177,15 @@ export function findMatchingItem<T extends ComparableItem & { id: string }>(
   return items.find((item) => itemSignature(item) === signature)
 }
 
-/**
- * Picks a starting product/category tab for a brand-new draft, based only on the configuration's
- * door/window/sliding/hinged family (already-derived vocabulary from configFamily). This is a UX
- * default only -- no product/opening compatibility rule exists, so ProductStep still lets staff
- * switch to any product/category regardless of this pick.
- */
+/** Picks the first product/category combination that is compatible with the opening configuration. */
 export function defaultProductSelection(
   configurationCode: string,
   products: Product[],
 ): { productKey: string; categoryKey: string } | null {
-  const first = products[0]
-  if (!first) return null
-
-  const family = configurationCode ? configFamily(configurationCode) : 'other'
-  const preferredCategoryKeys =
-    family === 'window'
-      ? ['windows']
-      : family === 'hinged'
-        ? ['hinged-doors', 'doors']
-        : family === 'sliding'
-          ? ['sliding-doors', 'doors']
-          : []
-
   for (const product of products) {
-    for (const key of preferredCategoryKeys) {
-      const match = product.categories.find((c) => c.key === key)
-      if (match) return { productKey: product.key, categoryKey: match.key }
-    }
+    const category = compatibleCategories(product, configurationCode)[0]
+    if (category) return { productKey: product.key, categoryKey: category.key }
   }
 
-  return { productKey: first.key, categoryKey: first.categories[0]?.key ?? '' }
+  return null
 }

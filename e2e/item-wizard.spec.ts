@@ -22,6 +22,28 @@ test.describe('item wizard', () => {
     // HDX-L is a hinged door, so the wizard should default to a product/category offering doors.
     await expect(page.getByRole('button', { name: 'Supascreen', exact: true })).toHaveClass(/tab--active/)
     await expect(page.getByRole('button', { name: 'Doors', exact: true })).toHaveClass(/tab--active/)
+    await expect(page.getByRole('button', { name: 'Windows', exact: true })).toHaveCount(0)
+  })
+
+  test('keeps product pricing categories compatible with the selected configuration', async ({ page }) => {
+    await openLocationAndConfig(page, { configCode: 'HDX-L' })
+
+    await page.getByRole('button', { name: 'Fly Screens', exact: true }).click()
+    await expect(page.getByRole('button', { name: 'Hinged Doors (Standard Mesh)', exact: true })).toHaveClass(
+      /tab--active/,
+    )
+    await expect(page.getByRole('button', { name: 'Windows (Standard Mesh)', exact: true })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Sliding Doors (Standard Mesh)', exact: true })).toHaveCount(0)
+
+    await page.getByRole('button', { name: 'Measurements' }).click()
+    await page.getByRole('button', { name: 'Back' }).click()
+    await page.getByRole('button', { name: /^WS\b/ }).click()
+    await page.getByLabel('H1', { exact: true }).fill('1500')
+    await page.getByLabel('W1', { exact: true }).fill('1200')
+    await page.getByRole('button', { name: 'Continue' }).click()
+
+    await expect(page.getByRole('button', { name: 'Windows (Standard Mesh)', exact: true })).toHaveClass(/tab--active/)
+    await expect(page.getByRole('button', { name: 'Doors', exact: true })).toHaveCount(0)
   })
 
   test('keeps W measurements unchanged when moving to product size', async ({ page }) => {

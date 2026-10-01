@@ -2,7 +2,14 @@ import { describe, expect, it } from 'vitest'
 import { calcConfiguredPrice } from '../../lib/configuredPrice'
 import type { ItemPhoto, QuoteLineItem } from '../../lib/quoteContext'
 import type { Product } from '../../types/pricing'
-import { draftForReuse, draftFromItem, emptyItemDraft, findMatchingItem } from './itemDraft'
+import {
+  compatibleCategories,
+  defaultProductSelection,
+  draftForReuse,
+  draftFromItem,
+  emptyItemDraft,
+  findMatchingItem,
+} from './itemDraft'
 
 function testProducts(): Product[] {
   return [
@@ -178,6 +185,38 @@ describe('itemDraft category/doubleHung/fitExtras round-trip', () => {
     const draft = draftFromItem(item, testProducts())
     expect(draft.productKey).toBe('flyscreens')
     expect(draft.categoryKey).toBe('hinged-doors')
+  })
+
+  it('repairs a saved door item that incorrectly points at window pricing', () => {
+    const item = sampleItem({
+      productKey: 'supascreen',
+      categoryKey: 'windows',
+      configurationCode: 'HDX-L',
+    })
+
+    expect(draftFromItem(item, testProducts()).categoryKey).toBe('doors')
+  })
+})
+
+describe('configuration-compatible product categories', () => {
+  it('allows only window pricing for a window configuration', () => {
+    const [supascreen, flyscreens] = testProducts()
+    expect(compatibleCategories(supascreen, 'WS').map((category) => category.key)).toEqual(['windows'])
+    expect(compatibleCategories(flyscreens, 'WS').map((category) => category.key)).toEqual(['windows'])
+  })
+
+  it('uses generic door pricing or the matching Fly Screen door operation', () => {
+    const [supascreen, flyscreens] = testProducts()
+    expect(compatibleCategories(supascreen, 'HDX-L').map((category) => category.key)).toEqual(['doors'])
+    expect(compatibleCategories(supascreen, 'SDOXX').map((category) => category.key)).toEqual(['doors'])
+    expect(compatibleCategories(flyscreens, 'HDX-L').map((category) => category.key)).toEqual(['hinged-doors'])
+    expect(compatibleCategories(flyscreens, 'SDOXX').map((category) => category.key)).toEqual(['sliding-doors'])
+  })
+
+  it('defaults each opening family to a compatible category', () => {
+    const products = testProducts()
+    expect(defaultProductSelection('WS', products)).toEqual({ productKey: 'supascreen', categoryKey: 'windows' })
+    expect(defaultProductSelection('HDX-L', products)).toEqual({ productKey: 'supascreen', categoryKey: 'doors' })
   })
 })
 
