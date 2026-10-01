@@ -1,14 +1,8 @@
-// Preset location/room options offered when adding or reusing an opening.
-// Numbered bedrooms/bathrooms are deliberately separate entries (never a generic
-// "Bedroom"/"Bathroom") so quote items for different physical rooms never get merged.
-export const COMMON_LOCATIONS = ['Living Room', 'Kitchen', 'Dining Room', 'Front Entry', 'Laundry', 'Garage']
+// Room type options offered when adding an opening. "Custom" lets staff type a location
+// that isn't one of the presets -- it is a UI sentinel only and is never itself printed.
+export const ROOM_TYPE_OPTIONS = ['Bedroom', 'Living Room', 'Bathrooms', 'Front Door']
 
-export const BEDROOM_LOCATIONS = ['Bedroom 1', 'Bedroom 2', 'Bedroom 3', 'Bedroom 4']
-
-export const BATHROOM_LOCATIONS = ['Bathroom 1', 'Bathroom 2']
-
-/** Flat list of every preset location, kept for callers that just want "all presets". */
-export const ROOM_TYPES = [...COMMON_LOCATIONS, ...BEDROOM_LOCATIONS, ...BATHROOM_LOCATIONS]
+export const CUSTOM_ROOM_TYPE = 'Custom'
 
 /**
  * Normalizes a location for comparison only (trims whitespace, lower-cases, collapses
@@ -17,4 +11,23 @@ export const ROOM_TYPES = [...COMMON_LOCATIONS, ...BEDROOM_LOCATIONS, ...BATHROO
  */
 export function normalizeLocationKey(location: string): string {
   return location.trim().toLowerCase().replace(/\s+/g, ' ')
+}
+
+/** Combines a dropdown room type with its optional free-text detail into a single location string. */
+export function composeRoomLocation(roomType: string, detail: string): string {
+  const trimmedDetail = detail.trim()
+  if (roomType === CUSTOM_ROOM_TYPE) return trimmedDetail
+  if (!roomType) return trimmedDetail
+  return trimmedDetail ? `${roomType} ${trimmedDetail}` : roomType
+}
+
+/** Splits a stored location string back into a dropdown room type + its detail text, for editing. */
+export function splitRoomLocation(location: string): { roomType: string; detail: string } {
+  const trimmed = location.trim()
+  if (!trimmed) return { roomType: '', detail: '' }
+  for (const option of ROOM_TYPE_OPTIONS) {
+    if (trimmed === option) return { roomType: option, detail: '' }
+    if (trimmed.startsWith(`${option} `)) return { roomType: option, detail: trimmed.slice(option.length + 1).trim() }
+  }
+  return { roomType: CUSTOM_ROOM_TYPE, detail: trimmed }
 }

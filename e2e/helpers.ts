@@ -1,4 +1,5 @@
 import { expect, type Page } from '@playwright/test'
+import { splitRoomLocation } from '../src/lib/roomTypes'
 
 export const CUSTOMER = {
   name: 'Ada Lovelace',
@@ -35,6 +36,16 @@ export async function startNewQuote(page: Page, customer = CUSTOMER) {
   await expect(page.getByRole('heading', { name: /^Quote \d/ })).toBeVisible()
 }
 
+/** Drives the Room type dropdown + its detail text field from a plain location string. */
+export async function fillRoomLocation(page: Page, location: string) {
+  const { roomType, detail } = splitRoomLocation(location)
+  await page.getByLabel('Room type').selectOption(roomType)
+  if (detail) {
+    const detailLabel = roomType === 'Custom' ? 'Location name' : 'Number or name (optional)'
+    await page.getByLabel(detailLabel).fill(detail)
+  }
+}
+
 export type OpeningLocationOptions = {
   location?: string
   configCode?: string
@@ -57,7 +68,7 @@ export async function openLocationAndConfig(
   await page.getByRole('link', { name: '+ Add Opening' }).click()
 
   await expect(page.getByRole('heading', { name: 'Where is this opening?' })).toBeVisible()
-  await page.getByLabel('Location').fill(location)
+  await fillRoomLocation(page, location)
   await page.getByRole('button', { name: 'Continue' }).click()
 
   await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()

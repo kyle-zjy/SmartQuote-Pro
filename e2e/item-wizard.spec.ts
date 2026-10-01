@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { addOpening, openLocationAndConfig, resetApp, startNewQuote } from './helpers'
+import { addOpening, fillRoomLocation, openLocationAndConfig, resetApp, startNewQuote } from './helpers'
 
 // A minimal 1x1 transparent PNG, small enough to embed inline without a fixture file on disk.
 const ONE_PX_PNG = Buffer.from(
@@ -48,7 +48,7 @@ test.describe('item wizard', () => {
 
   test('keeps W measurements unchanged when moving to product size', async ({ page }) => {
     await page.getByRole('link', { name: '+ Add Opening' }).click()
-    await page.getByLabel('Location').fill('Patio')
+    await fillRoomLocation(page, 'Patio')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: /^HDXX-L\b/ }).click()
     await page.getByLabel('H1', { exact: true }).fill('2100')
@@ -62,7 +62,7 @@ test.describe('item wizard', () => {
 
   test('records door lock details and bowed condition through review and edit', async ({ page }) => {
     await page.getByRole('link', { name: '+ Add Opening' }).click()
-    await page.getByLabel('Location').fill('Front door')
+    await fillRoomLocation(page, 'Front door')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: /^HDX-L\b/ }).click()
     await expect(page.getByLabel('H3', { exact: true })).toHaveCount(0)
@@ -86,7 +86,7 @@ test.describe('item wizard', () => {
 
   test('removes and replaces a measurement marker without clearing its value', async ({ page }) => {
     await page.getByRole('link', { name: '+ Add Opening' }).click()
-    await page.getByLabel('Location').fill('Front door')
+    await fillRoomLocation(page, 'Front door')
     await page.getByRole('button', { name: 'Continue' }).click()
     await page.getByRole('button', { name: /^HDX-L\b/ }).click()
 
@@ -248,19 +248,16 @@ test.describe('duplicate and reuse location behaviour', () => {
     await expect(page.getByText('Bedroom 1', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled()
 
-    await page.getByLabel('Use at').fill('Bedroom 2')
+    await fillRoomLocation(page, 'Bedroom 2')
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()
   })
 
-  test('a custom location becomes reusable and groups with future items in it', async ({ page }) => {
+  test('a custom location groups with future items in it', async ({ page }) => {
     await addOpening(page, { location: 'Study', configCode: 'WS', product: 'Fly Screens' })
     await addOpening(page, { location: 'Study', configCode: 'HDX-L' })
 
     const studyGroup = page.locator('.quote-room-group', { hasText: 'Study' })
     await expect(studyGroup.locator('.quote-item-card')).toHaveCount(2)
-
-    await page.getByRole('link', { name: '+ Add Opening' }).click()
-    await expect(page.getByRole('button', { name: 'Study', exact: true })).toBeVisible()
   })
 })
