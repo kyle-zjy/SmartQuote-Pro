@@ -2,17 +2,21 @@ import { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
+import QuoteAddresses from '../components/QuoteAddresses'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
 }
 
 export default function QuoteIntake() {
-  const { items, customer, newQuote, setCustomer, setQuoteDate } = useQuote()
+  const { items, customer, newQuote, setCustomer, setShipTo, setShipSameAsBill, setQuoteDate } = useQuote()
   const navigate = useNavigate()
 
   const [name, setName] = useState('')
-  const [address, setAddress] = useState('')
+  const [siteAddress, setSiteAddress] = useState('')
+  const [billingAddress, setBillingAddress] = useState('')
+  const [sameAddress, setSameAddress] = useState(true)
+  const [email, setEmail] = useState('')
   const [phone, setPhone] = useState('')
   const [quoteNumber, setQuoteNumber] = useState('')
   const [error, setError] = useState('')
@@ -38,13 +42,15 @@ export default function QuoteIntake() {
       setError('This quote number is already in use. Enter another number or leave it blank to generate one.')
       return
     }
-    setCustomer({ name, address, phone })
+    setCustomer({ name, address: sameAddress ? siteAddress : billingAddress, phone, email: email.trim() })
+    setShipTo({ name, address: siteAddress, phone, email: email.trim() })
+    setShipSameAsBill(sameAddress)
     setQuoteDate(date)
     navigate(`/quotes/${quoteNo}`)
   }
 
   return (
-    <div className="quote-editor quote-intake">
+    <form className="quote-editor quote-intake" onSubmit={(event) => { event.preventDefault(); handleCreate() }}>
       <p>
         <Link to="/quotes">&larr; All quotes</Link>
       </p>
@@ -60,14 +66,13 @@ export default function QuoteIntake() {
           <input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="0417-001-615" />
         </label>
         <label className="quote-editor__wide">
-          Address
-          <textarea
-            value={address}
-            onChange={(e) => setAddress(e.target.value)}
-            placeholder={'Street\nSuburb STATE'}
-            rows={3}
-          />
+          Email addresses
+          <input type="email" multiple aria-label="Email addresses" value={email} onChange={(e) => setEmail(e.target.value)}
+            placeholder="customer@example.com, accounts@example.com" />
+          <span className="muted small">Separate multiple email addresses with commas.</span>
         </label>
+        <QuoteAddresses siteAddress={siteAddress} billingAddress={billingAddress} same={sameAddress}
+          onSiteChange={setSiteAddress} onBillingChange={setBillingAddress} onSameChange={setSameAddress} />
         <label>
           Quote date
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
@@ -80,10 +85,10 @@ export default function QuoteIntake() {
       </div>
       {error && <p className="price-result--error" role="alert">{error}</p>}
       <div className="quote-actions">
-        <button type="button" className="primary-button" onClick={handleCreate}>
+        <button type="submit" className="primary-button">
           Start quote
         </button>
       </div>
-    </div>
+    </form>
   )
 }

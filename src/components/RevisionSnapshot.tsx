@@ -215,14 +215,15 @@ export default function RevisionSnapshot({
             <h3>Customer</h3>
             <div className="snapshot-parties">
               <div>
-                <h4>Bill to</h4>
+                <h4>Billing address</h4>
                 {billLines.map((line, index) => (
                   <p key={`bill-${index}`}>{line}</p>
                 ))}
+                {quote.customer.email && <p>{quote.customer.email}</p>}
               </div>
               <div>
-                <h4>Ship to</h4>
-                {quote.shipSameAsBill ? <p className="muted small">Same as bill to</p> : null}
+                <h4>Site address</h4>
+                {quote.shipSameAsBill ? <p className="muted small">Same as billing address</p> : null}
                 {shipLines.map((line, index) => (
                   <p key={`ship-${index}`}>{line}</p>
                 ))}

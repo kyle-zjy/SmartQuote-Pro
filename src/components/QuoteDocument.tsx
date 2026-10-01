@@ -82,15 +82,16 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
           {status === 'issued' && <p>Status: Issued</p>}
         </div>
         <div className="quote-party">
-          <div className="quote-party__label">Bill To:</div>
+          <div className="quote-party__label">Billing address:</div>
           <div className="quote-party__body">
             {billLines.map((line, index) => (
               <p key={`bill-${index}`}>{line}</p>
             ))}
+            {customer.email && <p>{customer.email}</p>}
           </div>
         </div>
         <div className="quote-party">
-          <div className="quote-party__label">Ship To:</div>
+          <div className="quote-party__label">Site address:</div>
           <div className="quote-party__body">
             {shipLines.map((line, index) => (
               <p key={`ship-${index}`}>{line}</p>

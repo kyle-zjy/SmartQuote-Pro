@@ -88,6 +88,8 @@ export interface QuoteCustomer {
   name: string
   address: string
   phone: string
+  /** One or more comma-separated customer email addresses. Optional for legacy quotes. */
+  email?: string
 }
 
 export interface QuoteState {
@@ -139,7 +141,7 @@ export type QuoteAction =
 
 const SEQ_KEY = 'smartquote-pro:quote-seq'
 
-const emptyCustomer: QuoteCustomer = { name: '', address: '', phone: '' }
+const emptyCustomer: QuoteCustomer = { name: '', address: '', phone: '', email: '' }
 
 function nextQuoteNo(): string {
   try {

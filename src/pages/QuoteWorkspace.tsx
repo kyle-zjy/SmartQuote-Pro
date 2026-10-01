@@ -4,6 +4,7 @@ import colours from '../data/colours.json'
 import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
+import QuoteAddresses from '../components/QuoteAddresses'
 import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
 import { groupQuoteItemsByLocation } from '../lib/groupQuoteItems'
@@ -282,15 +283,34 @@ export default function QuoteWorkspace() {
               />
             </label>
             <label className="quote-editor__wide">
-              Address
-              <textarea
-                value={customer.address}
-                onChange={(e) => setCustomer({ ...customer, address: e.target.value })}
-                placeholder={'Street\nSuburb STATE'}
-                rows={3}
+              Email addresses
+              <input
+                type="email"
+                multiple
+                aria-label="Email addresses"
+                value={customer.email ?? ''}
+                onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
+                placeholder="customer@example.com, accounts@example.com"
                 disabled={locked}
               />
+              <span className="muted small">Separate multiple email addresses with commas.</span>
             </label>
+            <QuoteAddresses
+              siteAddress={shipSameAsBill ? customer.address : shipTo.address}
+              billingAddress={customer.address}
+              same={shipSameAsBill}
+              disabled={locked}
+              onSiteChange={(address) => {
+                if (shipSameAsBill) setCustomer({ ...customer, address })
+                else setShipTo({ ...shipTo, address })
+              }}
+              onBillingChange={(address) => setCustomer({ ...customer, address })}
+              onSameChange={(same) => {
+                if (same) setCustomer({ ...customer, address: shipTo.address })
+                else setShipTo({ ...shipTo, address: customer.address })
+                setShipSameAsBill(same)
+              }}
+            />
             <label>
               Quote date
               <input type="date" value={quoteDate} onChange={(e) => setQuoteDate(e.target.value)} disabled={locked} />
@@ -355,19 +375,10 @@ export default function QuoteWorkspace() {
             </p>
           )}
 
-          <label className="checkbox-row">
-            <input
-              type="checkbox"
-              checked={shipSameAsBill}
-              onChange={(e) => setShipSameAsBill(e.target.checked)}
-              disabled={locked}
-            />
-            Ship To is the same as Bill To
-          </label>
           {!shipSameAsBill && (
             <div className="quote-editor__grid">
               <label>
-                Ship name
+                Site contact name
                 <input
                   value={shipTo.name}
                   onChange={(e) => setShipTo({ ...shipTo, name: e.target.value })}
@@ -376,21 +387,11 @@ export default function QuoteWorkspace() {
                 />
               </label>
               <label>
-                Ship phone
+                Site contact phone
                 <input
                   value={shipTo.phone}
                   onChange={(e) => setShipTo({ ...shipTo, phone: formatPhone(e.target.value) })}
                   placeholder="0417-001-615"
-                  disabled={locked}
-                />
-              </label>
-              <label className="quote-editor__wide">
-                Ship address
-                <textarea
-                  value={shipTo.address}
-                  onChange={(e) => setShipTo({ ...shipTo, address: e.target.value })}
-                  placeholder={'Street\nSuburb STATE'}
-                  rows={3}
                   disabled={locked}
                 />
               </label>
