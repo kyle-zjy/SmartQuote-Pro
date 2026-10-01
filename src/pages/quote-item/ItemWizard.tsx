@@ -3,11 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { calcConfiguredPrice } from '../../lib/configuredPrice'
 import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
-import { describeStructuredItem, openingLabel } from '../../lib/lineDescription'
+import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { useQuote, type QuoteLineItem } from '../../lib/quoteContext'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
-import { configFamily } from '../../lib/quoteSheet'
+import { calcSheetSize, configFamily, findSheetConfig } from '../../lib/quoteSheet'
 import AddonStep from './AddonStep'
 import ConfigurationPicker from './ConfigurationPicker'
 import {
@@ -199,11 +199,13 @@ export default function ItemWizard() {
     const category = product?.categories.find((c) => c.key === draft.categoryKey)
     const widthMm = Number(draft.widthMm)
     const heightMm = Number(draft.heightMm)
+    const config = findSheetConfig(draft.configurationCode)
+    const pricingSize = config ? calcSheetSize(config, heightMm, widthMm) : null
     if (draft.lockHeightMm && !(Number(draft.lockHeightMm) > 0)) {
       setError('Enter a valid lock height in millimetres.')
       return
     }
-    if (!product || !category || !(widthMm > 0) || !(heightMm > 0)) {
+    if (!product || !category || !pricingSize) {
       setError('Choose a product and enter a valid size before saving.')
       return
     }
@@ -213,7 +215,7 @@ export default function ItemWizard() {
     }
 
     const isFlyscreenWindows = product.key === 'flyscreens' && category.key === 'windows'
-    const configured = calcConfiguredPrice(category, widthMm, heightMm, {
+    const configured = calcConfiguredPrice(category, pricingSize.screenWidth, pricingSize.screenHeight, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     })
@@ -254,7 +256,7 @@ export default function ItemWizard() {
 
     const payload: Omit<QuoteLineItem, 'id'> = {
       description,
-      detail: `${widthMm} x ${heightMm} mm`,
+      detail: formatItemDimensions(heightMm, widthMm),
       quantity: draft.quantity,
       unitPrice: finalPrice,
       calculatedPrice,
@@ -322,7 +324,9 @@ export default function ItemWizard() {
     draft.location,
     draft.configurationCode,
     data.products.find((p) => p.key === draft.productKey)?.name,
-    draft.widthMm && draft.heightMm ? `${draft.widthMm}×${draft.heightMm} mm` : undefined,
+    draft.widthMm && draft.heightMm
+      ? formatItemDimensions(Number(draft.heightMm), Number(draft.widthMm))
+      : undefined,
   ]
     .filter(Boolean)
     .join(' / ')

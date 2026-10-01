@@ -19,22 +19,32 @@ describe('quoteSheet', () => {
     expect(findSheetConfig('WS')?.widthFactor).toBe(1)
   })
 
-  it('preserves measured dimensions for every configuration', () => {
+  it('keeps complete opening dimensions separate from panel pricing dimensions', () => {
     expect(calcSheetSize(findSheetConfig('HDX-L')!, 2100, 900)).toMatchObject({
       panels: 1,
+      openingHeight: 2100,
+      openingWidth: 900,
       openingLabel: '2100X900',
       screenLabel: '2100X900',
     })
     expect(calcSheetSize(findSheetConfig('SDOX')!, 2100, 2400)).toMatchObject({
       panels: 1,
+      openingWidth: 2400,
       screenHeight: 2100,
-      screenWidth: 2400,
-      screenLabel: '2100X2400',
+      screenWidth: 1200,
+      screenLabel: '2100X1200',
     })
-    expect(calcSheetSize(findSheetConfig('SDOXX')!, 2100, 3600)).toMatchObject({
+    expect(calcSheetSize(findSheetConfig('SDOXX')!, 2100, 1800)).toMatchObject({
       panels: 2,
-      screenWidth: 3600,
-      screenLabel: '2100X3600',
+      openingWidth: 1800,
+      openingLabel: '2100X1800',
+      screenWidth: 670,
+    })
+    expect(calcSheetSize(findSheetConfig('SDOXXX')!, 2100, 1800)).toMatchObject({
+      panels: 3,
+      openingWidth: 1800,
+      openingLabel: '2100X1800',
+      screenWidth: 520,
     })
   })
 

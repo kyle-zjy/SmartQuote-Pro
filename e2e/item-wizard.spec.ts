@@ -54,7 +54,8 @@ test.describe('item wizard', () => {
     await page.getByLabel('H1', { exact: true }).fill('2100')
     await page.getByLabel('W1', { exact: true }).fill('900')
     await page.getByLabel('W2', { exact: true }).fill('1000')
-    await expect(page.getByText(/Size used for pricing: 2100 × 1000 mm/)).toBeVisible()
+    await expect(page.getByText(/Opening used for sizing: 2100 × 1000 mm/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing: 2100 × 500 mm/)).toBeVisible()
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByLabel('Width (mm)')).toHaveValue('1000')
     await expect(page.getByLabel('Height (mm)')).toHaveValue('2100')
@@ -143,7 +144,7 @@ test.describe('item wizard', () => {
     const card = page.locator('.quote-item-card')
     await expect(card).toHaveCount(1)
     await expect(card.getByText('Living Room — Supascreen')).toBeVisible()
-    await expect(card.getByText(/900 × 2100 mm/)).toBeVisible()
+    await expect(card.getByText(/2100 × 900 mm/)).toBeVisible()
     await expect(card.getByText('Extra — Small Pet Door')).toBeVisible()
     await expect(card.getByText('Extra — BOX-OUTS')).toBeVisible()
     await expect(card.getByText('Note: Site measure pending')).toBeVisible()
@@ -152,6 +153,33 @@ test.describe('item wizard', () => {
     await addOpening(page, opening)
     await expect(page.locator('.quote-item-card')).toHaveCount(1)
     await expect(page.getByLabel('Qty')).toHaveValue('2')
+  })
+
+  test('shows and persists complete multi-panel dimensions as Height × Width', async ({ page }) => {
+    await addOpening(page, {
+      location: 'Patio',
+      configCode: 'SDOXXX',
+      measurements: { H1: '2100', W1: '1800' },
+    })
+
+    const card = page.locator('.quote-item-card')
+    await expect(card.getByText(/2100 × 1800 mm/)).toBeVisible()
+    await expect(card.getByText(/600 × 2100 mm|2100 × 600 mm|1800 × 2100 mm/)).toHaveCount(0)
+
+    await card.getByRole('link', { name: 'Edit' }).click()
+    await page.getByRole('button', { name: 'Product' }).click()
+    await page.getByLabel('Height (mm)').fill('2200')
+    await page.getByLabel('Width (mm)').fill('2400')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByText('2200 × 2400 mm', { exact: true })).toBeVisible()
+    await page.getByRole('button', { name: 'Save Item' }).click()
+    await expect(card.getByText(/2200 × 2400 mm/)).toBeVisible()
+
+    await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+    await page.getByRole('navigation').first().getByRole('link', { name: /^Quotes/ }).click()
+    await page.getByRole('button', { name: 'Open' }).click()
+    await expect(page.locator('.quote-item-card').getByText(/2200 × 2400 mm/)).toBeVisible()
   })
 
   test('attaches and annotates a photo, then reloads it on edit', async ({ page }) => {
@@ -246,7 +274,7 @@ test.describe('duplicate and reuse location behaviour', () => {
 
     await expect(page.getByRole('heading', { name: 'Where is this opening?' })).toBeVisible()
     await expect(page.getByText('Original location:')).toBeVisible()
-    await expect(page.getByText('Bedroom 1', { exact: true })).toBeVisible()
+    await expect(page.locator('.reuse-location-banner').getByText('Bedroom 1', { exact: true })).toBeVisible()
     await expect(page.getByRole('button', { name: 'Continue' })).toBeDisabled()
 
     await fillRoomLocation(page, 'Bedroom 2')

@@ -106,11 +106,14 @@ export interface SheetSize {
   screenLabel: string
 }
 
-/** Preserve the measured opening dimensions when carrying them into product pricing. */
+/**
+ * Converts the complete opening dimensions into the per-panel screen size used for
+ * product pricing. The opening dimensions remain available separately for display.
+ */
 export function calcSheetSize(config: SheetConfig, height: number, width: number): SheetSize | null {
-  if (!(height > 0) || !(width > 0)) return null
-  const screenWidth = width
-  const screenHeight = height
+  if (!(height > 0) || !(width > 0) || config.widthFactor <= 0) return null
+  const screenWidth = width / config.widthFactor + config.widthOffset
+  const screenHeight = config.heightFactor * height
   return {
     panels: config.panels,
     openingHeight: height,
