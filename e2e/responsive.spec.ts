@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test'
-import { expectNoHorizontalOverflow, resetApp, startNewQuote } from './helpers'
+import { expectNoHorizontalOverflow, fillRoomLocation, resetApp, startNewQuote } from './helpers'
 
 const VIEWPORTS = [
   { name: 'iPad landscape (1024px)', width: 1024, height: 768 },
@@ -23,7 +23,7 @@ for (const viewport of VIEWPORTS) {
       await expect(page.getByRole('heading', { name: 'Where is this opening?' })).toBeVisible()
       await expectNoHorizontalOverflow(page, 'wizard: location step')
 
-      await page.getByLabel('Location').fill('Living Room')
+      await fillRoomLocation(page, 'Living Room')
       await page.getByRole('button', { name: 'Continue' }).click()
       await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()
       await expectNoHorizontalOverflow(page, 'wizard: configuration step')
