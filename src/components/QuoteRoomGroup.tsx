@@ -11,6 +11,7 @@ export default function QuoteRoomGroup({
   onRemove,
   onSetQuantity,
   onOverridePrice,
+  onRemoveExtra,
 }: {
   group: RoomGroupData
   quoteId: string
@@ -20,6 +21,7 @@ export default function QuoteRoomGroup({
   onRemove: (id: string) => void
   onSetQuantity: (id: string, quantity: number) => void
   onOverridePrice: (id: string, finalPrice: number) => void
+  onRemoveExtra: (id: string, name: string) => void
 }) {
   return (
     <div className="quote-room-group">
@@ -42,6 +44,7 @@ export default function QuoteRoomGroup({
             onRemove={onRemove}
             onSetQuantity={onSetQuantity}
             onOverridePrice={onOverridePrice}
+            onRemoveExtra={onRemoveExtra}
           />
         ))}
       </div>

@@ -1,10 +1,11 @@
+import type { QuoteAudience } from '../lib/quotePrint'
 import { useEffect, useRef, useState } from 'react'
 import { exportElementToPdf, quotePdfFilename } from '../lib/exportQuotePdf'
 import { displayQuoteNo } from '../lib/displayQuoteNo'
 import { useQuote } from '../lib/quoteContext'
 import QuoteDocument from './QuoteDocument'
 
-export default function QuotePdfPreview({ onClose }: { onClose: () => void }) {
+export default function QuotePdfPreview({ onClose, audience }: { onClose: () => void; audience: QuoteAudience }) {
   const { quoteNo, quoteNumber, customer } = useQuote()
   const paperRef = useRef<HTMLDivElement>(null)
   const [saving, setSaving] = useState(false)
@@ -30,7 +31,7 @@ export default function QuotePdfPreview({ onClose }: { onClose: () => void }) {
     setSaving(true)
     setError(null)
     try {
-      await exportElementToPdf(paperRef.current, quotePdfFilename(displayQuoteNo(quoteNo, quoteNumber), customer.name))
+      await exportElementToPdf(paperRef.current, quotePdfFilename(displayQuoteNo(quoteNo, quoteNumber), customer.name).replace(/\.pdf$/, `-${audience}.pdf`))
       onClose()
     } catch {
       setError('Could not create the PDF. Please try again.')
@@ -50,8 +51,8 @@ export default function QuotePdfPreview({ onClose }: { onClose: () => void }) {
       >
         <header className="quote-preview__header">
           <div>
-            <h2 id="quote-preview-title">Preview quote</h2>
-            <p className="muted small">Check the quote below, then download it as a PDF.</p>
+            <h2 id="quote-preview-title">{audience === 'factory' ? 'Preview factory quote' : 'Preview quote'}</h2>
+            <p className="muted small">Check the {audience === 'factory' ? 'factory' : 'customer'} quote below, then download it as a PDF.</p>
           </div>
           <button type="button" className="link-button" onClick={onClose} disabled={saving}>
             Close
@@ -60,7 +61,7 @@ export default function QuotePdfPreview({ onClose }: { onClose: () => void }) {
 
         <div className="quote-preview__body">
           <div ref={paperRef} className="quote-paper quote-paper--preview">
-            <QuoteDocument readOnly />
+            <QuoteDocument readOnly audience={audience} />
           </div>
         </div>
 

@@ -1,3 +1,4 @@
+import { customerQuoteNote } from '../../lib/quotePrint'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { calcConfiguredPrice } from '../../lib/configuredPrice'
@@ -261,6 +262,7 @@ export default function ItemWizard() {
       priceOverridden,
       room: draft.location,
       note: draft.note.trim(),
+      customerNote: customerQuoteNote(draft).trim(),
       productKey: draft.productKey,
       categoryKey: draft.categoryKey,
       location: draft.location,
@@ -275,6 +277,7 @@ export default function ItemWizard() {
       material: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
       fitExtras: draft.fitExtras,
+      fitExtraPrices: draft.fitExtras.map((name) => ({ name, price: addons.find((addon) => addon.name === name)?.price ?? 0 })),
       frameColourMode: draft.frameColourMode,
       customFrameColour: draft.customFrameColour,
       addons: draft.addons,

@@ -1,6 +1,52 @@
 import { expect, test } from '@playwright/test'
 import { acceptDialogs, addOpening, CUSTOMER, parseAud, resetApp, startNewQuote } from './helpers'
 
+test('customer and factory previews separate production notes and pet door conditions', async ({ page }) => {
+  await resetApp(page)
+  await startNewQuote(page)
+  await addOpening(page, {
+    location: 'Entry', configCode: 'HDX-L',
+    addons: ['PET DOOR - MEDIUM'], note: 'Cut frame after site measure',
+  })
+  await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
+  const customer = page.getByRole('dialog', { name: 'Preview quote', exact: true })
+  await expect(customer.getByText('Extra — Medium Pet Door')).toBeVisible()
+  await expect(customer.getByText('Customer notes: Adding a pet door means this door is no longer considered a security door.')).toBeVisible()
+  await expect(customer.getByText(/Cut frame after site measure/)).toHaveCount(0)
+  await customer.getByRole('button', { name: 'Back' }).click()
+  await page.getByRole('button', { name: 'Preview Factory Quote' }).click()
+  const factory = page.getByRole('dialog', { name: 'Preview factory quote' })
+  await expect(factory.getByText('Production notes: Cut frame after site measure')).toBeVisible()
+  await expect(factory.getByText('Extra — Medium Pet Door')).toBeVisible()
+  await expect(factory.getByText(/no longer considered a security door/)).toHaveCount(0)
+})
+
+test('extras can be removed individually and stay removed after reloading', async ({ page }) => {
+  await resetApp(page)
+  await startNewQuote(page)
+  await addOpening(page, {
+    location: 'Entry', configCode: 'HDX-L', quantity: 2,
+    addons: ['PET DOOR - MEDIUM', 'TRIPLE LOCKS'],
+  })
+  const card = page.locator('.quote-item-card')
+  const total = page.locator('.quote-workspace__total-line')
+  const before = parseAud(await total.innerText())
+  const productPrice = await card.getByLabel('Product unit price').inputValue()
+  await card.getByRole('button', { name: 'Remove Medium Pet Door' }).click()
+  await expect(card.getByText('Extra — Medium Pet Door')).toHaveCount(0)
+  await expect(card.getByText('Extra — TRIPLE LOCKS')).toBeVisible()
+  await expect(card.getByLabel('Product unit price')).toHaveValue(productPrice)
+  await expect.poll(async () => parseAud(await total.innerText())).toBeCloseTo(before - 190 * 2 * 1.1, 2)
+  await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await page.reload()
+  await expect(card.getByText('Extra — Medium Pet Door')).toHaveCount(0)
+  await expect(card.getByText('Extra — TRIPLE LOCKS')).toBeVisible()
+  await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
+  const preview = page.getByRole('dialog', { name: 'Preview quote', exact: true })
+  await expect(preview.getByText('Extra — TRIPLE LOCKS')).toBeVisible()
+  await expect(preview.getByText(/no longer considered a security door/)).toHaveCount(0)
+})
+
 test.describe('quote workspace', () => {
   test.beforeEach(async ({ page }) => {
     await resetApp(page)
@@ -157,4 +203,25 @@ test.describe('room grouping', () => {
     await expect(rooms.nth(1).locator('.quote-room-group__title')).toHaveText('Bedroom 2')
     await expect(rooms.nth(1).locator('.quote-item-card')).toHaveCount(1)
   })
+})
+
+test('custom customer notes survive saving and stay out of the factory preview', async ({ page }) => {
+  await resetApp(page)
+  await startNewQuote(page)
+  await addOpening(page, {
+    location: 'Entry', configCode: 'HDX-L', addons: ['PET DOOR - MEDIUM'],
+    customerNote: 'Client approved the pet door location.', note: 'Door requires factory inspection.',
+  })
+  await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await page.reload()
+  await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
+  const customer = page.getByRole('dialog', { name: 'Preview quote', exact: true })
+  await expect(customer.getByText('Customer notes: Client approved the pet door location.')).toBeVisible()
+  await expect(customer.getByText(/no longer considered a security door/)).toHaveCount(0)
+  await expect(customer.getByText(/factory inspection/)).toHaveCount(0)
+  await customer.getByRole('button', { name: 'Back' }).click()
+  await page.getByRole('button', { name: 'Preview Factory Quote' }).click()
+  const factory = page.getByRole('dialog', { name: 'Preview factory quote' })
+  await expect(factory.getByText(/Client approved/)).toHaveCount(0)
+  await expect(factory.getByText('Production notes: Door requires factory inspection.')).toBeVisible()
 })

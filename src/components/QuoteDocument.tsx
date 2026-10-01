@@ -1,3 +1,4 @@
+import type { QuoteAudience } from '../lib/quotePrint'
 import { productWarrantyNotes } from '../data/company'
 import { useCompanySettings } from '../lib/companySettings'
 import { displayFrameColour } from '../lib/frameColour'
@@ -17,7 +18,7 @@ function formatQuoteDate(iso: string): string {
   return `${d}/${m}/${y}`
 }
 
-export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean }) {
+export default function QuoteDocument({ readOnly = false, audience = 'customer' }: { readOnly?: boolean; audience?: QuoteAudience }) {
   const { settings } = useCompanySettings()
   const {
     items,
@@ -72,7 +73,7 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
       </header>
 
       <div className="quote-doc__parties">
-        <h1>Quote</h1>
+        <h1>{audience === 'factory' ? 'Factory Quote' : 'Quote'}</h1>
         <div className="quote-doc__meta">
           <p>Date: {formatQuoteDate(quoteDate)}</p>
           <p className="quote-doc__no">
@@ -143,6 +144,7 @@ export default function QuoteDocument({ readOnly = false }: { readOnly?: boolean
                 <QuoteLineItemRow
                   key={item.id}
                   item={item}
+                  audience={audience}
                   readOnly={linesLocked}
                   onQuantityChange={linesLocked ? undefined : (q) => setQuantity(item.id, q)}
                   onDescriptionChange={linesLocked ? undefined : (description) => updateItem(item.id, { description })}
