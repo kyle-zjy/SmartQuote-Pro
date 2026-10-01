@@ -2,8 +2,12 @@ import { configFamily, configHanding, configLabel, type SheetConfig } from './qu
 
 export type ConfigTypeFilter = 'door' | 'window'
 export type ConfigOperationFilter = 'hinged' | 'sliding'
-export type ConfigPanelsFilter = 1 | 2 | '3+'
+export type ConfigPanelsFilter = number
 export type ConfigDirectionFilter = 'LHS' | 'RHS'
+
+export const MIN_PANELS_FILTER = 1
+export const MAX_PANELS_FILTER = 6
+export const MAX_PANELS_FILTER_HINGED = 2
 
 export interface ConfigurationFilters {
   type?: ConfigTypeFilter
@@ -26,18 +30,12 @@ export function configDirection(code: string): ConfigDirectionFilter | undefined
   return configHanding(code) || undefined
 }
 
-export function configPanelsBucket(panels: number): ConfigPanelsFilter {
-  if (panels <= 1) return 1
-  if (panels === 2) return 2
-  return '3+'
-}
-
 export function filterConfigs(configs: SheetConfig[], filters: ConfigurationFilters): SheetConfig[] {
   const search = filters.search?.trim().toLowerCase()
   return configs.filter((config) => {
     if (filters.type && configType(config.code) !== filters.type) return false
     if (filters.operation && configOperation(config.code) !== filters.operation) return false
-    if (filters.panels && configPanelsBucket(config.panels) !== filters.panels) return false
+    if (filters.panels !== undefined && config.panels !== filters.panels) return false
     if (filters.direction && configDirection(config.code) !== filters.direction) return false
     if (search) {
       const haystack = `${config.code} ${configLabel(config.code)}`.toLowerCase()
