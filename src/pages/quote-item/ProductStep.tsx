@@ -7,7 +7,7 @@ import { formatCurrency } from '../../lib/formatCurrency'
 import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
 import { usePricing } from '../../lib/pricingContext'
 import { colourRecord } from '../../lib/quoteContext'
-import type { ItemDraft } from './itemDraft'
+import { compatibleCategories, type ItemDraft } from './itemDraft'
 
 export default function ProductStep({
   draft,
@@ -25,19 +25,32 @@ export default function ProductStep({
   onBack: () => void
 }) {
   const { data, addons } = usePricing()
-  const product = data.products.find((p) => p.key === draft.productKey) ?? data.products[0]
-  const category = product?.categories.find((c) => c.key === draft.categoryKey) ?? product?.categories[0]
+  const availableProducts = useMemo(
+    () => data.products.filter((candidate) => compatibleCategories(candidate, draft.configurationCode).length > 0),
+    [data.products, draft.configurationCode],
+  )
+  const product = availableProducts.find((candidate) => candidate.key === draft.productKey) ?? availableProducts[0]
+  const categories = useMemo(
+    () => (product ? compatibleCategories(product, draft.configurationCode) : []),
+    [product, draft.configurationCode],
+  )
+  const category = categories.find((candidate) => candidate.key === draft.categoryKey) ?? categories[0]
   const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
 
   // draft.productKey/categoryKey can be blank (new draft, or a legacy item with no stored category) --
   // the fallbacks above pick something to display, but Review/Save must see the same value, so write
   // it back as soon as it's resolved.
   useEffect(() => {
-    if (product && product.key !== draft.productKey) {
-      onChange({ productKey: product.key })
-    } else if (category && category.key !== draft.categoryKey) {
-      onChange({ categoryKey: category.key })
-    }
+    if (!product || !category) return
+    const productChanged = product.key !== draft.productKey
+    if (!productChanged && category.key === draft.categoryKey) return
+    onChange({
+      productKey: product.key,
+      categoryKey: category.key,
+      meshOption: STANDARD_MESH,
+      doubleHung: false,
+      fitExtras: [],
+    })
   }, [product, category, draft.productKey, draft.categoryKey, onChange])
 
   const widthMm = Number(draft.widthMm)
@@ -78,10 +91,12 @@ export default function ProductStep({
   }
 
   function handleProductChange(key: string) {
-    const nextProduct = data.products.find((p) => p.key === key)
+    const nextProduct = availableProducts.find((candidate) => candidate.key === key)
+    const nextCategory = nextProduct ? compatibleCategories(nextProduct, draft.configurationCode)[0] : undefined
+    if (!nextProduct || !nextCategory) return
     onChange({
       productKey: key,
-      categoryKey: nextProduct?.categories[0]?.key ?? '',
+      categoryKey: nextCategory.key,
       meshOption: STANDARD_MESH,
       doubleHung: false,
       fitExtras: [],
@@ -89,17 +104,15 @@ export default function ProductStep({
   }
 
   function handleCategoryChange(key: string) {
+    if (!categories.some((candidate) => candidate.key === key)) return
     onChange({ categoryKey: key, meshOption: STANDARD_MESH, doubleHung: false, fitExtras: [] })
   }
 
   return (
     <div className="wizard-panel">
       <h2>Product &amp; size</h2>
-      {/* TODO(compat): no product/opening-configuration compatibility data exists yet, so every
-          product is offered regardless of the configuration picked earlier. Revisit if/when that
-          compatibility data becomes available. */}
       <div className="tabs">
-        {data.products.map((p) => (
+        {availableProducts.map((p) => (
           <button
             key={p.key}
             type="button"
@@ -114,7 +127,7 @@ export default function ProductStep({
       {category && (
         <div className="calculator">
           <div className="tabs">
-            {product.categories.map((c) => (
+            {categories.map((c) => (
               <button
                 key={c.key}
                 type="button"
