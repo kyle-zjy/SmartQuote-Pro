@@ -498,6 +498,16 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       colourExtra: liveColourExtra,
       depositRate: settings.depositRate,
     })
+    const persistCurrentQuote = () => {
+      const result = upsertArchivedQuote(state, { total })
+      try {
+        persistDraftQuote(state, localStorage)
+      } catch {
+        // The archive is saved even when draft storage is unavailable.
+      }
+      setSavedQuotes(listArchivedQuotes())
+      return result
+    }
     return {
       ...state,
       addItem: (item) => {
@@ -520,11 +530,21 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       setPaid: (paid) => dispatch({ type: 'SET_PAID', paid }),
       submitForReview: () => {
         if (!canSubmitForReview(state) || !state.customer.name.trim() || !state.customer.address.trim()) return false
+        try {
+          persistCurrentQuote()
+        } catch {
+          // Keep going so the quote can still be submitted even if the save fails.
+        }
         dispatch({ type: 'SUBMIT_FOR_REVIEW' })
         return true
       },
       issueQuote: () => {
         if (!canIssueQuote(state)) return false
+        try {
+          persistCurrentQuote()
+        } catch {
+          // Keep going so the quote can still be issued even if the save fails.
+        }
         const snapshot = createIssuedSnapshot(state, liveColourExtra, settings.depositRate)
         dispatch({ type: 'ISSUE', snapshot })
         const issued = { ...state, status: 'issued' as const, issuedSnapshot: snapshot }
@@ -574,16 +594,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
         dispatch({ type: 'NEW_QUOTE', quoteNo })
         return quoteNo
       },
-      saveCurrentQuote: () => {
-        const result = upsertArchivedQuote(state, { total })
-        try {
-          persistDraftQuote(state, localStorage)
-        } catch {
-          // The archive is saved even when draft storage is unavailable.
-        }
-        setSavedQuotes(listArchivedQuotes())
-        return result
-      },
+      saveCurrentQuote: () => persistCurrentQuote(),
       saveAsSeparateQuote: () => {
         const newQuoteNo = nextQuoteNo()
         const separate = buildDuplicatedQuote(state, newQuoteNo)
