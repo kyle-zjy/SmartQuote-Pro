@@ -94,6 +94,7 @@ export type AddOpeningOptions = OpeningLocationOptions & {
   addonPrices?: Record<string, string>
   quantity?: number
   note?: string
+  customerNote?: string
 }
 
 /** Drives the full Add Opening wizard through to Save Item. */
@@ -135,8 +136,11 @@ export async function addOpening(page: Page, options: AddOpeningOptions = {}) {
   if (options.quantity) {
     await page.getByLabel('Quantity').fill(String(options.quantity))
   }
+  if (options.customerNote !== undefined) {
+    await page.getByLabel('Customer notes (customer only)').fill(options.customerNote)
+  }
   if (options.note) {
-    await page.getByLabel('Additional notes').fill(options.note)
+    await page.getByLabel('Production notes (factory only)').fill(options.note)
   }
   await page.getByRole('button', { name: 'Save Item' }).click()
 }

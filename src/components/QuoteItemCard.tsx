@@ -4,6 +4,7 @@ import { effectiveFrameColour } from '../lib/frameColour'
 import { usePricing } from '../lib/pricingContext'
 import type { QuoteLineItem } from '../lib/quoteContext'
 import { configLabel } from '../lib/quoteSheet'
+import { customerQuoteNote, extraLabel, productPrice, quoteExtras } from '../lib/quotePrint'
 import { itemPrice } from '../lib/quoteTotals'
 import { sheetCodeImage } from '../lib/sheetCodeImages'
 
@@ -16,6 +17,7 @@ export default function QuoteItemCard({
   onRemove,
   onSetQuantity,
   onOverridePrice,
+  onRemoveExtra,
 }: {
   item: QuoteLineItem
   quoteId: string
@@ -25,8 +27,11 @@ export default function QuoteItemCard({
   onRemove: (id: string) => void
   onSetQuantity: (id: string, quantity: number) => void
   onOverridePrice: (id: string, finalPrice: number) => void
+  onRemoveExtra: (id: string, name: string) => void
 }) {
   const { data } = usePricing()
+  const extras = quoteExtras(item)
+  const extrasPrice = extras.reduce((sum, extra) => sum + extra.price, 0)
   const product = item.productKey ? data.products.find((p) => p.key === item.productKey) : undefined
   const isStructured = Boolean(item.location && item.configurationCode)
 
@@ -59,9 +64,6 @@ export default function QuoteItemCard({
               {' · '}
               {effectiveFrameColour(item, quoteFrameColour, quoteCustomFrameColour)}
             </p>
-            {item.addons && item.addons.length > 0 && (
-              <p className="muted small">Add-ons: {item.addons.map((a) => a.name).join(', ')}</p>
-            )}
             {(item.lockHeightMm || item.lockSide || item.centreTongue || item.bowed) && (
               <p className="muted small">
                 {[
@@ -84,6 +86,7 @@ export default function QuoteItemCard({
           </>
         )}
 
+        {customerQuoteNote(item) && <p className="muted small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {customerQuoteNote(item)}</p>}
         <div className="quote-item-card__row">
           <label className="quote-item-card__qty">
             Qty
@@ -96,22 +99,32 @@ export default function QuoteItemCard({
             />
           </label>
           <label className="quote-item-card__qty">
-            Unit price
+            Product unit price
             <input
               type="number"
               min={0}
               step={1}
-              value={itemPrice(item)}
+              value={productPrice(item)}
               disabled={locked}
-              onChange={(e) => onOverridePrice(item.id, Number(e.target.value))}
+              onChange={(e) => onOverridePrice(item.id, Number(e.target.value) + extrasPrice)}
             />
           </label>
           <span className="quote-item-card__price">
-            × {item.quantity} = {formatCurrency(itemPrice(item) * item.quantity)}
+            × {item.quantity} = {formatCurrency(productPrice(item) * item.quantity)}
             {item.priceOverridden && <span className="muted small"> · manually overridden</span>}
           </span>
         </div>
 
+        {extras.map((extra, index) => (
+          <div key={`${extra.name}-${index}`} className="quote-item-card__row quote-item-card__extra">
+            <span>Extra — {extraLabel(extra.name)}</span>
+            <span>{item.quantity} × {formatCurrency(extra.price)} = {formatCurrency(extra.price * item.quantity)}</span>
+            <button type="button" className="link-button" disabled={locked} onClick={() => onRemoveExtra(item.id, extra.name)}>
+              Remove {extraLabel(extra.name)}
+            </button>
+          </div>
+        ))}
+        <p className="small">Item total including extras: {formatCurrency(itemPrice(item) * item.quantity)}</p>
         <div className="quote-item-card__actions">
           {locked ? (
             <>

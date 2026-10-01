@@ -7,6 +7,7 @@ import QuoteStatusBadge from '../components/QuoteStatusBadge'
 import QuoteAddresses from '../components/QuoteAddresses'
 import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
+import { removeQuoteExtra } from '../lib/quotePrint'
 import { groupQuoteItemsByLocation } from '../lib/groupQuoteItems'
 import { isOtherFrameColour } from '../lib/frameColour'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
@@ -72,7 +73,7 @@ export default function QuoteWorkspace() {
     clear,
   } = quote
 
-  const [previewOpen, setPreviewOpen] = useState(false)
+  const [previewAudience, setPreviewAudience] = useState<'customer' | 'factory' | null>(null)
   const [message, setMessage] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [wizardDrafts, setWizardDrafts] = useState(() => listWizardDrafts(quoteNo))
@@ -417,6 +418,10 @@ export default function QuoteWorkspace() {
                 locked={locked}
                 onRemove={removeItem}
                 onSetQuantity={setQuantity}
+                onRemoveExtra={(id, name) => {
+                  const item = items.find((candidate) => candidate.id === id)
+                  if (!locked && item) updateItem(id, removeQuoteExtra(item, name))
+                }}
                 onOverridePrice={(id, finalPrice) => updateItem(id, { finalPrice, priceOverridden: true })}
               />
             ))}
@@ -479,10 +484,13 @@ export default function QuoteWorkspace() {
             <button
               type="button"
               className="secondary-button"
-              onClick={() => setPreviewOpen(true)}
+              onClick={() => setPreviewAudience('customer')}
               disabled={items.length === 0}
             >
               Preview Customer Quote
+            </button>
+            <button type="button" className="secondary-button" onClick={() => setPreviewAudience('factory')} disabled={items.length === 0}>
+              Preview Factory Quote
             </button>
             <button type="button" className="secondary-button" onClick={handleSaveQuote}>
               {alreadySaved ? 'Update saved quote' : 'Save quote'}
@@ -503,7 +511,7 @@ export default function QuoteWorkspace() {
         </section>
       </div>
 
-      {previewOpen && <QuotePdfPreview onClose={() => setPreviewOpen(false)} />}
+      {previewAudience && <QuotePdfPreview audience={previewAudience} onClose={() => setPreviewAudience(null)} />}
     </div>
   )
 }

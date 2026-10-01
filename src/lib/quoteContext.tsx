@@ -51,6 +51,7 @@ export interface QuoteLineItem {
   unitPrice: number
   room: string
   note: string
+  customerNote?: string
   productKey?: string
   // Structured fields for items built through the opening/item wizard.
   // All optional so legacy flat items (description/detail/room only) keep working unchanged.
@@ -71,6 +72,8 @@ export interface QuoteLineItem {
   categoryKey?: string
   doubleHung?: boolean
   fitExtras?: string[]
+  /** Prices captured when fitting extras are selected, for stable quote breakdowns. */
+  fitExtraPrices?: QuoteAddon[]
   /** Last system-computed unit price (before any manual override). */
   calculatedPrice?: number
   /** The price actually used for totals -- equals calculatedPrice unless manually overridden. Kept in sync with unitPrice. */

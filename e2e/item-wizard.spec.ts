@@ -136,7 +136,7 @@ test.describe('item wizard', () => {
     await page.getByRole('button', { name: 'Continue' }).click()
 
     await expect(page.getByRole('heading', { name: 'Review & save' })).toBeVisible()
-    await page.getByLabel('Additional notes').fill(opening.note)
+    await page.getByLabel('Production notes (factory only)').fill(opening.note)
     await page.getByRole('button', { name: 'Save Item' }).click()
 
     await expect(page.getByRole('heading', { name: /^Quote \d/ })).toBeVisible()
@@ -144,7 +144,8 @@ test.describe('item wizard', () => {
     await expect(card).toHaveCount(1)
     await expect(card.getByText('Living Room — Supascreen')).toBeVisible()
     await expect(card.getByText(/900 × 2100 mm/)).toBeVisible()
-    await expect(card.getByText(/Add-ons: PET DOOR - SMALL, BOX-OUTS/)).toBeVisible()
+    await expect(card.getByText('Extra — Small Pet Door')).toBeVisible()
+    await expect(card.getByText('Extra — BOX-OUTS')).toBeVisible()
     await expect(card.getByText('Note: Site measure pending')).toBeVisible()
 
     // Adding an identical opening again should bump quantity instead of duplicating the row.

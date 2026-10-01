@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import ItemPhotos from '../../components/ItemPhotos'
+import { customerQuoteNote } from '../../lib/quotePrint'
 import ProductQuoteNotes from '../../components/ProductQuoteNotes'
 import { calcConfiguredPrice, STANDARD_MESH } from '../../lib/configuredPrice'
 import { effectiveFrameColour } from '../../lib/frameColour'
@@ -121,7 +122,12 @@ export default function ReviewItemStep({
       </div>
 
       <label className="field-row__single">
-        Additional notes
+        Customer notes (customer only)
+        <textarea value={customerQuoteNote(draft)} onChange={(e) => onChange({ customerNote: e.target.value })} rows={3} />
+      </label>
+
+      <label className="field-row__single">
+        Production notes (factory only)
         <textarea value={draft.note} onChange={(e) => onChange({ note: e.target.value })} rows={3} />
       </label>
 

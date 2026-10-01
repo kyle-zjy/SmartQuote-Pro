@@ -27,6 +27,7 @@ export interface ItemDraft {
   customFrameColour: string
   addons: QuoteAddon[]
   note: string
+  customerNote?: string
   quantity: number
   photos: ItemPhoto[]
 }
@@ -113,6 +114,7 @@ export function draftFromItem(item: QuoteLineItem, products: Product[] = []): It
     customFrameColour: item.customFrameColour ?? '',
     addons: item.addons ?? [],
     note: item.note ?? '',
+    customerNote: item.customerNote,
     quantity: item.quantity,
     photos: item.photos ?? [],
   }
@@ -140,6 +142,7 @@ interface ComparableItem {
   frameColourMode?: 'default' | 'custom'
   customFrameColour?: string
   note?: string
+  customerNote?: string
   addons?: QuoteAddon[]
   photos?: ItemPhoto[]
   unitPrice: number
@@ -160,6 +163,7 @@ function itemSignature(item: ComparableItem): string {
     frameColourMode: item.frameColourMode ?? 'default',
     customFrameColour: item.customFrameColour ?? '',
     note: item.note ?? '',
+    customerNote: item.customerNote ?? null,
     addons: [...(item.addons ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     // Different photos mean a genuinely different opening context, even if every other field matches
     // -- never silently merge quantity and drop one item's photos in the process.
