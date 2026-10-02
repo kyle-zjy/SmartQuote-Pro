@@ -29,15 +29,15 @@ for (const viewport of VIEWPORTS) {
       await expectNoHorizontalOverflow(page, 'wizard: configuration step')
 
       await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+      await expect(page.getByRole('heading', { name: 'Select a product' })).toBeVisible()
+      await expectNoHorizontalOverflow(page, 'wizard: product step')
+      await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+      await page.getByRole('button', { name: 'Continue' }).click()
       await expect(page.getByRole('heading', { name: 'Measure the opening' })).toBeVisible()
       await expectNoHorizontalOverflow(page, 'wizard: measurements step')
 
       await page.getByLabel('H1', { exact: true }).fill('2100')
       await page.getByLabel('W1', { exact: true }).fill('900')
-      await page.getByRole('button', { name: 'Continue' }).click()
-      await expect(page.getByRole('heading', { name: 'Product & size' })).toBeVisible()
-      await expectNoHorizontalOverflow(page, 'wizard: product step')
-
       await page.getByRole('button', { name: 'Continue' }).click()
       await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
       await expectNoHorizontalOverflow(page, 'wizard: add-ons step')

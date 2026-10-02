@@ -12,7 +12,9 @@ import {
 } from './quoteArchive'
 import { useCompanySettings } from './companySettings'
 import { OTHER_FRAME_COLOUR } from './frameColour'
+import { formatItemDimensions, padMm } from './lineDescription'
 import { deleteRoomPhotos, loadRoomPhotos, saveRoomPhotos } from './quotePhotoStore'
+import { calcSheetSize, findSheetConfig, openingFromMeasures } from './quoteSheet'
 import { DRAFT_PERSIST_MS, DRAFT_STORAGE_KEY, MEASURE_LEGACY_DRAFT_PERSIST, hasPhotoData, persistDraftQuote } from './quotePersist'
 import {
   canIssueQuote,
@@ -61,7 +63,16 @@ export interface QuoteLineItem {
   lockHeightMm?: number | null
   lockSide?: 'left' | 'right' | ''
   centreTongue?: boolean
+  lockTopMm?: number | null
+  lockCentreMm?: number | null
+  lockBottomMm?: number | null
+  midRailRequired?: boolean
+  midRailHeightMm?: number | null
+  interlockAdjustment?: 'add' | 'remove' | ''
   bowed?: boolean
+  serviceOnly?: boolean
+  serviceDescription?: string
+  servicePrice?: number
   openingWidthMm?: number
   openingHeightMm?: number
   material?: string
@@ -199,8 +210,32 @@ function defaultState(quoteNo: string): QuoteState {
 /** Legacy items never persisted these fields; backfill them from unitPrice so totals/overrides behave consistently. */
 function normalizeItem(item: QuoteLineItem): QuoteLineItem {
   const finalPrice = item.finalPrice ?? item.unitPrice
+  const config = item.configurationCode ? findSheetConfig(item.configurationCode) : undefined
+  const opening = item.measurements ? openingFromMeasures(item.measurements) : null
+  const screen = config && opening ? calcSheetSize(config, opening.height, opening.width) : null
+  const pricedWidth = screen
+    ? Math.round(screen.screenWidth + (item.interlockAdjustment === 'add' ? 5 : item.interlockAdjustment === 'remove' ? -5 : 0))
+    : 0
+  // The former measurement wizard stored per-panel pricing dimensions in the opening
+  // fields. Recover the full dimensions only when the saved measurements prove this.
+  const storedPricingSize = Boolean(
+    screen && opening && item.openingWidthMm && item.openingHeightMm &&
+    item.openingWidthMm === pricedWidth &&
+    item.openingHeightMm === Math.round(screen.screenHeight) &&
+    (item.openingWidthMm !== Math.round(opening.width) || item.openingHeightMm !== Math.round(opening.height)),
+  )
+  const oldSuffix = storedPricingSize ? `${padMm(item.openingHeightMm!)} x ${padMm(item.openingWidthMm!)} mm` : ''
+  const newSuffix = opening ? `${padMm(opening.height)} x ${padMm(opening.width)} mm` : ''
   return {
     ...item,
+    ...(storedPricingSize && opening ? {
+      openingWidthMm: Math.round(opening.width),
+      openingHeightMm: Math.round(opening.height),
+      detail: item.detail === `${item.openingHeightMm} x ${item.openingWidthMm} mm`
+        ? formatItemDimensions(opening.height, opening.width) : item.detail,
+      description: item.description.endsWith(oldSuffix)
+        ? `${item.description.slice(0, -oldSuffix.length)}${newSuffix}` : item.description,
+    } : {}),
     categoryKey: item.categoryKey ?? '',
     doubleHung: item.doubleHung ?? false,
     fitExtras: item.fitExtras ?? [],

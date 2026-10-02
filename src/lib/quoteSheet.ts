@@ -53,7 +53,32 @@ export function configHanding(code: string): 'LHS' | 'RHS' | '' {
   return ''
 }
 
+// Source: Screen measuring .xlsx, Images sheet. The measurements are keyed by
+// configuration; the supplied workbook does not split them further by product.
+const SCREEN_MEASURE_POINTS: Record<string, { heights: string[]; widths: string[] }> = {
+  'HDX-L': { heights: ['H1', 'H2'], widths: ['W1', 'W2', 'W3'] },
+  'HDX-R': { heights: ['H1', 'H2'], widths: ['W1', 'W2', 'W3'] },
+  'HDXX-L': { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] },
+  'HDXX-R': { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] },
+  SDOX: { heights: ['H1', 'H2', 'H3'], widths: ['W1'] },
+  'SDOXO-L': { heights: ['H1', 'H2', 'H3'], widths: ['W1'] },
+  'SDOXO-R': { heights: ['H1', 'H2', 'H3'], widths: ['W1'] },
+  SDOXX: { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2'] },
+  'SDOXXO-L': { heights: ['H1', 'H2', 'H3'], widths: ['W1'] },
+  'SDOXXO-R': { heights: ['H1', 'H2', 'H3'], widths: ['W1'] },
+  SDOXXX: { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] },
+  'SDOXXXXO-L': { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] },
+  'SDOXXXXO-R': { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] },
+  'SDOXXXXXO-R': { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3', 'W4', 'W5'] },
+  'SDOXXXXXXO-L': { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3', 'W4', 'W5'] },
+  SDXO: { heights: ['H1', 'H2', 'H3'], widths: ['W1'] },
+  SDXXO: { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2'] },
+  SDXXXO: { heights: ['H1', 'H2', 'H3'], widths: ['W1', 'W2', 'W3'] },
+  WS: { heights: ['H1'], widths: ['W1'] },
+}
+
 export function measurePoints(config: SheetConfig): { heights: string[]; widths: string[] } {
+  if (SCREEN_MEASURE_POINTS[config.code]) return SCREEN_MEASURE_POINTS[config.code]
   if (config.heightPoints.length > 0 || config.widthPoints.length > 0) {
     return {
       heights: config.heightPoints.length > 0 ? config.heightPoints : ['H1'],

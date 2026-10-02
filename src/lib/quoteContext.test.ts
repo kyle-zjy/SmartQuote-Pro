@@ -145,6 +145,37 @@ describe('normalizeQuote price-override backfill (Issue 8)', () => {
   })
 })
 
+describe('normalizeQuote opening dimensions', () => {
+  it('recovers complete multi-panel dimensions saved by the earlier pricing-size wizard', () => {
+    const quote = normalizeQuote({ quoteNo: '1', items: [sampleItem({
+      configurationCode: 'SDOXXX',
+      location: 'Patio',
+      openingHeightMm: 2100,
+      openingWidthMm: 520,
+      measurements: { H1: '2100', W1: '1800' },
+      description: 'Patio — Supascreen sliding door — 2100 x 0520 mm',
+      detail: '2100 x 520 mm',
+    })] })
+    expect(quote.items[0]).toMatchObject({
+      openingHeightMm: 2100,
+      openingWidthMm: 1800,
+      description: 'Patio — Supascreen sliding door — 2100 x 1800 mm',
+      detail: '2100 × 1800 mm',
+    })
+  })
+
+  it('keeps main-branch dimensions and manually edited descriptions intact', () => {
+    const quote = normalizeQuote({ quoteNo: '1', items: [sampleItem({
+      configurationCode: 'SDOXXX',
+      openingHeightMm: 2100,
+      openingWidthMm: 1800,
+      measurements: { H1: '2100', W1: '1800' },
+      description: 'Special patio door',
+    })] })
+    expect(quote.items[0]).toMatchObject({ openingWidthMm: 1800, description: 'Special patio door' })
+  })
+})
+
 describe('duplicateQuote independence (Issue 7)', () => {
   it('assigns a new quote number and resets lifecycle fields on the duplicate', () => {
     const source = sampleQuote('33098', { version: 3, status: 'issued', paid: 200 })

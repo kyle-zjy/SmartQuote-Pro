@@ -15,10 +15,17 @@ import { sheetCodeImage } from '../../lib/sheetCodeImages'
 
 export default function MeasurementStep({
   code,
+  productKey,
   values,
   lockHeightMm,
   lockSide,
   centreTongue,
+  lockTopMm,
+  lockCentreMm,
+  lockBottomMm,
+  midRailRequired,
+  midRailHeightMm,
+  interlockAdjustment,
   bowed,
   onHardwareChange,
   markers,
@@ -30,12 +37,23 @@ export default function MeasurementStep({
   onBack,
 }: {
   code: string
+  productKey: string
   values: Record<string, string>
   lockHeightMm: string
   lockSide: 'left' | 'right' | ''
   centreTongue: boolean
+  lockTopMm: string
+  lockCentreMm: string
+  lockBottomMm: string
+  midRailRequired: boolean
+  midRailHeightMm: string
+  interlockAdjustment: 'add' | 'remove' | ''
   bowed: boolean
-  onHardwareChange: (patch: { lockHeightMm?: string; lockSide?: 'left' | 'right' | ''; centreTongue?: boolean; bowed?: boolean }) => void
+  onHardwareChange: (patch: {
+    lockHeightMm?: string; lockSide?: 'left' | 'right' | ''; centreTongue?: boolean; bowed?: boolean
+    lockTopMm?: string; lockCentreMm?: string; lockBottomMm?: string
+    midRailRequired?: boolean; midRailHeightMm?: string; interlockAdjustment?: 'add' | 'remove' | ''
+  }) => void
   markers: Record<string, MarkerPosition>
   strokes: DrawStroke[]
   onValuesChange: (values: Record<string, string>) => void
@@ -46,6 +64,8 @@ export default function MeasurementStep({
 }) {
   const config = findSheetConfig(code)
   const isDoor = configFamily(code) !== 'window'
+  const isSliding = configFamily(code) === 'sliding'
+  const supportsTripleLock = isDoor && productKey !== 'flyscreens'
   const image = config ? sheetCodeImage(code) : undefined
   const points = config ? measurePoints(config) : { heights: [] as string[], widths: [] as string[] }
   const keys = config ? measureKeys(config) : []
@@ -57,6 +77,7 @@ export default function MeasurementStep({
 
   const opening = useMemo(() => openingFromMeasures(values), [values])
   const size = config && opening ? calcSheetSize(config, opening.height, opening.width) : null
+  const adjustedWidth = size ? size.screenWidth + (interlockAdjustment === 'add' ? 5 : interlockAdjustment === 'remove' ? -5 : 0) : 0
   const missingMarks = keys.filter((key) => !markers[key])
   const missingValues = keys.filter((key) => !(Number(values[key]) > 0))
 
@@ -96,11 +117,10 @@ export default function MeasurementStep({
   }
 
   function handleContinue() {
-    onNext(
-      size
-        ? { widthMm: Math.round(size.openingWidth), heightMm: Math.round(size.openingHeight) }
-        : null,
-    )
+    if (missingValues.length > 0 || !size || adjustedWidth <= 0) return
+    if (centreTongue && [lockTopMm, lockCentreMm, lockBottomMm].some((value) => !(Number(value) > 0))) return
+    if (midRailRequired && !(Number(midRailHeightMm) > 0)) return
+    onNext({ widthMm: Math.round(size.openingWidth), heightMm: Math.round(size.openingHeight) })
   }
 
   function removeSelectedMark() {
@@ -277,7 +297,11 @@ export default function MeasurementStep({
               <h3>Door hardware &amp; condition</h3>
               <label>
                 Lock height (mm)
-                <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
+                {centreTongue ? (
+                  <input aria-label="Lock height (mm)" value="N/A" disabled />
+                ) : (
+                  <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
+                )}
               </label>
               <label>
                 Lock side
@@ -287,16 +311,44 @@ export default function MeasurementStep({
                   <option value="right">Right</option>
                 </select>
               </label>
-              <label className="check-row">
-                <input type="checkbox" checked={centreTongue} onChange={(e) => onHardwareChange({ centreTongue: e.target.checked })} />
-                Centre tongue
-              </label>
+              {supportsTripleLock && (
+                <>
+                  <label className="check-row">
+                    <input type="checkbox" checked={centreTongue} onChange={(e) => onHardwareChange({ centreTongue: e.target.checked, lockHeightMm: e.target.checked ? '' : lockHeightMm })} />
+                    Centre tongue / triple lock
+                  </label>
+                  {centreTongue && (
+                    <div className="field-row sheet-measure-fields">
+                      <label>Top lock position (mm)<input type="number" min={0} value={lockTopMm} onChange={(e) => onHardwareChange({ lockTopMm: e.target.value })} /></label>
+                      <label>Centre lock position (mm)<input type="number" min={0} value={lockCentreMm} onChange={(e) => onHardwareChange({ lockCentreMm: e.target.value })} /></label>
+                      <label>Bottom lock position (mm)<input type="number" min={0} value={lockBottomMm} onChange={(e) => onHardwareChange({ lockBottomMm: e.target.value })} /></label>
+                    </div>
+                  )}
+                </>
+              )}
               <label className="check-row">
                 <input type="checkbox" checked={bowed} onChange={(e) => onHardwareChange({ bowed: e.target.checked })} />
                 Door is bowed
               </label>
             </div>
           )}
+
+          <div className="sheet-hardware-fields">
+            <label className="check-row">
+              <input type="checkbox" checked={midRailRequired} onChange={(e) => onHardwareChange({ midRailRequired: e.target.checked, midRailHeightMm: e.target.checked ? midRailHeightMm : '' })} />
+              Mid-rail required
+            </label>
+            {midRailRequired && (
+              <label>Mid-rail height (mm)<input type="number" min={0} value={midRailHeightMm} onChange={(e) => onHardwareChange({ midRailHeightMm: e.target.value })} /></label>
+            )}
+            {isSliding && (
+              <fieldset>
+                <legend>Door interlock</legend>
+                <label className="check-row"><input type="checkbox" checked={interlockAdjustment === 'add'} onChange={(e) => onHardwareChange({ interlockAdjustment: e.target.checked ? 'add' : '' })} />Door interlock needed — 5 mm added</label>
+                <label className="check-row"><input type="checkbox" checked={interlockAdjustment === 'remove'} onChange={(e) => onHardwareChange({ interlockAdjustment: e.target.checked ? 'remove' : '' })} />Door has interlock — 5 mm removed</label>
+              </fieldset>
+            )}
+          </div>
 
           {size ? (
             <div className="price-result">
@@ -305,7 +357,7 @@ export default function MeasurementStep({
                 (largest marked height and width)
               </p>
               <p>
-                Size used for pricing: {size.screenLabel.replace('X', ' × ')} mm · {size.panels} panel
+                Size used for pricing: {formatSheetMm(size.screenHeight)} × {formatSheetMm(adjustedWidth)} mm · {size.panels} panel
                 {size.panels === 1 ? '' : 's'}
               </p>
             </div>
@@ -319,12 +371,18 @@ export default function MeasurementStep({
           {missingValues.length > 0 && missingMarks.length === 0 && (
             <p className="muted small">Still to type: {missingValues.join(', ')}.</p>
           )}
+          {centreTongue && [lockTopMm, lockCentreMm, lockBottomMm].some((value) => !(Number(value) > 0)) && (
+            <p className="muted small">Enter all three lock positions to continue.</p>
+          )}
+          {midRailRequired && !(Number(midRailHeightMm) > 0) && (
+            <p className="muted small">Enter the mid-rail height to continue.</p>
+          )}
 
           <div className="wizard-actions">
             <button type="button" className="link-button" onClick={onBack}>
               &larr; Back
             </button>
-            <button type="button" className="primary-button" onClick={handleContinue}>
+            <button type="button" className="primary-button" onClick={handleContinue} disabled={!size || missingValues.length > 0 || adjustedWidth <= 0 || (centreTongue && [lockTopMm, lockCentreMm, lockBottomMm].some((value) => !(Number(value) > 0))) || (midRailRequired && !(Number(midRailHeightMm) > 0))}>
               Continue
             </button>
           </div>

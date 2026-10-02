@@ -54,13 +54,12 @@ test.describe('quote workspace', () => {
     await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
   })
 
-  test('shows customer, suffix and GST on the customer preview', async ({ page }) => {
-    await page.getByLabel('Quote suffix').fill('SS')
+  test('shows customer, quote number and GST on the customer preview', async ({ page }) => {
     await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
 
     const dialog = page.getByRole('dialog', { name: 'Preview quote' })
-    await expect(dialog.locator('.quote-doc__no')).toHaveText(/Quote No: \d+-SS/)
-    await expect(dialog.getByText(CUSTOMER.name)).toBeVisible()
+    await expect(dialog.locator('.quote-doc__no')).toHaveText(/Quote No: \d+/)
+    await expect(dialog.getByText(CUSTOMER.name).first()).toBeVisible()
     await expect(dialog.getByText('GST')).toBeVisible()
 
     await dialog.getByRole('button', { name: 'Back' }).click()
@@ -151,11 +150,11 @@ test('uses the entered quote number in the customer preview and formats phone nu
   await page.getByLabel('Phone').fill('0417001615')
   await expect(page.getByLabel('Phone')).toHaveValue('0417-001-615')
   await page.getByRole('button', { name: 'Start quote' }).click()
-  await expect(page.getByRole('heading', { name: /Quote 00045678/ })).toBeVisible()
+  await expect(page.getByRole('heading', { name: /Quote 45678/ })).toBeVisible()
   await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
   await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
   const dialog = page.getByRole('dialog', { name: 'Preview quote' })
-  await expect(dialog.locator('.quote-doc__no')).toContainText('Quote No: 00045678')
+  await expect(dialog.locator('.quote-doc__no')).toContainText('Quote No: 45678')
   await expect(dialog.getByText('0417-001-615').first()).toBeVisible()
 })
 

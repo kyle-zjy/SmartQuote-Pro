@@ -7,6 +7,8 @@ async function startUnfinishedOpening(page: Page, location = 'Living Room Test')
   await fillRoomLocation(page, location)
   await page.getByRole('button', { name: 'Continue' }).click()
   await page.getByRole('button', { name: /^HDX-L\b/ }).click()
+  await page.getByRole('button', { name: 'Supascreen', exact: true }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
 
   await expect(page.getByRole('heading', { name: 'Measure the opening' })).toBeVisible()
   await page.getByLabel('H1', { exact: true }).fill('2000')

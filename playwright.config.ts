@@ -18,7 +18,12 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'off',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [{ name: 'chromium', use: {
+    ...devices['Desktop Chrome'],
+    ...(process.env.PLAYWRIGHT_CHROME_PATH
+      ? { launchOptions: { executablePath: process.env.PLAYWRIGHT_CHROME_PATH } }
+      : {}),
+  } }],
   webServer: {
     command: `npm run dev -- --host ${host} --port ${port} --strictPort`,
     url: baseURL,

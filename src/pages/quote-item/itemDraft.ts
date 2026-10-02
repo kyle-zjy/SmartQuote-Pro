@@ -15,7 +15,16 @@ export interface ItemDraft {
   lockHeightMm: string
   lockSide: 'left' | 'right' | ''
   centreTongue: boolean
+  lockTopMm: string
+  lockCentreMm: string
+  lockBottomMm: string
+  midRailRequired: boolean
+  midRailHeightMm: string
+  interlockAdjustment: 'add' | 'remove' | ''
   bowed: boolean
+  serviceOnly: boolean
+  serviceDescription: string
+  servicePrice: string
   productKey: string
   categoryKey: string
   widthMm: string
@@ -40,7 +49,16 @@ export function emptyItemDraft(): ItemDraft {
     lockHeightMm: '',
     lockSide: '',
     centreTongue: false,
+    lockTopMm: '',
+    lockCentreMm: '',
+    lockBottomMm: '',
+    midRailRequired: false,
+    midRailHeightMm: '',
+    interlockAdjustment: '',
     bowed: false,
+    serviceOnly: false,
+    serviceDescription: '',
+    servicePrice: '',
     productKey: '',
     categoryKey: '',
     widthMm: '',
@@ -102,7 +120,16 @@ export function draftFromItem(item: QuoteLineItem, products: Product[] = []): It
     lockHeightMm: item.lockHeightMm == null ? '' : String(item.lockHeightMm),
     lockSide: item.lockSide ?? '',
     centreTongue: item.centreTongue ?? false,
+    lockTopMm: item.lockTopMm == null ? '' : String(item.lockTopMm),
+    lockCentreMm: item.lockCentreMm == null ? '' : String(item.lockCentreMm),
+    lockBottomMm: item.lockBottomMm == null ? '' : String(item.lockBottomMm),
+    midRailRequired: item.midRailRequired ?? false,
+    midRailHeightMm: item.midRailHeightMm == null ? '' : String(item.midRailHeightMm),
+    interlockAdjustment: item.interlockAdjustment ?? '',
     bowed: item.bowed ?? false,
+    serviceOnly: item.serviceOnly ?? !item.productKey,
+    serviceDescription: item.serviceDescription ?? (!item.productKey ? item.description : ''),
+    servicePrice: item.servicePrice == null ? (!item.productKey ? String(item.unitPrice) : '') : String(item.servicePrice),
     productKey: item.productKey ?? '',
     categoryKey: resolveCategoryKey(item, products),
     widthMm: item.openingWidthMm ? String(item.openingWidthMm) : '',
@@ -137,7 +164,16 @@ interface ComparableItem {
   lockHeightMm?: number | null
   lockSide?: 'left' | 'right' | ''
   centreTongue?: boolean
+  lockTopMm?: number | null
+  lockCentreMm?: number | null
+  lockBottomMm?: number | null
+  midRailRequired?: boolean
+  midRailHeightMm?: number | null
+  interlockAdjustment?: 'add' | 'remove' | ''
   bowed?: boolean
+  serviceOnly?: boolean
+  serviceDescription?: string
+  servicePrice?: number
   material?: string
   frameColourMode?: 'default' | 'custom'
   customFrameColour?: string
@@ -158,7 +194,16 @@ function itemSignature(item: ComparableItem): string {
     lockHeightMm: item.lockHeightMm ?? null,
     lockSide: item.lockSide ?? '',
     centreTongue: item.centreTongue ?? false,
+    lockTopMm: item.lockTopMm ?? null,
+    lockCentreMm: item.lockCentreMm ?? null,
+    lockBottomMm: item.lockBottomMm ?? null,
+    midRailRequired: item.midRailRequired ?? false,
+    midRailHeightMm: item.midRailHeightMm ?? null,
+    interlockAdjustment: item.interlockAdjustment ?? '',
     bowed: item.bowed ?? false,
+    serviceOnly: item.serviceOnly ?? false,
+    serviceDescription: item.serviceDescription ?? '',
+    servicePrice: item.servicePrice ?? 0,
     material: item.material ?? '',
     frameColourMode: item.frameColourMode ?? 'default',
     customFrameColour: item.customFrameColour ?? '',

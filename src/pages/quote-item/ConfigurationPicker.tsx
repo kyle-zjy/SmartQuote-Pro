@@ -11,16 +11,22 @@ import {
 } from '../../lib/configurationFilters'
 import { QUOTE_SHEET, configLabel } from '../../lib/quoteSheet'
 import { sheetCodeImage } from '../../lib/sheetCodeImages'
+import { usePricing } from '../../lib/pricingContext'
+import { compatibleCategories } from './itemDraft'
 
 export default function ConfigurationPicker({
   value,
+  productKey,
   onNext,
   onBack,
 }: {
   value: string
+  productKey?: string
   onNext: (code: string) => void
   onBack: () => void
 }) {
+  const { data } = usePricing()
+  const product = data.products.find((candidate) => candidate.key === productKey)
   const [type, setType] = useState<ConfigTypeFilter | undefined>(undefined)
   const [operation, setOperation] = useState<ConfigOperationFilter | undefined>(undefined)
   const [panels, setPanels] = useState<ConfigPanelsFilter | undefined>(undefined)
@@ -76,8 +82,9 @@ export default function ConfigurationPicker({
   }, [filterOpen])
 
   const configs = useMemo(
-    () => filterConfigs(QUOTE_SHEET.configs, { type, operation, panels, direction, search }),
-    [type, operation, panels, direction, search],
+    () => filterConfigs(QUOTE_SHEET.configs, { type, operation, panels, direction, search })
+      .filter((config) => !product || compatibleCategories(product, config.code).length > 0),
+    [type, operation, panels, direction, search, product],
   )
 
   return (

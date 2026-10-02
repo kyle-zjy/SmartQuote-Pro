@@ -42,12 +42,15 @@ export async function fillRoomLocation(page: Page, location: string) {
 
 export type OpeningLocationOptions = {
   location?: string
+  product?: string
   configCode?: string
   measurements?: Record<string, string>
+  widthMm?: string
+  heightMm?: string
 }
 
 /**
- * Drives Location -> Configuration -> Measurements and lands on the Product step.
+ * Drives Location -> Configuration -> Product -> Measurements and lands on Add-ons.
  * The Configuration step has no separate Continue button -- clicking a config card
  * advances immediately -- unlike every other wizard step.
  */
@@ -55,8 +58,11 @@ export async function openLocationAndConfig(
   page: Page,
   {
     location = 'Living Room',
+    product = 'Supascreen',
     configCode = 'HDX-L',
     measurements = { H1: '2100', W1: '900' },
+    widthMm,
+    heightMm,
   }: OpeningLocationOptions = {},
 ) {
   await page.getByRole('link', { name: '+ Add Opening' }).click()
@@ -68,20 +74,23 @@ export async function openLocationAndConfig(
   await expect(page.getByRole('heading', { name: 'Pick a configuration' })).toBeVisible()
   await page.getByRole('button', { name: new RegExp(`^${escapeRegExp(configCode)}\\b`) }).click()
 
+  await expect(page.getByRole('heading', { name: 'Select a product' })).toBeVisible()
+  await page.getByRole('button', { name: product, exact: true }).click()
+  await page.getByRole('button', { name: 'Continue' }).click()
+
   await expect(page.getByRole('heading', { name: 'Measure the opening' })).toBeVisible()
   for (const [key, value] of Object.entries(measurements)) {
     await page.getByLabel(key, { exact: true }).fill(value)
   }
+  if (heightMm) await page.getByLabel('H1', { exact: true }).fill(heightMm)
+  if (widthMm) await page.getByLabel('W1', { exact: true }).fill(widthMm)
   await page.getByRole('button', { name: 'Continue' }).click()
 
-  await expect(page.getByRole('heading', { name: 'Product & size' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
 }
 
 export type AddOpeningOptions = OpeningLocationOptions & {
-  product?: string
   category?: string
-  widthMm?: string
-  heightMm?: string
   mesh?: string
   doubleHung?: boolean
   addons?: string[]
@@ -95,34 +104,17 @@ export type AddOpeningOptions = OpeningLocationOptions & {
 export async function addOpening(page: Page, options: AddOpeningOptions = {}) {
   await openLocationAndConfig(page, options)
 
-  if (options.product) {
-    await page.getByRole('button', { name: options.product, exact: true }).click()
-  }
-  if (options.category) {
-    await page.getByRole('button', { name: options.category, exact: true }).click()
-  }
-  if (options.heightMm) {
-    await page.getByLabel('Height (mm)').fill(options.heightMm)
-  }
-  if (options.widthMm) {
-    await page.getByLabel('Width (mm)').fill(options.widthMm)
-  }
   if (options.mesh) {
     await page.getByLabel('Mesh type').selectOption({ label: options.mesh })
   }
   if (options.doubleHung) {
     await page.getByRole('checkbox', { name: /Double hung window/ }).check()
   }
-  await page.getByRole('button', { name: 'Continue' }).click()
-
-  await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
   for (const name of options.addons ?? []) {
     const row = page.getByRole('row', { name: new RegExp(escapeRegExp(name)) })
     const price = options.addonPrices?.[name]
-    if (price) {
-      await row.getByPlaceholder('Enter price').fill(price)
-    }
     await row.getByRole('checkbox').check()
+    if (price) await row.getByRole('spinbutton', { name: `${name} price` }).fill(price)
   }
   await page.getByRole('button', { name: 'Continue' }).click()
 

@@ -40,14 +40,17 @@ export default function ReviewItemStep({
   const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
   const config = findSheetConfig(draft.configurationCode)
   const pricingSize = config ? calcSheetSize(config, heightMm, widthMm) : null
+  const pricingWidth = pricingSize
+    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
+    : 0
 
   const configured = useMemo(() => {
-    if (!category || !pricingSize) return null
-    return calcConfiguredPrice(category, pricingSize.screenWidth, pricingSize.screenHeight, {
+    if (!category || !pricingSize || pricingWidth <= 0) return null
+    return calcConfiguredPrice(category, pricingWidth, pricingSize.screenHeight, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     })
-  }, [category, pricingSize, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
+  }, [category, pricingSize, pricingWidth, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
 
   const fitExtraItems = LINE_FIT_EXTRAS.map((extra) => ({
     ...extra,
@@ -55,13 +58,15 @@ export default function ReviewItemStep({
   })).filter((extra) => draft.fitExtras.includes(extra.addonName) && extra.price > 0)
   const fitExtraTotal = fitExtraItems.reduce((sum, extra) => sum + extra.price, 0)
   const addonsTotal = draft.addons.reduce((sum, addon) => sum + addon.price, 0)
-  const unitPrice = configured?.unitPrice != null ? configured.unitPrice + fitExtraTotal + addonsTotal : null
+  const unitPrice = draft.serviceOnly
+    ? Number(draft.servicePrice || 0) + addonsTotal
+    : configured?.unitPrice != null ? configured.unitPrice + fitExtraTotal + addonsTotal : null
   const lineTotal = unitPrice != null ? unitPrice * draft.quantity : null
 
   const colourName = effectiveFrameColour(draft, quoteFrameColour, quoteCustomFrameColour)
   const productLabel =
     product && category ? `${product.name} ${openingLabel(category.key, category.label)}` : ''
-  const description = describeStructuredItem({
+  const description = draft.serviceOnly ? `${draft.location} — ${draft.serviceDescription.trim()}` : describeStructuredItem({
     location: draft.location,
     productLabel,
     widthMm,
@@ -77,26 +82,35 @@ export default function ReviewItemStep({
         <dd>{draft.location || '—'}</dd>
         <dt>Configuration</dt>
         <dd>
-          {draft.configurationCode ? `${draft.configurationCode} · ${configLabel(draft.configurationCode)}` : '—'}
+          {draft.serviceOnly ? 'N/A' : draft.configurationCode ? `${draft.configurationCode} · ${configLabel(draft.configurationCode)}` : '—'}
         </dd>
         <dt>Product</dt>
-        <dd>{product ? `${product.name} (${category?.label ?? ''})` : '—'}</dd>
+        <dd>{draft.serviceOnly ? 'Extra / repair only' : product ? `${product.name} (${category?.label ?? ''})` : '—'}</dd>
         <dt>Size</dt>
-        <dd>{widthMm > 0 && heightMm > 0 ? formatItemDimensions(heightMm, widthMm) : '—'}</dd>
-        {draft.configurationCode !== 'WS' && (
+        <dd>{draft.serviceOnly ? 'N/A' : widthMm > 0 && heightMm > 0 ? formatItemDimensions(heightMm, widthMm) : '—'}</dd>
+        {!draft.serviceOnly && draft.configurationCode !== 'WS' && (
           <>
             <dt>Lock height</dt>
-            <dd>{draft.lockHeightMm ? `${draft.lockHeightMm} mm` : 'Not recorded'}</dd>
+            <dd>{draft.centreTongue ? 'N/A' : draft.lockHeightMm ? `${draft.lockHeightMm} mm` : 'Not recorded'}</dd>
             <dt>Lock side</dt>
             <dd>{draft.lockSide || 'Not recorded'}</dd>
             <dt>Centre tongue</dt>
             <dd>{draft.centreTongue ? 'Yes' : 'No'}</dd>
+            {draft.centreTongue && (
+              <>
+                <dt>Lock positions</dt>
+                <dd>Top {draft.lockTopMm || '—'} · Centre {draft.lockCentreMm || '—'} · Bottom {draft.lockBottomMm || '—'} mm</dd>
+              </>
+            )}
+            <dt>Mid-rail</dt>
+            <dd>{draft.midRailRequired ? `${draft.midRailHeightMm || '—'} mm` : 'No'}</dd>
+            {draft.interlockAdjustment && <><dt>Door interlock</dt><dd>{draft.interlockAdjustment === 'add' ? '5 mm added' : '5 mm removed'}</dd></>}
             <dt>Door bowed</dt>
             <dd>{draft.bowed ? 'Yes' : 'No'}</dd>
           </>
         )}
         <dt>Mesh</dt>
-        <dd>{draft.meshOption !== STANDARD_MESH ? draft.meshOption : 'Standard'}</dd>
+        <dd>{draft.serviceOnly ? 'N/A' : draft.meshOption !== STANDARD_MESH ? draft.meshOption : 'Standard'}</dd>
         <dt>Frame colour</dt>
         <dd>{colourName}</dd>
         <dt>Fitting extras</dt>
@@ -163,7 +177,7 @@ export default function ReviewItemStep({
         <button type="button" className="link-button" onClick={onBack}>
           &larr; Back
         </button>
-        <button type="button" className="primary-button" onClick={onSave} disabled={unitPrice == null || locked}>
+        <button type="button" className="primary-button" onClick={onSave} disabled={unitPrice == null || locked || (draft.serviceOnly && !draft.serviceDescription.trim())}>
           Save Item
         </button>
       </div>
