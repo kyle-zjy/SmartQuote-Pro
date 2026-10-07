@@ -56,7 +56,6 @@ export default function QuoteIntake() {
         <Link to="/quotes">&larr; All quotes</Link>
       </p>
       <h1>New quote</h1>
-      <p className="muted">Customer details can be finished later — start with whatever you have on site.</p>
       <div className="quote-editor__grid">
         <label>
           Customer

@@ -122,11 +122,6 @@ export default function Quotes() {
       <header className="page-header">
         <div>
           <h1>Quotes</h1>
-          <p className="muted">
-            Track whether each quote is still in progress, abandoned, or closed, and whether it is a draft, submitted
-            for office review, or issued. Comments under a revision record why the customer asked for a change. Use
-            Snapshot to review a revision — including photos — without opening it.
-          </p>
         </div>
         <div className="quote-actions">
           {hasDraft && (
@@ -179,7 +174,6 @@ export default function Quotes() {
       {savedQuotes.length === 0 ? (
         <div className="empty-state">
           <p className="empty-state__title">No saved quotes yet</p>
-          <p className="muted">No saved quotes yet. Open a quote and choose Save quote or Issue quote.</p>
           {hasDraft ? (
             <Link to={`/quotes/${quoteNo}`} className="primary-button">Continue current quote</Link>
           ) : (
@@ -192,7 +186,6 @@ export default function Quotes() {
           return (
             <section key={section.status} className={`saved-board saved-board--${section.status}`}>
               <h2 className={`saved-board__title saved-board__title--${section.status}`}>{section.title}</h2>
-              <p className="muted small">{section.hint}</p>
               {groups.length === 0 ? (
                 <p className="muted small">None.</p>
               ) : (
