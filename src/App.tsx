@@ -1,8 +1,11 @@
 import { lazy, Suspense } from 'react'
 import { Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom'
 import { useQuote } from './lib/quoteContext'
+import { ConfigProvider } from 'antd'
+import { AppstoreOutlined, FileTextOutlined, FormOutlined, SettingOutlined } from '@ant-design/icons'
 
 const Quotes = lazy(() => import('./pages/Quotes'))
+const Home = lazy(() => import('./pages/Home'))
 const QuoteIntake = lazy(() => import('./pages/QuoteIntake'))
 const QuoteWorkspace = lazy(() => import('./pages/QuoteWorkspace'))
 const ItemWizard = lazy(() => import('./pages/quote-item/ItemWizard'))
@@ -35,30 +38,31 @@ export default function App() {
       : 'content'
 
   return (
+    <ConfigProvider theme={{ token: { colorPrimary: '#1d4ed8', borderRadius: 8, fontFamily: "'DM Sans', system-ui, sans-serif" } }}>
     <div className="app-shell">
       <header className="topbar">
-        <NavLink to="/quotes" className="brand" aria-label="SmartQuote Pro">
-          <span className="brand-mark" aria-hidden="true">
-            SQ
-          </span>
-          <span>SmartQuote Pro</span>
+        <NavLink to="/" className="brand" aria-label="SmartQuote Pro home">
+          <span className="brand-mark" aria-hidden="true">SQ</span>
+          <span>SmartQuote <span className="brand-pro">PRO</span></span>
         </NavLink>
-        <nav className="topnav">
+        <nav className="topnav" aria-label="Main navigation">
+          <NavLink to="/" end><AppstoreOutlined aria-hidden="true" />Home</NavLink>
           <NavLink to="/quotes" end>
-            Quotes
+            <FileTextOutlined aria-hidden="true" />Quotes
             {savedQuoteCount > 0 ? <span className="nav-count">{savedQuoteCount}</span> : null}
           </NavLink>
           <NavLink to={`/quotes/${quoteNo}`}>
-            Current Quote
+            <FormOutlined aria-hidden="true" />Current Quote
             {itemCount > 0 ? <span className="nav-count">{itemCount}</span> : null}
           </NavLink>
-          <NavLink to="/admin">Admin</NavLink>
+          <NavLink to="/admin"><SettingOutlined aria-hidden="true" />Admin</NavLink>
         </nav>
       </header>
 
       <main className={contentClass}>
         <Suspense fallback={<PageFallback />}>
           <Routes>
+            <Route path="/" element={<Home />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/quotes/new" element={<QuoteIntake />} />
             <Route path="/quotes/:id" element={<QuoteWorkspace />} />
@@ -70,7 +74,6 @@ export default function App() {
             </Route>
 
             {/* Legacy routes from the old five-page layout redirect instead of 404ing. */}
-            <Route path="/" element={<Navigate to="/quotes" replace />} />
             <Route path="/product/:productKey" element={<Navigate to="/quotes" replace />} />
             <Route path="/addons" element={<Navigate to="/quotes" replace />} />
             <Route path="/sheet" element={<Navigate to="/quotes" replace />} />
@@ -81,5 +84,6 @@ export default function App() {
         </Suspense>
       </main>
     </div>
+    </ConfigProvider>
   )
 }

@@ -11,7 +11,7 @@ function escapeRegExp(value: string): string {
 }
 
 export async function resetApp(page: Page) {
-  await page.goto('/')
+  await page.goto('/quotes')
   await page.evaluate(() => {
     localStorage.clear()
     sessionStorage.clear()
@@ -38,6 +38,7 @@ export async function startNewQuote(page: Page, customer = CUSTOMER) {
 /** Enters the complete opening location in the predictive location field. */
 export async function fillRoomLocation(page: Page, location: string) {
   await page.getByRole('combobox').fill(location)
+  await page.getByRole('combobox').press('Escape')
 }
 
 export type OpeningLocationOptions = {
