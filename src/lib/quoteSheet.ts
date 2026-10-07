@@ -150,6 +150,51 @@ export function calcSheetSize(config: SheetConfig, height: number, width: number
   }
 }
 
+/** The per-panel screen size actually used to calculate price, derived from the same stored
+ * fields the wizard priced against -- null when the item wasn't built through the opening/
+ * measurement wizard (e.g. service-only items or legacy flat items). */
+export function pricingSizeForItem(item: {
+  configurationCode?: string
+  measurements?: Record<string, string>
+  interlockAdjustment?: 'add' | 'remove' | ''
+}): { widthMm: number; heightMm: number } | null {
+  if (!item.configurationCode || !item.measurements) return null
+  const config = findSheetConfig(item.configurationCode)
+  const opening = openingFromMeasures(item.measurements)
+  if (!config || !opening) return null
+  const screen = calcSheetSize(config, opening.height, opening.width)
+  if (!screen) return null
+  const widthMm = screen.screenWidth + (item.interlockAdjustment === 'add' ? 5 : item.interlockAdjustment === 'remove' ? -5 : 0)
+  return { widthMm, heightMm: screen.screenHeight }
+}
+
+/** The price-matrix bracket the item was actually billed at -- rounded up from the per-panel
+ * screen size to the next available size, e.g. a 1285 x 440 screen priced off a 1300 x 450
+ * bracket. This is deliberately coarser than the real measurement so a customer-facing quote
+ * can show it without revealing the precise site measurement. Null when the item wasn't built
+ * through the opening/measurement wizard, or its product/category can't be found in the given
+ * pricing catalog (e.g. a custom import that dropped a category). */
+export function pricingBracketForItem(
+  item: {
+    configurationCode?: string
+    measurements?: Record<string, string>
+    interlockAdjustment?: 'add' | 'remove' | ''
+    productKey?: string
+    categoryKey?: string
+  },
+  pricingData: PricingData,
+): { widthMm: number; heightMm: number } | null {
+  const screen = pricingSizeForItem(item)
+  if (!screen) return null
+  const category = pricingData.products
+    .find((product) => product.key === item.productKey)
+    ?.categories.find((candidate) => candidate.key === item.categoryKey) as PriceCategory | undefined
+  if (!category) return null
+  const lookup = findPrice(category, screen.widthMm, screen.heightMm)
+  if (!lookup.ok) return null
+  return { widthMm: lookup.matchedWidth, heightMm: lookup.matchedHeight }
+}
+
 export function sheetLineAmount(unitPrice: number, qty: number, panels: number): number {
   return money(Math.max(0, unitPrice) * Math.max(0, qty) * Math.max(0, panels))
 }
