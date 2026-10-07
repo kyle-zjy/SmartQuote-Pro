@@ -1,6 +1,7 @@
-import { customerQuoteNote, productPrice, quoteExtras, extraLabel, type QuoteAudience } from '../lib/quotePrint'
+import { customerQuoteNote, displayDescription, productPrice, quoteExtras, extraLabel, type QuoteAudience } from '../lib/quotePrint'
 import type { QuoteLineItem } from '../lib/quoteContext'
 import { lineAmount } from '../lib/quoteTotals'
+import { usePricing } from '../lib/pricingContext'
 
 function siteDetails(item: QuoteLineItem): string {
   return [
@@ -34,9 +35,11 @@ export default function QuoteLineItemRow({
   readOnly?: boolean
   audience?: QuoteAudience
 }) {
+  const { data: pricingData } = usePricing()
   const customerNote = customerQuoteNote(item)
   const extras = quoteExtras(item)
   const basePrice = productPrice(item)
+  const description = displayDescription(item, audience, pricingData)
   const details = (
     <>
       {audience === 'customer' && customerNote && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {customerNote}</div>}
@@ -71,7 +74,7 @@ export default function QuoteLineItemRow({
       <td>
         {readOnly ? (
           <>
-            <div>{item.description}</div>
+            <div>{description}</div>
             {details}
           </>
         ) : (

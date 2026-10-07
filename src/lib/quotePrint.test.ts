@@ -2,8 +2,10 @@ import { createElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
 import QuoteLineItemRow from '../components/QuoteLineItemRow'
+import { PricingProvider } from './pricingContext'
 import type { QuoteLineItem } from './quoteContext'
-import { PET_DOOR_DISCLAIMER, petDoorOptions, productPrice, quoteExtras, removeQuoteExtra, type QuoteAudience } from './quotePrint'
+import type { PricingData } from '../types/pricing'
+import { PET_DOOR_DISCLAIMER, displayDescription, petDoorOptions, productPrice, quoteExtras, removeQuoteExtra, type QuoteAudience } from './quotePrint'
 
 const item: QuoteLineItem = {
   id: 'door', description: 'Supascreen hinged door', detail: '', room: 'Entry',
@@ -14,9 +16,9 @@ const item: QuoteLineItem = {
 }
 
 function render(audience: QuoteAudience, line = item) {
-  return renderToStaticMarkup(createElement(QuoteLineItemRow, {
+  return renderToStaticMarkup(createElement(PricingProvider, null, createElement(QuoteLineItemRow, {
     item: line, audience, readOnly: true, formatCurrency: (value) => `$${value}`,
-  }))
+  })))
 }
 
 describe('quote print audience', () => {
@@ -86,6 +88,62 @@ describe('separate extras pricing', () => {
     expect(updated.fitExtraPrices).toEqual([])
     expect(updated.unitPrice).toBe(815)
     expect(productPrice(updated)).toBe(productPrice(line))
+  })
+})
+
+describe('dimension shown to each audience', () => {
+  // Window category with brackets at 1200/1300/1400 wide, 400/450/500 high, so a 1285 x 440
+  // measurement (as in the 1285 x 440 -> 1300 x 450 example this behavior was built for) rounds
+  // up to the next available bracket rather than landing on an exact size.
+  const pricingData: PricingData = {
+    note: '',
+    products: [{
+      key: 'supascreen', name: 'Supascreen', pricingAsAt: null,
+      categories: [
+        { key: 'windows', label: 'Windows', widths: [1200, 1300, 1400], heights: [400, 450, 500],
+          prices: [[200, 220, 240], [230, 250, 270], [260, 280, 300]], extras: null },
+        { key: 'sliding-doors', label: 'Sliding Doors', widths: [600, 700, 800], heights: [2100],
+          prices: [[300, 350, 400]], extras: null },
+      ],
+    }],
+  }
+
+  const windowItem: QuoteLineItem = {
+    id: 'window', description: 'Living Room — Supascreen Window — 0440 x 1285 mm', detail: '',
+    room: 'Living Room', quantity: 1, unitPrice: 220, note: '',
+    configurationCode: 'WS', measurements: { H1: '440', W1: '1285' },
+    productKey: 'supascreen', categoryKey: 'windows',
+    openingWidthMm: 1285, openingHeightMm: 440,
+  }
+
+  it('shows the customer the price-matrix bracket, not the precise measurement', () => {
+    expect(displayDescription(windowItem, 'customer', pricingData)).toBe('Living Room — Supascreen Window — 0450 x 1300 mm')
+  })
+
+  it('keeps showing the actual measured opening to factory', () => {
+    expect(displayDescription(windowItem, 'factory', pricingData)).toBe(windowItem.description)
+  })
+
+  it('also brackets a multi-panel door down to its per-panel screen size', () => {
+    const doorItem: QuoteLineItem = {
+      ...windowItem, id: 'door2', description: 'Living Room — Supascreen Sliding Door — 2100 x 1800 mm',
+      configurationCode: 'SDOXX', measurements: { H1: '2100', W1: '1800', W2: '1700' },
+      categoryKey: 'sliding-doors', openingWidthMm: 1800, openingHeightMm: 2100,
+    }
+    // Opening is 1800mm, but SDOXX has 2 panels so the screen priced is ~670mm wide, bracketed up to 700.
+    expect(displayDescription(doorItem, 'customer', pricingData)).toBe('Living Room — Supascreen Sliding Door — 2100 x 0700 mm')
+  })
+
+  it('is a no-op when the measurement lands exactly on a bracket', () => {
+    const exact = { ...windowItem, measurements: { H1: '450', W1: '1300' }, openingWidthMm: 1300, openingHeightMm: 450,
+      description: 'Living Room — Supascreen Window — 0450 x 1300 mm' }
+    expect(displayDescription(exact, 'customer', pricingData)).toBe(exact.description)
+  })
+
+  it('leaves legacy items without a configuration/opening or recognised product untouched', () => {
+    const legacy = { ...item, configurationCode: undefined, measurements: undefined, openingWidthMm: undefined, openingHeightMm: undefined }
+    expect(displayDescription(legacy, 'customer', pricingData)).toBe(legacy.description)
+    expect(displayDescription(windowItem, 'customer', { note: '', products: [] })).toBe(windowItem.description)
   })
 })
 
