@@ -13,6 +13,9 @@ import {
 } from '../../lib/quoteSheet'
 import { sheetCodeImage } from '../../lib/sheetCodeImages'
 
+// Off by default per stakeholder request. No UI control for this.
+const AUTOFILL_WIDTHS = false
+
 export default function MeasurementStep({
   code,
   productKey,
@@ -105,7 +108,9 @@ export default function MeasurementStep({
     // keep changing them with changes to that field, but once another is edited it is 
     // detached. Re attached when cleared.
     const previous = values[key] ?? ''
-    const secondaryKeys = isHeightPrimary ? points.heights.slice(1) : points.widths.slice(1)
+    const secondaryKeys = isHeightPrimary
+      ? points.heights.slice(1)
+      : (AUTOFILL_WIDTHS ? points.widths.slice(1) : [])
     const next = { ...values, [key]: value }
     for (const secondaryKey of secondaryKeys) {
       const current = values[secondaryKey] ?? ''
