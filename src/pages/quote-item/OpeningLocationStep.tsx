@@ -1,44 +1,17 @@
 import { useMemo, useRef, useState } from 'react'
-import { isNumberedRoomType, nextRoomNumber, normalizeLocationKey, ROOM_TYPE_OPTIONS } from '../../lib/roomTypes'
+import { normalizeLocationKey, ROOM_TYPE_OPTIONS } from '../../lib/roomTypes'
 
-interface Suggestion {
-  label: string
-  group: 'Used on this quote' | 'Common rooms'
-}
-
-function buildSuggestions(text: string, existingLocations: string[]): Suggestion[] {
+function buildSuggestions(text: string): string[] {
   const query = normalizeLocationKey(text)
-  const seen = new Set<string>()
-  const suggestions: Suggestion[] = []
-
-  for (const location of existingLocations) {
-    const trimmed = location.trim()
-    const key = normalizeLocationKey(trimmed)
-    if (!trimmed || seen.has(key)) continue
-    if (query && !key.includes(query)) continue
-    seen.add(key)
-    suggestions.push({ label: trimmed, group: 'Used on this quote' })
-  }
-
-  for (const roomType of ROOM_TYPE_OPTIONS) {
-    const key = normalizeLocationKey(roomType)
-    if (seen.has(key)) continue
-    if (query && !key.includes(query)) continue
-    seen.add(key)
-    suggestions.push({ label: roomType, group: 'Common rooms' })
-  }
-
-  return suggestions
+  return ROOM_TYPE_OPTIONS.filter((roomType) => !query || normalizeLocationKey(roomType).includes(query))
 }
 
 export default function OpeningLocationStep({
   value,
-  existingLocations,
   originalLocation,
   onNext,
 }: {
   value: string
-  existingLocations: string[]
   /** When reusing an existing item, its original location. Shown so staff must confirm/change it. */
   originalLocation?: string
   onNext: (location: string) => void
@@ -48,14 +21,10 @@ export default function OpeningLocationStep({
   const [activeIndex, setActiveIndex] = useState(-1)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  const suggestions = useMemo(() => buildSuggestions(text, existingLocations), [text, existingLocations])
+  const suggestions = useMemo(() => buildSuggestions(text), [text])
 
   function selectSuggestion(label: string) {
-    const nextValue =
-      ROOM_TYPE_OPTIONS.includes(label) && isNumberedRoomType(label)
-        ? `${label} ${nextRoomNumber(label, existingLocations)}`
-        : label
-    setText(nextValue)
+    setText(label)
     setIsOpen(false)
     setActiveIndex(-1)
     inputRef.current?.focus()
@@ -77,7 +46,7 @@ export default function OpeningLocationStep({
     } else if (e.key === 'Enter') {
       if (isOpen && activeIndex >= 0 && suggestions[activeIndex]) {
         e.preventDefault()
-        selectSuggestion(suggestions[activeIndex].label)
+        selectSuggestion(suggestions[activeIndex])
       }
     } else if (e.key === 'Escape') {
       setIsOpen(false)
@@ -89,8 +58,6 @@ export default function OpeningLocationStep({
     if (!text.trim()) return
     onNext(text.trim())
   }
-
-  let lastGroup: string | null = null
 
   return (
     <div className="calculator">
@@ -128,36 +95,30 @@ export default function OpeningLocationStep({
             onFocus={() => setIsOpen(true)}
             onBlur={() => setIsOpen(false)}
             onKeyDown={handleKeyDown}
-            placeholder="e.g. Bedroom, Kitchen"
+            placeholder="e.g. Bedroom #1, Kitchen"
             autoFocus
             autoComplete="off"
           />
           {isOpen && suggestions.length > 0 ? (
             <ul className="location-autocomplete__list" role="listbox">
-              {suggestions.map((suggestion, index) => {
-                const showGroupHeader = suggestion.group !== lastGroup
-                lastGroup = suggestion.group
-                return (
-                  <li key={`${suggestion.group}-${suggestion.label}`}>
-                    {showGroupHeader ? <p className="location-autocomplete__group">{suggestion.group}</p> : null}
-                    <button
-                      type="button"
-                      role="option"
-                      aria-selected={index === activeIndex}
-                      className={`location-autocomplete__option${index === activeIndex ? ' location-autocomplete__option--active' : ''}`}
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => selectSuggestion(suggestion.label)}
-                    >
-                      {suggestion.label}
-                    </button>
-                  </li>
-                )
-              })}
+              {suggestions.map((suggestion, index) => (
+                <li key={suggestion}>
+                  <button
+                    type="button"
+                    role="option"
+                    aria-selected={index === activeIndex}
+                    className={`location-autocomplete__option${index === activeIndex ? ' location-autocomplete__option--active' : ''}`}
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => selectSuggestion(suggestion)}
+                  >
+                    {suggestion}
+                  </button>
+                </li>
+              ))}
             </ul>
           ) : null}
         </div>
       </label>
-      <p className="muted small">Tip: For bedrooms or bathrooms, numbering is autofilled on selection, starting at 1.</p>
 
       <div className="wizard-actions">
         <button type="button" className="primary-button" onClick={handleContinue} disabled={!text.trim()}>
