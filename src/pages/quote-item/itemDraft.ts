@@ -226,6 +226,11 @@ export function findMatchingItem<T extends ComparableItem & { id: string }>(
   return items.find((item) => itemSignature(item) === signature)
 }
 
+/** Sums the price of every add-on attached to a draft/item -- the single source of truth for this total. */
+export function calcAddonsTotal(addons: QuoteAddon[]): number {
+  return addons.reduce((sum, addon) => sum + addon.price, 0)
+}
+
 /** Picks the first product/category combination that is compatible with the opening configuration. */
 export function defaultProductSelection(
   configurationCode: string,
