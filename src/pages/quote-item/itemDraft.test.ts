@@ -110,11 +110,16 @@ describe('itemDraft interlock options', () => {
     expect(draftFromItem(sampleItem({ interlockAdjustment: 'add' })).interlockAdjustment).toBe('add')
   })
 
-  it('replaces the retired -5 mm option with zero adjustment for editable drafts', () => {
+  it('keeps the -5 mm option when editing or reusing an item', () => {
     const item = sampleItem({ interlockAdjustment: 'remove' })
-    expect(draftFromItem(item).interlockAdjustment).toBe('')
-    expect(draftForReuse(item).interlockAdjustment).toBe('')
+    expect(draftFromItem(item).interlockAdjustment).toBe('remove')
+    expect(draftForReuse(item).interlockAdjustment).toBe('remove')
     expect(item.interlockAdjustment).toBe('remove')
+  })
+  it('keeps the -0 mm choice separate from the +0 mm choice', () => {
+    const item = sampleItem({ interlockAdjustment: 'remove-zero' })
+    expect(draftFromItem(item).interlockAdjustment).toBe('remove-zero')
+    expect(draftForReuse(item).interlockAdjustment).toBe('remove-zero')
   })
 })
 

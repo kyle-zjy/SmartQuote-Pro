@@ -68,7 +68,7 @@ export interface QuoteLineItem {
   lockBottomMm?: number | null
   midRailRequired?: boolean
   midRailHeightMm?: number | null
-  interlockAdjustment?: 'add' | 'remove' | ''
+  interlockAdjustment?: 'add' | 'remove' | 'remove-zero' | ''
   bowed?: boolean
   serviceOnly?: boolean
   serviceDescription?: string

@@ -156,7 +156,7 @@ export function calcSheetSize(config: SheetConfig, height: number, width: number
 export function pricingSizeForItem(item: {
   configurationCode?: string
   measurements?: Record<string, string>
-  interlockAdjustment?: 'add' | 'remove' | ''
+  interlockAdjustment?: 'add' | 'remove' | 'remove-zero' | ''
 }): { widthMm: number; heightMm: number } | null {
   if (!item.configurationCode || !item.measurements) return null
   const config = findSheetConfig(item.configurationCode)
@@ -178,7 +178,7 @@ export function pricingBracketForItem(
   item: {
     configurationCode?: string
     measurements?: Record<string, string>
-    interlockAdjustment?: 'add' | 'remove' | ''
+    interlockAdjustment?: 'add' | 'remove' | 'remove-zero' | ''
     productKey?: string
     categoryKey?: string
   },

@@ -11,7 +11,7 @@ function siteDetails(item: QuoteLineItem): string {
     item.lockSide ? `Lock side: ${item.lockSide}` : '',
     item.centreTongue ? 'Centre tongue' : '',
     item.midRailRequired && item.midRailHeightMm ? `Mid-rail: ${item.midRailHeightMm} mm` : '',
-    item.interlockAdjustment ? `Interlock: 5 mm ${item.interlockAdjustment === 'add' ? 'added' : 'removed'}` : '',
+    item.interlockAdjustment ? `Interlock: ${item.interlockAdjustment === 'remove-zero' ? '0' : '5'} mm ${item.interlockAdjustment === 'add' ? 'added' : 'removed'}` : '',
     item.bowed ? 'Door bowed' : '',
   ].filter(Boolean).join(' · ')
 }

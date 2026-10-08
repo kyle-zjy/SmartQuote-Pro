@@ -74,7 +74,7 @@ export default function QuoteItemCard({
                   item.centreTongue && item.lockTopMm && item.lockCentreMm && item.lockBottomMm
                     ? `Locks: top ${item.lockTopMm}, centre ${item.lockCentreMm}, bottom ${item.lockBottomMm} mm` : '',
                   item.midRailRequired && item.midRailHeightMm ? `Mid-rail: ${item.midRailHeightMm} mm` : '',
-                  item.interlockAdjustment ? `Interlock: 5 mm ${item.interlockAdjustment === 'add' ? 'added' : 'removed'}` : '',
+                  item.interlockAdjustment ? `Interlock: ${item.interlockAdjustment === 'remove-zero' ? '0' : '5'} mm ${item.interlockAdjustment === 'add' ? 'added' : 'removed'}` : '',
                   item.bowed ? 'Door bowed' : '',
                 ].filter(Boolean).join(' · ')}
               </p>
