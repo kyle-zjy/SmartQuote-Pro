@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { Card, Statistic } from 'antd'
-import { ArrowRightOutlined, FileTextOutlined, PlusOutlined, SettingOutlined, TagsOutlined } from '@ant-design/icons'
+import { ArrowRightOutlined, FileTextOutlined, SettingOutlined, TagsOutlined } from '@ant-design/icons'
 import { useQuote } from '../lib/quoteContext'
 import { partitionArchivedQuoteGroups } from '../lib/quoteArchive'
 import { displayQuoteNo } from '../lib/displayQuoteNo'
@@ -18,7 +18,6 @@ export default function Home() {
     <div className="home-page">
       <header className="home-heading">
         <div><span className="home-label">OVERVIEW / 01</span><h1>Workspace<span className="home-heading-dot">.</span></h1></div>
-        <Link to="/quotes/new" className="primary-button"><PlusOutlined aria-hidden="true" /> New quote</Link>
       </header>
       <div className="home-overview-grid">
       <section className="home-stats" aria-label="Saved quote overview">
