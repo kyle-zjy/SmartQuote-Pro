@@ -105,6 +105,19 @@ function sampleItem(overrides: Partial<QuoteLineItem> = {}): QuoteLineItem {
   }
 }
 
+describe('itemDraft interlock options', () => {
+  it('keeps the +5 mm option when editing an existing item', () => {
+    expect(draftFromItem(sampleItem({ interlockAdjustment: 'add' })).interlockAdjustment).toBe('add')
+  })
+
+  it('replaces the retired -5 mm option with zero adjustment for editable drafts', () => {
+    const item = sampleItem({ interlockAdjustment: 'remove' })
+    expect(draftFromItem(item).interlockAdjustment).toBe('')
+    expect(draftForReuse(item).interlockAdjustment).toBe('')
+    expect(item.interlockAdjustment).toBe('remove')
+  })
+})
+
 describe('itemDraft photos', () => {
   it('starts with no photos on a brand-new draft', () => {
     expect(emptyItemDraft().photos).toEqual([])
