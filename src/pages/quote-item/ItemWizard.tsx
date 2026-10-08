@@ -11,6 +11,7 @@ import { adjustedPricingGroups, configFamily, findSheetConfig, sheetSizeFromMeas
 import AddonStep from './AddonStep'
 import ConfigurationPicker from './ConfigurationPicker'
 import {
+  calcAddonsTotal,
   compatibleCategories,
   draftForReuse,
   draftFromItem,
@@ -248,7 +249,7 @@ export default function ItemWizard() {
       (sum, extra) => sum + (addons.find((a) => a.name === extra.addonName)?.price ?? 0),
       0,
     )
-    const addonsTotal = draft.addons.reduce((sum, a) => sum + a.price, 0)
+    const addonsTotal = calcAddonsTotal(draft.addons)
     const calculatedPrice = (draft.serviceOnly ? Number(draft.servicePrice || 0) : configured?.unitPrice ?? 0) + fitExtraTotal + addonsTotal
 
     let finalPrice = calculatedPrice

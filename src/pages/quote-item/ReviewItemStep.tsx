@@ -8,6 +8,8 @@ import { formatCurrency } from '../../lib/formatCurrency'
 import { fitExtraPhrase, LINE_FIT_EXTRAS } from '../../lib/lineExtras'
 import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
+import { calcSheetSize, configLabel, findSheetConfig } from '../../lib/quoteSheet'
+import { calcAddonsTotal, type ItemDraft } from './itemDraft'
 import { adjustedPricingGroups, configLabel, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
 import type { ItemDraft } from './itemDraft'
 
@@ -54,7 +56,7 @@ export default function ReviewItemStep({
     price: addons.find((item) => item.name === extra.addonName)?.price ?? 0,
   })).filter((extra) => draft.fitExtras.includes(extra.addonName) && extra.price > 0)
   const fitExtraTotal = fitExtraItems.reduce((sum, extra) => sum + extra.price, 0)
-  const addonsTotal = draft.addons.reduce((sum, addon) => sum + addon.price, 0)
+  const addonsTotal = calcAddonsTotal(draft.addons)
   const unitPrice = draft.serviceOnly
     ? Number(draft.servicePrice || 0) + addonsTotal
     : configured?.unitPrice != null ? configured.unitPrice + fitExtraTotal + addonsTotal : null
