@@ -14,7 +14,7 @@ import { useCompanySettings } from './companySettings'
 import { OTHER_FRAME_COLOUR } from './frameColour'
 import { formatItemDimensions, padMm } from './lineDescription'
 import { deleteRoomPhotos, loadRoomPhotos, saveRoomPhotos } from './quotePhotoStore'
-import { calcSheetSize, findSheetConfig, openingFromMeasures } from './quoteSheet'
+import { findSheetConfig, openingFromMeasures, sheetSizeFromMeasures } from './quoteSheet'
 import { DRAFT_PERSIST_MS, DRAFT_STORAGE_KEY, MEASURE_LEGACY_DRAFT_PERSIST, hasPhotoData, persistDraftQuote } from './quotePersist'
 import {
   canIssueQuote,
@@ -211,10 +211,16 @@ function defaultState(quoteNo: string): QuoteState {
 function normalizeItem(item: QuoteLineItem): QuoteLineItem {
   const finalPrice = item.finalPrice ?? item.unitPrice
   const config = item.configurationCode ? findSheetConfig(item.configurationCode) : undefined
-  const opening = item.measurements ? openingFromMeasures(item.measurements) : null
-  const screen = config && opening ? calcSheetSize(config, opening.height, opening.width) : null
+  const opening = item.measurements ? openingFromMeasures(item.measurements, config) : null
+  const screen = config && item.measurements ? sheetSizeFromMeasures(config, item.measurements) : null
+  const measuredWidths = Object.entries(item.measurements ?? {})
+    .filter(([key, value]) => key.startsWith('W') && Number(value) > 0)
+    .map(([, value]) => Number(value))
+  const legacyScreenWidth = config && measuredWidths.length > 0
+    ? Math.max(...measuredWidths) / config.widthFactor + config.widthOffset
+    : 0
   const pricedWidth = screen
-    ? Math.round(screen.screenWidth + (item.interlockAdjustment === 'add' ? 5 : item.interlockAdjustment === 'remove' ? -5 : 0))
+    ? Math.round(legacyScreenWidth + (item.interlockAdjustment === 'add' ? 5 : item.interlockAdjustment === 'remove' ? -5 : 0))
     : 0
   // The former measurement wizard stored per-panel pricing dimensions in the opening
   // fields. Recover the full dimensions only when the saved measurements prove this.

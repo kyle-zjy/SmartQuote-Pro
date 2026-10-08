@@ -124,13 +124,13 @@ describe('dimension shown to each audience', () => {
     expect(displayDescription(windowItem, 'factory', pricingData)).toBe(windowItem.description)
   })
 
-  it('also brackets a multi-panel door down to its per-panel screen size', () => {
+  it('brackets a multi-panel sliding door from its widest drawn W without dividing it', () => {
     const doorItem: QuoteLineItem = {
-      ...windowItem, id: 'door2', description: 'Living Room — Supascreen Sliding Door — 2100 x 1800 mm',
-      configurationCode: 'SDOXX', measurements: { H1: '2100', W1: '1800', W2: '1700' },
-      categoryKey: 'sliding-doors', openingWidthMm: 1800, openingHeightMm: 2100,
+      ...windowItem, id: 'door2', description: 'Living Room — Supascreen Sliding Door — 2100 x 1300 mm',
+      configurationCode: 'SDOXX', measurements: { H1: '2100', W1: '620', W2: '680' },
+      categoryKey: 'sliding-doors', openingWidthMm: 1300, openingHeightMm: 2100,
     }
-    // Opening is 1800mm, but SDOXX has 2 panels so the screen priced is ~670mm wide, bracketed up to 700.
+    // The total is W1 + W2, while each drawn W is used directly for panel pricing.
     expect(displayDescription(doorItem, 'customer', pricingData)).toBe('Living Room — Supascreen Sliding Door — 2100 x 0700 mm')
   })
 
