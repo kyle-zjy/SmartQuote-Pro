@@ -20,7 +20,7 @@ export interface ItemDraft {
   lockBottomMm: string
   midRailRequired: boolean
   midRailHeightMm: string
-  interlockAdjustment: 'add' | 'remove' | ''
+  interlockAdjustment: 'add' | ''
   bowed: boolean
   serviceOnly: boolean
   serviceDescription: string
@@ -125,7 +125,7 @@ export function draftFromItem(item: QuoteLineItem, products: Product[] = []): It
     lockBottomMm: item.lockBottomMm == null ? '' : String(item.lockBottomMm),
     midRailRequired: item.midRailRequired ?? false,
     midRailHeightMm: item.midRailHeightMm == null ? '' : String(item.midRailHeightMm),
-    interlockAdjustment: item.interlockAdjustment ?? '',
+    interlockAdjustment: item.interlockAdjustment === 'add' ? 'add' : '',
     bowed: item.bowed ?? false,
     serviceOnly: item.serviceOnly ?? !item.productKey,
     serviceDescription: item.serviceDescription ?? (!item.productKey ? item.description : ''),

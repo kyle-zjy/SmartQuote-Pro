@@ -33,7 +33,7 @@ export default function AddonStep({
   const config = findSheetConfig(draft.configurationCode)
   const pricingSize = config ? calcSheetSize(config, Number(draft.heightMm), Number(draft.widthMm)) : null
   const pricingWidth = pricingSize
-    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
+    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : 0)
     : 0
   const configured = !draft.serviceOnly && category && pricingSize && pricingWidth > 0
     ? calcConfiguredPrice(category, pricingWidth, pricingSize.screenHeight, {
