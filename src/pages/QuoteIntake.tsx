@@ -25,7 +25,7 @@ export default function QuoteIntake() {
 
   function handleCreate() {
     if (quoteNumber.trim() && !isValidQuoteNumber(quoteNumber.trim())) {
-      setError('Enter a quote number with up to 50 letters and numbers.')
+      setError("Enter a quote number with up to 50 letters, numbers, and the separators . _ -.")
       return
     }
     const hasDraft = items.length > 0 || Boolean(customer.name.trim())

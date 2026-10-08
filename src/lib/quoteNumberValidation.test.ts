@@ -16,14 +16,34 @@ describe('isValidQuoteNumber', () => {
     expect(isValidQuoteNumber('ABCDEF')).toBe(true)
   })
 
+  it('accepts the hyphen, underscore, and period separators', () => {
+    expect(isValidQuoteNumber('Q-2026-001')).toBe(true)
+    expect(isValidQuoteNumber('INV_2026_01')).toBe(true)
+    expect(isValidQuoteNumber('33021.1')).toBe(true)
+    expect(isValidQuoteNumber('---___...')).toBe(true)
+  })
+
   it('rejects an empty string', () => {
     expect(isValidQuoteNumber('')).toBe(false)
   })
 
-  it('rejects punctuation and whitespace', () => {
-    expect(isValidQuoteNumber('Q-33021')).toBe(false)
+  it('rejects whitespace', () => {
     expect(isValidQuoteNumber('33021 ')).toBe(false)
     expect(isValidQuoteNumber('33 021')).toBe(false)
+  })
+
+  it('rejects characters that are unsafe as a URL path segment', () => {
+    expect(isValidQuoteNumber('33021/1')).toBe(false)
+    expect(isValidQuoteNumber('33021?x=1')).toBe(false)
+    expect(isValidQuoteNumber('33021#1')).toBe(false)
+    expect(isValidQuoteNumber('33021%20')).toBe(false)
+    expect(isValidQuoteNumber('33021\\1')).toBe(false)
+  })
+
+  it('rejects other punctuation outside the supported separator set', () => {
+    expect(isValidQuoteNumber("Q'21")).toBe(false)
+    expect(isValidQuoteNumber('Q(2026)')).toBe(false)
+    expect(isValidQuoteNumber('Q&2026')).toBe(false)
   })
 
   it('rejects non-English characters', () => {
