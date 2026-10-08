@@ -85,13 +85,22 @@ describe('quote number round-trip (Issue 2)', () => {
     expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteNumber)).toBe('33098')
   })
 
-  it('an alphanumeric quote number runss through the archive untouched', () => {
+  it('an alphanumeric quote number runs through the archive untouched', () => {
     const storage = new MemoryStorage()
     upsertArchivedQuote(sampleQuote('A123'), { total: 610 }, storage)
     const record = getArchivedQuote('A123', undefined, storage)
     expect(record?.quoteNo).toBe('A123')
     expect(record?.quote.quoteNo).toBe('A123')
     expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteNumber)).toBe('A123')
+  })
+
+  it('a quote number with separator characters runs through the archive untouched', () => {
+    const storage = new MemoryStorage()
+    upsertArchivedQuote(sampleQuote('Q-2026-001'), { total: 610 }, storage)
+    const record = getArchivedQuote('Q-2026-001', undefined, storage)
+    expect(record?.quoteNo).toBe('Q-2026-001')
+    expect(record?.quote.quoteNo).toBe('Q-2026-001')
+    expect(displayQuoteNo(record!.quote.quoteNo, record!.quote.quoteNumber)).toBe('Q-2026-001')
   })
 })
 
@@ -106,6 +115,10 @@ describe('nextSequenceValue (auto-numbering guard for alphanumeric quote numbers
 
   it('leaves the sequence untouched for an alphanumeric quote number', () => {
     expect(nextSequenceValue(33020, 'A123')).toBe(33020)
+  })
+
+  it('leaves the sequence untouched for a quote number containing separator characters', () => {
+    expect(nextSequenceValue(33020, 'Q-2026-001')).toBe(33020)
   })
 
   it('never returns NaN for a non-numeric quote number, which would otherwise corrupt future auto-generated numbers', () => {
