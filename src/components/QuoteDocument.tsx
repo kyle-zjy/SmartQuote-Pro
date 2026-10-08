@@ -224,9 +224,6 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
           {settings.bank.account}
         </p>
         <p>Please use your quote number as the reference for all payments</p>
-        <p className="quote-doc__fee">
-          Please Note: Any credit card payments will incur a {settings.cardFeePercent}% processing fee
-        </p>
       </div>
 
       {!readOnly && rooms.length > 0 && (
