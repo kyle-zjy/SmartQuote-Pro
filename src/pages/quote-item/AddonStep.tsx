@@ -1,11 +1,11 @@
 import { useMemo } from 'react'
 import colours from '../../data/colours.json'
 import type { AddonItem } from '../../types/pricing'
-import { calcConfiguredPrice, DOUBLE_HUNG_SURCHARGE, STANDARD_MESH } from '../../lib/configuredPrice'
+import { calcConfiguredGroupPrice, DOUBLE_HUNG_SURCHARGE, STANDARD_MESH } from '../../lib/configuredPrice'
 import { displayFrameColour } from '../../lib/frameColour'
 import { formatCurrency } from '../../lib/formatCurrency'
 import { usePricing } from '../../lib/pricingContext'
-import { calcSheetSize, findSheetConfig } from '../../lib/quoteSheet'
+import { adjustedPricingGroups, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
 import type { ItemDraft } from './itemDraft'
 
 export default function AddonStep({
@@ -31,12 +31,10 @@ export default function AddonStep({
   const category = product?.categories.find((item) => item.key === draft.categoryKey)
   const isFlyscreenWindows = draft.productKey === 'flyscreens' && draft.categoryKey === 'windows'
   const config = findSheetConfig(draft.configurationCode)
-  const pricingSize = config ? calcSheetSize(config, Number(draft.heightMm), Number(draft.widthMm)) : null
-  const pricingWidth = pricingSize
-    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
-    : 0
-  const configured = !draft.serviceOnly && category && pricingSize && pricingWidth > 0
-    ? calcConfiguredPrice(category, pricingWidth, pricingSize.screenHeight, {
+  const pricingSize = config ? sheetSizeFromMeasures(config, draft.measurements) : null
+  const pricingGroups = pricingSize ? adjustedPricingGroups(pricingSize, draft.interlockAdjustment) : []
+  const configured = !draft.serviceOnly && category && pricingGroups.length > 0
+    ? calcConfiguredGroupPrice(category, pricingGroups, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     })
@@ -111,7 +109,7 @@ export default function AddonStep({
             <label className="checkbox-row"><input type="radio" name="frameColourMode" checked={draft.frameColourMode === 'custom'} onChange={() => onChange({ frameColourMode: 'custom', customFrameColour: draft.customFrameColour || colours[0]?.name || '' })} />Custom colour for this item</label>
             {draft.frameColourMode === 'custom' && <select value={draft.customFrameColour} onChange={(e) => onChange({ customFrameColour: e.target.value })}>{colours.map((colour) => <option key={colour.name} value={colour.name}>{colour.name}</option>)}</select>}
           </fieldset>
-          {configured?.unitPrice != null && <p className="muted small">Product price including mesh: {formatCurrency(configured.unitPrice)}</p>}
+          {configured?.unitPrice != null && <p className="muted small">Product price including all panels and mesh: {formatCurrency(configured.unitPrice)}</p>}
         </div>
       )}
 
@@ -159,7 +157,7 @@ export default function AddonStep({
         <button type="button" className="link-button" onClick={onBack}>
           &larr; Back
         </button>
-        <button type="button" className="primary-button" onClick={onNext} disabled={draft.serviceOnly ? !draft.serviceDescription.trim() || !Number.isFinite(Number(draft.servicePrice)) || Number(draft.servicePrice) < 0 : !configured?.lookup.ok}>
+        <button type="button" className="primary-button" onClick={onNext} disabled={draft.serviceOnly ? !draft.serviceDescription.trim() || !Number.isFinite(Number(draft.servicePrice)) || Number(draft.servicePrice) < 0 : !configured?.ok}>
           Continue
         </button>
       </div>

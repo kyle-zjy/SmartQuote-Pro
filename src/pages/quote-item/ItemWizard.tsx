@@ -1,13 +1,13 @@
 import { customerQuoteNote } from '../../lib/quotePrint'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { calcConfiguredPrice } from '../../lib/configuredPrice'
+import { calcConfiguredGroupPrice } from '../../lib/configuredPrice'
 import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
 import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { useQuote, type QuoteLineItem } from '../../lib/quoteContext'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
-import { calcSheetSize, configFamily, findSheetConfig } from '../../lib/quoteSheet'
+import { adjustedPricingGroups, configFamily, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
 import AddonStep from './AddonStep'
 import ConfigurationPicker from './ConfigurationPicker'
 import {
@@ -198,7 +198,7 @@ export default function ItemWizard() {
     const widthMm = Number(draft.widthMm)
     const heightMm = Number(draft.heightMm)
     const config = findSheetConfig(draft.configurationCode)
-    const pricingSize = config ? calcSheetSize(config, heightMm, widthMm) : null
+    const pricingSize = config ? sheetSizeFromMeasures(config, draft.measurements) : null
     if (!draft.location.trim()) {
       setError('Choose a location before saving.')
       return
@@ -233,15 +233,13 @@ export default function ItemWizard() {
     }
 
     const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
-    const pricingWidth = pricingSize
-      ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
-      : 0
-    const configured = !draft.serviceOnly && category && pricingSize && pricingWidth > 0
-      ? calcConfiguredPrice(category, pricingWidth, pricingSize.screenHeight, {
+    const pricingGroups = pricingSize ? adjustedPricingGroups(pricingSize, draft.interlockAdjustment) : []
+    const configured = !draft.serviceOnly && category && pricingGroups.length > 0
+      ? calcConfiguredGroupPrice(category, pricingGroups, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     }) : null
-    if (!draft.serviceOnly && (!configured?.lookup.ok || configured.unitPrice == null)) {
+    if (!draft.serviceOnly && (!configured?.ok || configured.unitPrice == null)) {
       setError('This size is not available for the selected product and category.')
       return
     }

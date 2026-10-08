@@ -96,15 +96,41 @@ export function measureKeys(config: SheetConfig): string[] {
   return [...points.heights, ...points.widths]
 }
 
-export function openingFromMeasures(values: Record<string, string>): { height: number; width: number } | null {
-  const heights = Object.entries(values)
-    .filter(([key, value]) => key.startsWith('H') && Number(value) > 0)
-    .map(([, value]) => Number(value))
-  const widths = Object.entries(values)
-    .filter(([key, value]) => key.startsWith('W') && Number(value) > 0)
-    .map(([, value]) => Number(value))
+function measurementEntries(values: Record<string, string>, prefix: 'H' | 'W'): Array<{ key: string; value: number }> {
+  return Object.entries(values)
+    .filter(([key, value]) => key.startsWith(prefix) && Number(value) > 0)
+    .sort(([left], [right]) => Number(left.slice(1)) - Number(right.slice(1)))
+    .map(([key, value]) => ({ key, value: Number(value) }))
+}
+
+/** Widths that span two sliding screens in the source measurement drawings.
+ * The divisor is applied before price lookup; quantity is applied to the lookup result. */
+const SHARED_SLIDING_WIDTHS: Record<string, Record<string, { divisor: number; quantity: number }>> = {
+  'SDOXXO-L': { W1: { divisor: 2, quantity: 2 } },
+  'SDOXXO-R': { W1: { divisor: 2, quantity: 2 } },
+  'SDOXXXXO-L': { W3: { divisor: 2, quantity: 2 } },
+  'SDOXXXXO-R': { W3: { divisor: 2, quantity: 2 } },
+  'SDOXXXXXO-R': { W5: { divisor: 2, quantity: 2 } },
+  'SDOXXXXXXO-L': { W5: { divisor: 2, quantity: 2 } },
+}
+
+function measurementValues(values: Record<string, string>, prefix: 'H' | 'W'): number[] {
+  return measurementEntries(values, prefix).map(({ value }) => value)
+}
+
+export function openingFromMeasures(
+  values: Record<string, string>,
+  config?: SheetConfig,
+): { height: number; width: number } | null {
+  const heights = measurementValues(values, 'H')
+  const widths = measurementValues(values, 'W')
   if (heights.length === 0 || widths.length === 0) return null
-  return { height: Math.max(...heights), width: Math.max(...widths) }
+  return {
+    height: Math.max(...heights),
+    width: config && configFamily(config.code) === 'sliding'
+      ? widths.reduce((sum, width) => sum + width, 0)
+      : Math.max(...widths),
+  }
 }
 
 export function suggestedScreenType(code: string): string {
@@ -129,15 +155,22 @@ export interface SheetSize {
   screenWidth: number
   openingLabel: string
   screenLabel: string
+  pricingGroups: Array<{
+    height: number
+    width: number
+    quantity: number
+    measurementKey?: string
+    widthDivisor?: number
+  }>
 }
 
-/**
- * Converts the complete opening dimensions into the per-panel screen size used for
- * product pricing. The opening dimensions remain available separately for display.
- */
+/** Converts one measured width into its pricing size. Sliding widths already describe
+ * the screen shown in the drawing; only hinged openings are split across their panels. */
 export function calcSheetSize(config: SheetConfig, height: number, width: number): SheetSize | null {
   if (!(height > 0) || !(width > 0) || config.widthFactor <= 0) return null
-  const screenWidth = width / config.widthFactor + config.widthOffset
+  const screenWidth = configFamily(config.code) === 'hinged'
+    ? width / config.panels
+    : width
   const screenHeight = config.heightFactor * height
   return {
     panels: config.panels,
@@ -147,7 +180,53 @@ export function calcSheetSize(config: SheetConfig, height: number, width: number
     screenWidth,
     openingLabel: `${formatSheetMm(height)}X${formatSheetMm(width)}`,
     screenLabel: `${formatSheetMm(screenHeight)}X${formatSheetMm(screenWidth)}`,
+    pricingGroups: [{ height: screenHeight, width: screenWidth, quantity: config.panels }],
   }
+}
+
+/** Builds pricing groups from the W dimensions drawn on the selected configuration.
+ * Most sliding W values describe one screen. Explicit shared-width rules divide a
+ * combined W before lookup and multiply that lookup price by the screen quantity. */
+export function sheetSizeFromMeasures(config: SheetConfig, values: Record<string, string>): SheetSize | null {
+  const opening = openingFromMeasures(values, config)
+  if (!opening) return null
+
+  const family = configFamily(config.code)
+  if (family !== 'sliding') return calcSheetSize(config, opening.height, opening.width)
+
+  const widthEntries = measurementEntries(values, 'W')
+  const screenHeight = config.heightFactor * opening.height
+  const sharedWidths = SHARED_SLIDING_WIDTHS[config.code] ?? {}
+  const pricingGroups = widthEntries.map(({ key, value }) => {
+    const rule = sharedWidths[key] ?? { divisor: 1, quantity: 1 }
+    return {
+      height: screenHeight,
+      width: value / rule.divisor,
+      measurementKey: key,
+      widthDivisor: rule.divisor,
+      quantity: rule.quantity,
+    }
+  })
+  const screenWidth = Math.max(...pricingGroups.map(({ width }) => width))
+
+  return {
+    panels: config.panels,
+    openingHeight: opening.height,
+    openingWidth: opening.width,
+    screenHeight,
+    screenWidth,
+    openingLabel: `${formatSheetMm(opening.height)}X${formatSheetMm(opening.width)}`,
+    screenLabel: `${formatSheetMm(screenHeight)}X${formatSheetMm(screenWidth)}`,
+    pricingGroups,
+  }
+}
+
+export function adjustedPricingGroups(
+  size: SheetSize,
+  interlockAdjustment: 'add' | 'remove' | 'remove-zero' | '' = '',
+): SheetSize['pricingGroups'] {
+  const adjustment = interlockAdjustment === 'add' ? 5 : interlockAdjustment === 'remove' ? -5 : 0
+  return size.pricingGroups.map((group) => ({ ...group, width: group.width + adjustment }))
 }
 
 /** The per-panel screen size actually used to calculate price, derived from the same stored
@@ -160,12 +239,12 @@ export function pricingSizeForItem(item: {
 }): { widthMm: number; heightMm: number } | null {
   if (!item.configurationCode || !item.measurements) return null
   const config = findSheetConfig(item.configurationCode)
-  const opening = openingFromMeasures(item.measurements)
-  if (!config || !opening) return null
-  const screen = calcSheetSize(config, opening.height, opening.width)
+  if (!config) return null
+  const screen = sheetSizeFromMeasures(config, item.measurements)
   if (!screen) return null
-  const widthMm = screen.screenWidth + (item.interlockAdjustment === 'add' ? 5 : item.interlockAdjustment === 'remove' ? -5 : 0)
-  return { widthMm, heightMm: screen.screenHeight }
+  const groups = adjustedPricingGroups(screen, item.interlockAdjustment)
+  const widest = groups.reduce((current, group) => group.width > current.width ? group : current)
+  return { widthMm: widest.width, heightMm: widest.height }
 }
 
 /** The price-matrix bracket the item was actually billed at -- rounded up from the per-panel
