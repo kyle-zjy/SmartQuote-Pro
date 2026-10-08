@@ -67,7 +67,7 @@ export default function ItemWizard() {
   const [initialSnapshot] = useState(() => loadWizardDraft(draftKey))
 
   const [draft, setDraft] = useState<ItemDraft>(() => {
-    if (initialSnapshot) return { ...initialSnapshot.draft, interlockAdjustment: initialSnapshot.draft.interlockAdjustment === 'add' ? 'add' : '' }
+    if (initialSnapshot) return initialSnapshot.draft
     if (itemId) return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
     if (basedOnId && mode === 'reuse') return sourceItem ? draftForReuse(sourceItem, data.products) : emptyItemDraft()
     if (basedOnId && mode === 'duplicate') return sourceItem ? draftFromItem(sourceItem, data.products) : emptyItemDraft()
@@ -234,7 +234,7 @@ export default function ItemWizard() {
 
     const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
     const pricingWidth = pricingSize
-      ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : 0)
+      ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
       : 0
     const configured = !draft.serviceOnly && category && pricingSize && pricingWidth > 0
       ? calcConfiguredPrice(category, pricingWidth, pricingSize.screenHeight, {

@@ -41,7 +41,7 @@ export default function ReviewItemStep({
   const config = findSheetConfig(draft.configurationCode)
   const pricingSize = config ? calcSheetSize(config, heightMm, widthMm) : null
   const pricingWidth = pricingSize
-    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : 0)
+    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
     : 0
 
   const configured = useMemo(() => {
@@ -104,7 +104,7 @@ export default function ReviewItemStep({
             )}
             <dt>Mid-rail</dt>
             <dd>{draft.midRailRequired ? `${draft.midRailHeightMm || '—'} mm` : 'No'}</dd>
-            {draft.interlockAdjustment && <><dt>Door interlock</dt><dd>5 mm added</dd></>}
+            {draft.interlockAdjustment && <><dt>Door interlock</dt><dd>{draft.interlockAdjustment === 'add' ? '5 mm added' : draft.interlockAdjustment === 'remove' ? '5 mm removed' : '0 mm removed'}</dd></>}
             <dt>Door bowed</dt>
             <dd>{draft.bowed ? 'Yes' : 'No'}</dd>
           </>

@@ -50,12 +50,12 @@ export default function MeasurementStep({
   lockBottomMm: string
   midRailRequired: boolean
   midRailHeightMm: string
-  interlockAdjustment: 'add' | ''
+  interlockAdjustment: 'add' | 'remove' | 'remove-zero' | ''
   bowed: boolean
   onHardwareChange: (patch: {
     lockHeightMm?: string; lockSide?: 'left' | 'right' | ''; centreTongue?: boolean; bowed?: boolean
     lockTopMm?: string; lockCentreMm?: string; lockBottomMm?: string
-    midRailRequired?: boolean; midRailHeightMm?: string; interlockAdjustment?: 'add' | ''
+    midRailRequired?: boolean; midRailHeightMm?: string; interlockAdjustment?: 'add' | 'remove' | 'remove-zero' | ''
   }) => void
   markers: Record<string, MarkerPosition>
   strokes: DrawStroke[]
@@ -80,7 +80,7 @@ export default function MeasurementStep({
 
   const opening = useMemo(() => openingFromMeasures(values), [values])
   const size = config && opening ? calcSheetSize(config, opening.height, opening.width) : null
-  const adjustedWidth = size ? size.screenWidth + (interlockAdjustment === 'add' ? 5 : 0) : 0
+  const adjustedWidth = size ? size.screenWidth + (interlockAdjustment === 'add' ? 5 : interlockAdjustment === 'remove' ? -5 : 0) : 0
   const missingMarks = keys.filter((key) => !markers[key])
   const missingValues = keys.filter((key) => !(Number(values[key]) > 0))
 
@@ -351,6 +351,8 @@ export default function MeasurementStep({
                 <legend>Door interlock</legend>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'add'} onChange={() => onHardwareChange({ interlockAdjustment: 'add' })} />Door interlock needed — 5 mm added</label>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === ''} onChange={() => onHardwareChange({ interlockAdjustment: '' })} />No interlock adjustment — 0 mm added</label>
+                <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'remove'} onChange={() => onHardwareChange({ interlockAdjustment: 'remove' })} />Door has interlock — 5 mm removed (−5 mm)</label>
+                <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'remove-zero'} onChange={() => onHardwareChange({ interlockAdjustment: 'remove-zero' })} />Door has interlock — 0 mm removed (−0 mm)</label>
               </fieldset>
             )}
           </div>
