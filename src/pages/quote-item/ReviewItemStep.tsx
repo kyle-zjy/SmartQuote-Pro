@@ -1,8 +1,8 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import ItemPhotos from '../../components/ItemPhotos'
 import { customerQuoteNote } from '../../lib/quotePrint'
 import ProductQuoteNotes from '../../components/ProductQuoteNotes'
-import { calcConfiguredPrice, STANDARD_MESH } from '../../lib/configuredPrice'
+import { calcConfiguredGroupPrice, STANDARD_MESH } from '../../lib/configuredPrice'
 import { effectiveFrameColour } from '../../lib/frameColour'
 import { formatCurrency } from '../../lib/formatCurrency'
 import { fitExtraPhrase, LINE_FIT_EXTRAS } from '../../lib/lineExtras'
@@ -10,6 +10,8 @@ import { describeStructuredItem, formatItemDimensions, openingLabel } from '../.
 import { usePricing } from '../../lib/pricingContext'
 import { calcSheetSize, configLabel, findSheetConfig } from '../../lib/quoteSheet'
 import { calcAddonsTotal, type ItemDraft } from './itemDraft'
+import { adjustedPricingGroups, configLabel, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
+import type { ItemDraft } from './itemDraft'
 
 export default function ReviewItemStep({
   draft,
@@ -39,18 +41,15 @@ export default function ReviewItemStep({
   const heightMm = Number(draft.heightMm)
   const isFlyscreenWindows = product?.key === 'flyscreens' && category?.key === 'windows'
   const config = findSheetConfig(draft.configurationCode)
-  const pricingSize = config ? calcSheetSize(config, heightMm, widthMm) : null
-  const pricingWidth = pricingSize
-    ? pricingSize.screenWidth + (draft.interlockAdjustment === 'add' ? 5 : draft.interlockAdjustment === 'remove' ? -5 : 0)
-    : 0
+  const pricingSize = config ? sheetSizeFromMeasures(config, draft.measurements) : null
+  const pricingGroups = pricingSize ? adjustedPricingGroups(pricingSize, draft.interlockAdjustment) : []
 
-  const configured = useMemo(() => {
-    if (!category || !pricingSize || pricingWidth <= 0) return null
-    return calcConfiguredPrice(category, pricingWidth, pricingSize.screenHeight, {
+  const configured = category && pricingGroups.length > 0
+    ? calcConfiguredGroupPrice(category, pricingGroups, {
       meshOption: draft.meshOption,
       doubleHung: isFlyscreenWindows && draft.doubleHung,
     })
-  }, [category, pricingSize, pricingWidth, draft.meshOption, draft.doubleHung, isFlyscreenWindows])
+    : null
 
   const fitExtraItems = LINE_FIT_EXTRAS.map((extra) => ({
     ...extra,

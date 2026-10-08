@@ -2,14 +2,14 @@ import { useMemo, useState } from 'react'
 import SheetDiagram, { type DiagramTool } from '../../components/SheetDiagram'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
 import {
-  calcSheetSize,
+  adjustedPricingGroups,
   configFamily,
   configLabel,
   findSheetConfig,
   formatSheetMm,
   measureKeys,
   measurePoints,
-  openingFromMeasures,
+  sheetSizeFromMeasures,
 } from '../../lib/quoteSheet'
 import { sheetCodeImage } from '../../lib/sheetCodeImages'
 
@@ -78,9 +78,9 @@ export default function MeasurementStep({
   const [brushColor, setBrushColor] = useState('#b91c1c')
   const [brushSize, setBrushSize] = useState(1.6)
 
-  const opening = useMemo(() => openingFromMeasures(values), [values])
-  const size = config && opening ? calcSheetSize(config, opening.height, opening.width) : null
-  const adjustedWidth = size ? size.screenWidth + (interlockAdjustment === 'add' ? 5 : interlockAdjustment === 'remove' ? -5 : 0) : 0
+  const size = useMemo(() => config ? sheetSizeFromMeasures(config, values) : null, [config, values])
+  const pricingGroups = size ? adjustedPricingGroups(size, interlockAdjustment) : []
+  const pricingGroupsValid = pricingGroups.length > 0 && pricingGroups.every((group) => group.width > 0)
   const missingMarks = keys.filter((key) => !markers[key])
   const missingValues = keys.filter((key) => !(Number(values[key]) > 0))
 
@@ -122,7 +122,7 @@ export default function MeasurementStep({
   }
 
   function handleContinue() {
-    if (missingValues.length > 0 || !size || adjustedWidth <= 0) return
+    if (missingValues.length > 0 || !size || !pricingGroupsValid) return
     if (centreTongue && [lockTopMm, lockCentreMm, lockBottomMm].some((value) => !(Number(value) > 0))) return
     if (midRailRequired && !(Number(midRailHeightMm) > 0)) return
     onNext({ widthMm: Math.round(size.openingWidth), heightMm: Math.round(size.openingHeight) })
@@ -360,13 +360,14 @@ export default function MeasurementStep({
           {size ? (
             <div className="price-result">
               <p>
-                Opening used for sizing: {formatSheetMm(size.openingHeight)} × {formatSheetMm(size.openingWidth)} mm
-                (largest marked height and width)
+                Total measured size: {formatSheetMm(size.openingHeight)} × {formatSheetMm(size.openingWidth)} mm
+                ({isSliding ? 'marked widths added together' : 'largest marked height and width'})
               </p>
-              <p>
-                Size used for pricing: {formatSheetMm(size.screenHeight)} × {formatSheetMm(adjustedWidth)} mm · {size.panels} panel
-                {size.panels === 1 ? '' : 's'}
-              </p>
+              {pricingGroups.map((group, index) => (
+                <p key={`${group.width}-${index}`}>
+                  Size used for pricing{group.measurementKey ? ` (${group.measurementKey}${group.widthDivisor && group.widthDivisor > 1 ? ` ÷ ${group.widthDivisor}` : ''})` : ''}: {formatSheetMm(group.height)} × {formatSheetMm(group.width)} mm × {group.quantity}
+                </p>
+              ))}
             </div>
           ) : (
             <p className="muted small">Mark and fill at least one height and one width to see the screen size.</p>
@@ -389,7 +390,7 @@ export default function MeasurementStep({
             <button type="button" className="link-button" onClick={onBack}>
               &larr; Back
             </button>
-            <button type="button" className="primary-button" onClick={handleContinue} disabled={!size || missingValues.length > 0 || adjustedWidth <= 0 || (centreTongue && [lockTopMm, lockCentreMm, lockBottomMm].some((value) => !(Number(value) > 0))) || (midRailRequired && !(Number(midRailHeightMm) > 0))}>
+            <button type="button" className="primary-button" onClick={handleContinue} disabled={!size || missingValues.length > 0 || !pricingGroupsValid || (centreTongue && [lockTopMm, lockCentreMm, lockBottomMm].some((value) => !(Number(value) > 0))) || (midRailRequired && !(Number(midRailHeightMm) > 0))}>
               Continue
             </button>
           </div>

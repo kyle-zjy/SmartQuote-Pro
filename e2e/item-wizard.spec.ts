@@ -67,6 +67,42 @@ test.describe('item wizard', () => {
     await expect(page.getByLabel('W2', { exact: true })).toHaveValue('1000')
   })
 
+  test('adds sliding W measurements and prices each drawn width without panel division', async ({ page }) => {
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await fillRoomLocation(page, 'Patio')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^SDOXX\b/ }).click()
+    await page.getByRole('button', { name: 'Fly Screens', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+
+    await page.getByLabel('H1', { exact: true }).fill('2100')
+    await page.getByLabel('W1', { exact: true }).fill('800')
+    await page.getByLabel('W2', { exact: true }).fill('900')
+
+    await expect(page.getByText(/Total measured size: 2100 .* 1700 mm/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing \(W1\): 2100 .* 800 mm .* 1/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing \(W2\): 2100 .* 900 mm .* 1/)).toBeVisible()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByText('Product price including all panels and mesh: $848.00')).toBeVisible()
+  })
+
+  test('halves a shared sliding W before lookup and then prices two screens', async ({ page }) => {
+    await page.getByRole('link', { name: '+ Add Opening' }).click()
+    await fillRoomLocation(page, 'Patio')
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await page.getByRole('button', { name: /^SDOXXO-L\b/ }).click()
+    await page.getByRole('button', { name: 'Fly Screens', exact: true }).click()
+    await page.getByRole('button', { name: 'Continue' }).click()
+
+    await page.getByLabel('H1', { exact: true }).fill('2100')
+    await page.getByLabel('W1', { exact: true }).fill('1600')
+
+    await expect(page.getByText(/Total measured size: 2100 .* 1600 mm/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing \(W1 ÷ 2\): 2100 .* 800 mm .* 2/)).toBeVisible()
+    await page.getByRole('button', { name: 'Continue' }).click()
+    await expect(page.getByText('Product price including all panels and mesh: $832.00')).toBeVisible()
+  })
+
   test('records door lock details and bowed condition through review and edit', async ({ page }) => {
     await page.getByRole('link', { name: '+ Add Opening' }).click()
     await fillRoomLocation(page, 'Front door')
