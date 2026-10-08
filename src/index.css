@@ -1696,10 +1696,6 @@ textarea:disabled {
   margin: 0.15rem 0;
 }
 
-.quote-doc__fee {
-  color: #ea161e;
-}
-
 .quote-doc__page {
   margin: 0.35rem 0 0;
   text-align: right;
