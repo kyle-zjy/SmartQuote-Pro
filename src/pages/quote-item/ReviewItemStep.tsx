@@ -8,10 +8,8 @@ import { formatCurrency } from '../../lib/formatCurrency'
 import { fitExtraPhrase, LINE_FIT_EXTRAS } from '../../lib/lineExtras'
 import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
-import { calcSheetSize, configLabel, findSheetConfig } from '../../lib/quoteSheet'
-import { calcAddonsTotal, type ItemDraft } from './itemDraft'
 import { adjustedPricingGroups, configLabel, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
-import type { ItemDraft } from './itemDraft'
+import { calcAddonsTotal, type ItemDraft } from './itemDraft'
 
 export default function ReviewItemStep({
   draft,
