@@ -47,7 +47,7 @@ export default function Home() {
               <div className="home-current__heading"><strong>{displayQuoteNo(quoteNo, quoteNumber)}</strong><QuoteStatusBadge status={status} /></div>
               <p className="muted">{customer.name.trim() || 'Unnamed customer'}</p>
               <div className="home-current__summary"><span>{items.reduce((sum, item) => sum + item.quantity, 0)} items</span><strong>{formatCurrency(total)}</strong></div>
-              <Link to={`/quotes/${quoteNo}`} className="home-current__link">Continue current quote <ArrowRightOutlined aria-hidden="true" /></Link>
+              <Link to={`/quotes/${encodeURIComponent(quoteNo ?? "")}`} className="home-current__link">Continue current quote <ArrowRightOutlined aria-hidden="true" /></Link>
             </> : <><p className="muted">No active quote</p><Link to="/quotes/new" className="home-current__link">New quote <ArrowRightOutlined aria-hidden="true" /></Link></>}
           </Card>
           <Card title="Quick access">

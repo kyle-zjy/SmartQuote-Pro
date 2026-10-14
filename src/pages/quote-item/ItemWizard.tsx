@@ -1,6 +1,7 @@
 import { customerQuoteNote } from '../../lib/quotePrint'
 import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { quoteIdFromPath } from '../../lib/quoteRoute'
 import { calcConfiguredGroupPrice } from '../../lib/configuredPrice'
 import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
 import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
@@ -34,7 +35,8 @@ import {
 import { STEP_LABELS, STEP_ORDER, type Step } from './wizardSteps'
 
 export default function ItemWizard() {
-  const { id, itemId } = useParams<{ id: string; itemId?: string }>()
+  const { itemId } = useParams<{ itemId?: string }>()
+  const id = quoteIdFromPath(useLocation().pathname)
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { data, addons } = usePricing()
@@ -150,7 +152,7 @@ export default function ItemWizard() {
     return (
       <div>
         <p className="price-result--error">That item could not be found on this quote.</p>
-        <Link to={`/quotes/${id}`} state={FROM_WIZARD_NAV_STATE}>
+        <Link to={`/quotes/${encodeURIComponent(id ?? "")}`} state={FROM_WIZARD_NAV_STATE}>
           &larr; Back to quote
         </Link>
       </div>
@@ -161,7 +163,7 @@ export default function ItemWizard() {
     return (
       <div className="wizard-shell">
         <p>
-          <Link to={`/quotes/${id}`} state={FROM_WIZARD_NAV_STATE}>
+          <Link to={`/quotes/${encodeURIComponent(id ?? "")}`} state={FROM_WIZARD_NAV_STATE}>
             &larr; Back to quote
           </Link>
         </p>
@@ -322,7 +324,7 @@ export default function ItemWizard() {
       updateItem(itemId, payload)
       finishedRef.current = true
       clearWizardDraft(draftKey)
-      navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
+      navigate(`/quotes/${encodeURIComponent(id ?? "")}`, { state: FROM_WIZARD_NAV_STATE })
       return
     }
 
@@ -331,7 +333,7 @@ export default function ItemWizard() {
       setQuantity(match.id, match.quantity + draft.quantity)
       finishedRef.current = true
       clearWizardDraft(draftKey)
-      navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
+      navigate(`/quotes/${encodeURIComponent(id ?? "")}`, { state: FROM_WIZARD_NAV_STATE })
       return
     }
 
@@ -342,14 +344,14 @@ export default function ItemWizard() {
     }
     finishedRef.current = true
     clearWizardDraft(draftKey)
-    navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
+    navigate(`/quotes/${encodeURIComponent(id ?? "")}`, { state: FROM_WIZARD_NAV_STATE })
   }
 
   function handleDiscard() {
     if (!window.confirm('Discard this unsaved opening? Any changes on this item will be lost.')) return
     finishedRef.current = true
     clearWizardDraft(draftKey)
-    navigate(`/quotes/${id}`, { state: FROM_WIZARD_NAV_STATE })
+    navigate(`/quotes/${encodeURIComponent(id ?? "")}`, { state: FROM_WIZARD_NAV_STATE })
   }
 
   const contextLabel = [
@@ -366,7 +368,7 @@ export default function ItemWizard() {
   return (
     <div className="wizard-shell">
       <p>
-        <Link to={`/quotes/${id}`} state={FROM_WIZARD_NAV_STATE}>
+        <Link to={`/quotes/${encodeURIComponent(id ?? "")}`} state={FROM_WIZARD_NAV_STATE}>
           &larr; Back to quote
         </Link>
         {' · '}

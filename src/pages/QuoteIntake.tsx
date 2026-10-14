@@ -25,7 +25,7 @@ export default function QuoteIntake() {
 
   function handleCreate() {
     if (quoteNumber.trim() && !isValidQuoteNumber(quoteNumber.trim())) {
-      setError("Enter a quote number with up to 50 letters, numbers, and the separators . _ -.")
+      setError('Enter a quote number with up to 50 characters. Any characters are allowed.')
       return
     }
     const hasDraft = items.length > 0 || Boolean(customer.name.trim())
@@ -47,7 +47,7 @@ export default function QuoteIntake() {
     setShipTo({ name, address: siteAddress, phone, email: email.trim() })
     setShipSameAsBill(sameAddress)
     setQuoteDate(date)
-    navigate(`/quotes/${quoteNo}`)
+    navigate(`/quotes/${encodeURIComponent(quoteNo ?? "")}`)
   }
 
   return (
@@ -80,7 +80,7 @@ export default function QuoteIntake() {
         <label>
           Quote number
           <input value={quoteNumber} onChange={(e) => { setQuoteNumber(e.target.value); setError('') }} placeholder="e.g. A123" />
-          <span className="muted small">Enter your quote number, or leave blank to generate the next one.</span>
+          <span className="muted small">Use any characters (up to 50), or leave blank to generate the next number.</span>
         </label>
       </div>
       {error && <p className="price-result--error" role="alert">{error}</p>}

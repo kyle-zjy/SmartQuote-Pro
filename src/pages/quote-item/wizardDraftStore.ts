@@ -140,7 +140,7 @@ export function isFromWizardNav(state: unknown): boolean {
 }
 
 export function wizardDraftPath(key: WizardDraftKey): string {
-  const base = `/quotes/${key.quoteNo}/items`
+  const base = `/quotes/${encodeURIComponent(key.quoteNo ?? "")}/items`
   if (key.kind === 'edit' && key.refId) return `${base}/${key.refId}/edit`
   if (key.kind === 'duplicate' && key.refId) return `${base}/new?basedOn=${key.refId}&mode=duplicate`
   if (key.kind === 'reuse' && key.refId) return `${base}/new?basedOn=${key.refId}&mode=reuse`

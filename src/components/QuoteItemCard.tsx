@@ -145,13 +145,13 @@ export default function QuoteItemCard({
             </>
           ) : (
             <>
-              <Link className="link-button" to={`/quotes/${quoteId}/items/${item.id}/edit`}>
+              <Link className="link-button" to={`/quotes/${encodeURIComponent(quoteId ?? "")}/items/${item.id}/edit`}>
                 Edit
               </Link>
-              <Link className="link-button" to={`/quotes/${quoteId}/items/new?basedOn=${item.id}&mode=duplicate`}>
+              <Link className="link-button" to={`/quotes/${encodeURIComponent(quoteId ?? "")}/items/new?basedOn=${item.id}&mode=duplicate`}>
                 Duplicate
               </Link>
-              <Link className="link-button" to={`/quotes/${quoteId}/items/new?basedOn=${item.id}&mode=reuse`}>
+              <Link className="link-button" to={`/quotes/${encodeURIComponent(quoteId ?? "")}/items/new?basedOn=${item.id}&mode=reuse`}>
                 Reuse
               </Link>
             </>

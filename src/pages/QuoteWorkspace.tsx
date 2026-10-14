@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { quoteIdFromPath } from '../lib/quoteRoute'
 import colours from '../data/colours.json'
 import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
@@ -30,9 +31,9 @@ function formatIssuedAt(iso: string): string {
 }
 
 export default function QuoteWorkspace() {
-  const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const location = useLocation()
+  const id = quoteIdFromPath(location.pathname)
   const { settings } = useCompanySettings()
   const quote = useQuote()
   const {
@@ -106,7 +107,7 @@ export default function QuoteWorkspace() {
           'Open this saved quote? The quote you are editing now will be replaced. Save it first if you still need it.',
         )
         if (!ok) {
-          navigate(`/quotes/${quoteNo}`, { replace: true })
+          navigate(`/quotes/${encodeURIComponent(quoteNo ?? "")}`, { replace: true })
           return
         }
       }
@@ -164,7 +165,7 @@ export default function QuoteWorkspace() {
   function handleSaveAsSeparateQuote() {
     try {
       const result = saveAsSeparateQuote()
-      navigate(`/quotes/${result.record.quoteNo}`, { replace: true })
+      navigate(`/quotes/${encodeURIComponent(result.record.quoteNo ?? "")}`, { replace: true })
       setMessage(
         result.photosOmitted
           ? `Saved as separate quote ${result.record.quoteNo}. The original saved quote is unchanged. Photos were too large to store in the saved copy.`
@@ -443,10 +444,10 @@ export default function QuoteWorkspace() {
             </>
           ) : (
             <>
-              <Link to={`/quotes/${quoteNo}/items/new`} className="primary-button quote-workspace__add">
+              <Link to={`/quotes/${encodeURIComponent(quoteNo ?? "")}/items/new`} className="primary-button quote-workspace__add">
                 + Add Opening
               </Link>
-              <Link to={`/quotes/${quoteNo}/items/new?service=1`} className="primary-button quote-workspace__add">
+              <Link to={`/quotes/${encodeURIComponent(quoteNo ?? "")}/items/new?service=1`} className="primary-button quote-workspace__add">
                 + Add Extra / Repair
               </Link>
             </>

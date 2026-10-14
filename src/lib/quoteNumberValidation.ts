@@ -1,3 +1,4 @@
 export function isValidQuoteNumber(value: string): boolean {
-  return /^[A-Za-z0-9._-]{1,50}$/.test(value)
+  const trimmed = value.trim()
+  return trimmed.length > 0 && Array.from(trimmed).length <= 50
 }

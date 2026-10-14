@@ -51,7 +51,7 @@ export default function App() {
             <FileTextOutlined aria-hidden="true" />Quotes
             {savedQuoteCount > 0 ? <span className="nav-count">{savedQuoteCount}</span> : null}
           </NavLink>
-          <NavLink to={`/quotes/${quoteNo}`}>
+          <NavLink to={`/quotes/${encodeURIComponent(quoteNo ?? "")}`}>
             <FormOutlined aria-hidden="true" />Current Quote
             {itemCount > 0 ? <span className="nav-count">{itemCount}</span> : null}
           </NavLink>
@@ -78,7 +78,7 @@ export default function App() {
             <Route path="/addons" element={<Navigate to="/quotes" replace />} />
             <Route path="/sheet" element={<Navigate to="/quotes" replace />} />
             <Route path="/sheet/:code" element={<Navigate to="/quotes" replace />} />
-            <Route path="/quote" element={<Navigate to={`/quotes/${quoteNo}`} replace />} />
+            <Route path="/quote" element={<Navigate to={`/quotes/${encodeURIComponent(quoteNo ?? "")}`} replace />} />
             <Route path="/saved/:status?" element={<Navigate to="/quotes" replace />} />
           </Routes>
         </Suspense>

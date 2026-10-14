@@ -10,7 +10,8 @@ export function quotePdfFilename(quoteNo: string, customerName: string): string 
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .slice(0, 40)
-  return `Quote-${quoteNo}-${safeName || 'customer'}.pdf`
+  const safeQuoteNo = quoteNo.replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '-').slice(0, 100)
+  return `Quote-${safeQuoteNo}-${safeName || 'customer'}.pdf`
 }
 
 export interface PdfExportTimings {

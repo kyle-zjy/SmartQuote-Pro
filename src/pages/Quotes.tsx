@@ -77,7 +77,7 @@ export default function Quotes() {
       if (!ok) return
     }
     if (!loadSavedQuote(savedQuoteNo, savedVersion)) return
-    navigate(`/quotes/${savedQuoteNo}`)
+    navigate(`/quotes/${encodeURIComponent(savedQuoteNo ?? "")}`)
   }
 
   function handleDelete(savedQuoteNo: string, savedVersion: number, label: string) {
@@ -98,7 +98,7 @@ export default function Quotes() {
       return
     }
     if (!loadSavedQuote(newQuoteNo)) return
-    navigate(`/quotes/${newQuoteNo}`)
+    navigate(`/quotes/${encodeURIComponent(newQuoteNo ?? "")}`)
   }
 
   function handleAddComment(savedQuoteNo: string, savedVersion: number) {
@@ -125,7 +125,7 @@ export default function Quotes() {
         </div>
         <div className="quote-actions">
           {hasDraft && (
-            <Link to={`/quotes/${quoteNo}`} className="primary-button">
+            <Link to={`/quotes/${encodeURIComponent(quoteNo ?? "")}`} className="primary-button">
               Continue quote {displayQuoteNo(quoteNo, '')}
             </Link>
           )}
@@ -175,7 +175,7 @@ export default function Quotes() {
         <div className="empty-state">
           <p className="empty-state__title">No saved quotes yet</p>
           {hasDraft ? (
-            <Link to={`/quotes/${quoteNo}`} className="primary-button">Continue current quote</Link>
+            <Link to={`/quotes/${encodeURIComponent(quoteNo ?? "")}`} className="primary-button">Continue current quote</Link>
           ) : (
             <Link to="/quotes/new" className="primary-button">New quote</Link>
           )}
@@ -217,7 +217,7 @@ export default function Quotes() {
           siblings={snapshotSiblings}
           onClose={closeSnapshot}
           onChangeRevision={(version) => setSnapshot({ quoteNo: snapshotRecord.quoteNo, version })}
-          onReturnToCurrent={hasDraft ? () => navigate(`/quotes/${quoteNo}`) : undefined}
+          onReturnToCurrent={hasDraft ? () => navigate(`/quotes/${encodeURIComponent(quoteNo ?? "")}`) : undefined}
         />
       ) : null}
     </div>
