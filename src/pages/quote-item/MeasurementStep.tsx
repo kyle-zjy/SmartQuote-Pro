@@ -301,20 +301,20 @@ export default function MeasurementStep({
             <div className="sheet-hardware-fields">
               <h3>Door hardware &amp; condition</h3>
               <label>
-                Lock height (mm)
-                {centreTongue ? (
-                  <input aria-label="Lock height (mm)" value="N/A" disabled />
-                ) : (
-                  <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
-                )}
-              </label>
-              <label>
                 Lock side
                 <select value={lockSide} onChange={(e) => onHardwareChange({ lockSide: e.target.value as 'left' | 'right' | '' })}>
                   <option value="">Select side</option>
                   <option value="left">Left</option>
                   <option value="right">Right</option>
                 </select>
+              </label>
+              <label>
+                Lock height (mm)
+                {centreTongue ? (
+                  <input aria-label="Lock height (mm)" value="N/A" disabled />
+                ) : (
+                  <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
+                )}
               </label>
               {supportsTripleLock && (
                 <>
@@ -349,6 +349,7 @@ export default function MeasurementStep({
             {isSliding && (
               <fieldset>
                 <legend>Door interlock</legend>
+                <p className="muted small">Recorded as an option only. Measurements and pricing dimensions stay unchanged.</p>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'add'} onChange={() => onHardwareChange({ interlockAdjustment: 'add' })} />Door interlock needed — 5 mm added</label>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === ''} onChange={() => onHardwareChange({ interlockAdjustment: '' })} />No interlock adjustment — 0 mm added</label>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'remove'} onChange={() => onHardwareChange({ interlockAdjustment: 'remove' })} />Door has interlock — 5 mm removed (−5 mm)</label>

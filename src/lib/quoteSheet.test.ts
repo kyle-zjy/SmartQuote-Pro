@@ -3,6 +3,8 @@ import type { PriceCategory, PricingData } from '../types/pricing'
 import { calcConfiguredGroupPrice } from './configuredPrice'
 import {
   calcSheetSize,
+  adjustedPricingGroups,
+  pricingSizeForItem,
   configLabel,
   findSheetConfig,
   lookupSheetUnitPrice,
@@ -15,6 +17,19 @@ import {
 } from './quoteSheet'
 
 describe('quoteSheet', () => {
+  it.each(['add', '', 'remove', 'remove-zero'] as const)('keeps dimensions and price unchanged for interlock option %s', (interlockAdjustment) => {
+    const measurements = { H1: '2100', H2: '2100', H3: '2100', W1: '900' }
+    const size = sheetSizeFromMeasures(findSheetConfig('SDOX')!, measurements)!
+    const groups = adjustedPricingGroups(size, interlockAdjustment)
+    expect(groups).toEqual(size.pricingGroups)
+    expect(pricingSizeForItem({ configurationCode: 'SDOX', measurements, interlockAdjustment }))
+      .toEqual(pricingSizeForItem({ configurationCode: 'SDOX', measurements }))
+    const category: PriceCategory = {
+      key: 'doors', label: 'Doors', widths: [900, 905], heights: [2100],
+      prices: [[300, 800]], extras: null,
+    }
+    expect(calcConfiguredGroupPrice(category, groups)).toEqual(calcConfiguredGroupPrice(category, size.pricingGroups))
+  })
   it('loads the 19 configuration drawings from the student workbook', () => {
     expect(findSheetConfig('HDX-L')?.panels).toBe(1)
     expect(findSheetConfig('SDOXX')?.widthOffset).toBe(70)

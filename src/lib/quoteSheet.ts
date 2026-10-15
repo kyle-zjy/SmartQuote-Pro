@@ -223,10 +223,11 @@ export function sheetSizeFromMeasures(config: SheetConfig, values: Record<string
 
 export function adjustedPricingGroups(
   size: SheetSize,
-  interlockAdjustment: 'add' | 'remove' | 'remove-zero' | '' = '',
+  _interlockAdjustment: 'add' | 'remove' | 'remove-zero' | '' = '',
 ): SheetSize['pricingGroups'] {
-  const adjustment = interlockAdjustment === 'add' ? 5 : interlockAdjustment === 'remove' ? -5 : 0
-  return size.pricingGroups.map((group) => ({ ...group, width: group.width + adjustment }))
+  // Door interlock is recorded as hardware information only. It must not alter
+  // measured dimensions, pricing brackets, or quantities.
+  return size.pricingGroups.map((group) => ({ ...group }))
 }
 
 /** The per-panel screen size actually used to calculate price, derived from the same stored

@@ -75,15 +75,12 @@ test.describe('quote workspace', () => {
     page.once('dialog', (dialog) => dialog.accept())
     await page.getByRole('button', { name: 'Start quote' }).click()
     await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
-    await page.getByLabel('Site contact name').fill('Warehouse Co')
-    await page.getByLabel('Site contact phone').fill('07 5555 1234')
-
     await page.getByLabel('Frame colour (default)').selectOption({ label: 'Deco Bush Cherry Decoral (extra)' })
     await expect(page.getByLabel('Colour extra $')).toBeVisible()
 
     await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
     const dialog = page.getByRole('dialog', { name: 'Preview quote' })
-    await expect(dialog.getByText('Warehouse Co')).toBeVisible()
+    await expect(dialog.getByText('9 Industrial Dr')).toBeVisible()
     await expect(dialog.getByText('Powder coating for non-standard colour')).toBeVisible()
   })
 
@@ -95,7 +92,7 @@ test.describe('quote workspace', () => {
 
     await page.getByRole('button', { name: 'Issue quote' }).click()
     await expect(page.getByText(/^Issued/)).toBeVisible()
-    await expect(page.getByLabel('Customer')).toBeDisabled()
+    await expect(page.getByLabel('Frame colour (default)')).toBeDisabled()
 
     await expect(page.getByRole('button', { name: '+ Add Opening' })).toBeDisabled()
     await expect(page.getByRole('button', { name: 'Edit' })).toBeDisabled()
@@ -112,7 +109,7 @@ test.describe('quote workspace', () => {
     await page.getByRole('link', { name: 'Back to quote' }).click()
     await page.getByRole('button', { name: 'Revise quote' }).click()
     await expect(page.getByText(/^Revision opened/)).toBeVisible()
-    await expect(page.getByLabel('Customer')).toBeEnabled()
+    await expect(page.getByLabel('Frame colour (default)')).toBeEnabled()
 
     await page.getByRole('link', { name: 'New quote' }).click()
     await expect(page).toHaveURL(/\/quotes\/new$/)
