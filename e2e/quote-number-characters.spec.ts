@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { resetApp } from './helpers'
 
 test('arbitrary quote number survives navigation, saving and reload', async ({ page }) => {

@@ -1,4 +1,5 @@
-import { expect, test, type Page } from '@playwright/test'
+import type { Page } from '@playwright/test'
+import { expect, test } from './helpers'
 import { acceptDialogs, addOpening, fillRoomLocation, goTo, resetApp, startNewQuote } from './helpers'
 
 /** Starts an opening and stops on the Measurements step with partial values, nothing saved. */

@@ -1,4 +1,20 @@
-import { expect, type Page } from '@playwright/test'
+import { expect, test as base, type Page } from '@playwright/test'
+
+const ADMIN_SESSION = JSON.stringify({ staffId: 'admin', role: 'admin', signedInAt: '2026-01-01T00:00:00.000Z' })
+
+/** Every existing spec runs signed in as the default admin so the sign-in gate stays out of the way. */
+export const test = base.extend<{ signedIn: void }>({
+  signedIn: [
+    async ({ page }, use) => {
+      await page.addInitScript((session) => {
+        if (!localStorage.getItem('smartquote-pro:session')) localStorage.setItem('smartquote-pro:session', session)
+      }, ADMIN_SESSION)
+      await use()
+    },
+    { auto: true },
+  ],
+})
+export { expect }
 
 export const CUSTOMER = {
   name: 'Ada Lovelace',

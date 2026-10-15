@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { acceptDialogs, addOpening, goTo, resetApp, startNewQuote } from './helpers'
 
 test.describe('admin settings', () => {

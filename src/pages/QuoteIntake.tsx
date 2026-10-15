@@ -4,6 +4,8 @@ import { useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
 import { isValidQuoteNumber } from '../lib/quoteNumberValidation'
 import QuoteAddresses from '../components/QuoteAddresses'
+import { useAuth } from '../lib/authContext'
+import { recordQuoteOwner } from '../lib/reviewStore'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -12,6 +14,7 @@ function todayISO(): string {
 export default function QuoteIntake() {
   const { items, customer, newQuote, setCustomer, setShipTo, setShipSameAsBill, setQuoteDate } = useQuote()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [name, setName] = useState('')
   const [siteAddress, setSiteAddress] = useState('')
@@ -47,6 +50,13 @@ export default function QuoteIntake() {
     setShipTo({ name, address: siteAddress, phone, email: email.trim() })
     setShipSameAsBill(sameAddress)
     setQuoteDate(date)
+    if (user) {
+      try {
+        recordQuoteOwner(quoteNo, user.id)
+      } catch {
+        // Ownership tracking is best-effort.
+      }
+    }
     navigate(`/quotes/${encodeURIComponent(quoteNo ?? "")}`)
   }
 

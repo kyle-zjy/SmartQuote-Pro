@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { expectNoHorizontalOverflow, startNewQuote } from './helpers'
 
 for (const width of [375, 768, 1440]) {

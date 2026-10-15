@@ -14,6 +14,9 @@ import { isOtherFrameColour } from '../lib/frameColour'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
 import { colourRecord, useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
+import { useAuth } from '../lib/authContext'
+import { getReview, recordQuoteOwner, recordSubmission } from '../lib/reviewStore'
+import { findStaff } from '../lib/staffStore'
 import { STEP_LABELS } from './quote-item/wizardSteps'
 import {
   clearWizardDraft,
@@ -78,6 +81,8 @@ export default function QuoteWorkspace() {
   const [message, setMessage] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [wizardDrafts, setWizardDrafts] = useState(() => listWizardDrafts(quoteNo))
+  const { user } = useAuth()
+  const [reviewTick, setReviewTick] = useState(0)
 
   const issued = status === 'issued'
   const dealSettled = dealStatus !== 'open'
@@ -137,6 +142,9 @@ export default function QuoteWorkspace() {
   const alreadySaved = savedQuotes.some((record) => record.quoteNo === quoteNo && record.version === version)
   const itemCount = items.reduce((sum, i) => sum + i.quantity, 0)
   const roomGroups = groupQuoteItemsByLocation(items)
+  void reviewTick
+  const review = locked ? undefined : getReview(quoteNo, version || 1)
+  const reviewer = review?.reviewedBy ? findStaff(review.reviewedBy) : undefined
 
   function handleClear() {
     if (items.length === 0 || window.confirm('Clear all items on this quote?')) clear()
@@ -159,7 +167,33 @@ export default function QuoteWorkspace() {
 
   function handleSubmitForReview() {
     if (!submitForReview()) return
+    trackSubmission()
     setMessage('Submitted for office review.')
+  }
+
+  function trackSubmission() {
+    if (!user) return
+    try {
+      recordQuoteOwner(quoteNo, user.id)
+      recordSubmission(quoteNo, version || 1, user.id)
+    } catch {
+      // Review tracking is best-effort; the quote itself is already submitted.
+    }
+    setReviewTick((t) => t + 1)
+  }
+
+  function handleResubmit() {
+    if (status === 'draft') {
+      if (!submitForReview()) return
+    } else {
+      try {
+        saveCurrentQuote()
+      } catch {
+        // Keep going; the review record still points at this revision.
+      }
+    }
+    trackSubmission()
+    setMessage('Resubmitted for office review.')
   }
 
   function handleSaveAsSeparateQuote() {
@@ -233,8 +267,20 @@ export default function QuoteWorkspace() {
           changes — the issued copy stays in Quotes. Amount paid can still be recorded.
         </p>
       )}
-      {status === 'office-review' && !locked && (
+      {((status === 'office-review' && !review) || review?.status === 'pending') && (
         <p className="quote-issued-banner">This quote is submitted for office review and can still be edited.</p>
+      )}
+      {review?.status === 'approved' && (
+        <p className="quote-issued-banner quote-review-banner--approved">
+          Approved by {reviewer?.name ?? 'the office'}
+          {review.reviewNote ? `: ${review.reviewNote}` : '.'} Ready to issue.
+        </p>
+      )}
+      {review?.status === 'returned' && (
+        <p className="quote-issued-banner quote-review-banner--returned" role="alert">
+          Returned by {reviewer?.name ?? 'the office'}: {review.reviewNote ?? 'changes needed.'} Make the changes, then
+          choose Resubmit for review.
+        </p>
       )}
 
       {wizardDrafts.length > 0 && (
@@ -460,7 +506,7 @@ export default function QuoteWorkspace() {
           </div>
 
           <div className="quote-actions">
-            {status === 'draft' && (
+            {status === 'draft' && review?.status !== 'returned' && (
               <button
                 type="button"
                 className="primary-button"
@@ -468,6 +514,11 @@ export default function QuoteWorkspace() {
                 disabled={!canSubmitForReview(quote)}
               >
                 Submit for Office Review
+              </button>
+            )}
+            {review?.status === 'returned' && (
+              <button type="button" className="primary-button" onClick={handleResubmit}>
+                Resubmit for review
               </button>
             )}
             {(status === 'draft' || status === 'office-review') && (

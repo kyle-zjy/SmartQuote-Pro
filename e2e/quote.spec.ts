@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { acceptDialogs, addOpening, CUSTOMER, parseAud, resetApp, startNewQuote } from './helpers'
 
 test('customer and factory previews separate production notes and pet door conditions', async ({ page }) => {

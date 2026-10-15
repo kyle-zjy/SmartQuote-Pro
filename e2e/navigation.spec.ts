@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { addOpening, resetApp, startNewQuote } from './helpers'
 
 test.describe('navigation', () => {

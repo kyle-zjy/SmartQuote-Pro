@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { expectNoHorizontalOverflow, fillRoomLocation, resetApp, startNewQuote } from './helpers'
 
 const VIEWPORTS = [

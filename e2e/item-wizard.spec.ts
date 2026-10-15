@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { addOpening, fillRoomLocation, openLocationAndConfig, resetApp, startNewQuote } from './helpers'
 
 // A minimal 1x1 transparent PNG, small enough to embed inline without a fixture file on disk.

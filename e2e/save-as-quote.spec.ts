@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test'
+import { expect, test } from './helpers'
 import { addOpening, resetApp, startNewQuote } from './helpers'
 
 test('saves current edits independently and subsequent saves only update the new quote', async ({ page }) => {

@@ -7,6 +7,7 @@ import App from './App'
 import { CompanySettingsProvider } from './lib/companySettings'
 import { QuoteProvider } from './lib/quoteContext'
 import { PricingProvider } from './lib/pricingContext'
+import { AuthProvider } from './lib/authContext'
 import './index.css'
 
 const basename = import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.BASE_URL.replace(/\/$/, '')
@@ -14,13 +15,15 @@ const basename = import.meta.env.BASE_URL === '/' ? undefined : import.meta.env.
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <BrowserRouter basename={basename}>
-      <CompanySettingsProvider>
-        <PricingProvider>
-          <QuoteProvider>
-            <App />
-          </QuoteProvider>
-        </PricingProvider>
-      </CompanySettingsProvider>
+      <AuthProvider>
+        <CompanySettingsProvider>
+          <PricingProvider>
+            <QuoteProvider>
+              <App />
+            </QuoteProvider>
+          </PricingProvider>
+        </CompanySettingsProvider>
+      </AuthProvider>
     </BrowserRouter>
   </StrictMode>,
 )
