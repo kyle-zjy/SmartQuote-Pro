@@ -301,20 +301,20 @@ export default function MeasurementStep({
             <div className="sheet-hardware-fields">
               <h3>Door hardware &amp; condition</h3>
               <label>
-                Lock height (mm)
-                {centreTongue ? (
-                  <input aria-label="Lock height (mm)" value="N/A" disabled />
-                ) : (
-                  <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
-                )}
-              </label>
-              <label>
                 Lock side
                 <select value={lockSide} onChange={(e) => onHardwareChange({ lockSide: e.target.value as 'left' | 'right' | '' })}>
                   <option value="">Select side</option>
                   <option value="left">Left</option>
                   <option value="right">Right</option>
                 </select>
+              </label>
+              <label>
+                Lock height (mm)
+                {centreTongue ? (
+                  <input aria-label="Lock height (mm)" value="N/A" disabled />
+                ) : (
+                  <input type="number" min={0} value={lockHeightMm} onChange={(e) => onHardwareChange({ lockHeightMm: e.target.value })} placeholder="Measure from floor" />
+                )}
               </label>
               {supportsTripleLock && (
                 <>
