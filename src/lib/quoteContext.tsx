@@ -220,6 +220,8 @@ function normalizeItem(item: QuoteLineItem): QuoteLineItem {
     ? Math.max(...measuredWidths) / config.widthFactor + config.widthOffset
     : 0
   const pricedWidth = screen
+    // Historical detection only: older saved items included the interlock offset.
+    // Keep this to recover their original opening, never to price new items.
     ? Math.round(legacyScreenWidth + (item.interlockAdjustment === 'add' ? 5 : item.interlockAdjustment === 'remove' ? -5 : 0))
     : 0
   // The former measurement wizard stored per-panel pricing dimensions in the opening

@@ -349,6 +349,7 @@ export default function MeasurementStep({
             {isSliding && (
               <fieldset>
                 <legend>Door interlock</legend>
+                <p className="muted small">Recorded as an option only. Measurements and pricing dimensions stay unchanged.</p>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'add'} onChange={() => onHardwareChange({ interlockAdjustment: 'add' })} />Door interlock needed — 5 mm added</label>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === ''} onChange={() => onHardwareChange({ interlockAdjustment: '' })} />No interlock adjustment — 0 mm added</label>
                 <label className="check-row"><input type="radio" name="door-interlock" checked={interlockAdjustment === 'remove'} onChange={() => onHardwareChange({ interlockAdjustment: 'remove' })} />Door has interlock — 5 mm removed (−5 mm)</label>
