@@ -392,7 +392,7 @@ export default function ItemWizard() {
             disabled={!visited.has(s)}
             onClick={() => goToStep(s)}
           >
-            {STEP_LABELS[s]}
+            {s === 'addons' && draft.serviceOnly ? 'Extras' : STEP_LABELS[s]}
           </button>
         ))}
       </div>

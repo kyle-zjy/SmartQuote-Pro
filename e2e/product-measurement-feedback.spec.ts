@@ -69,7 +69,7 @@ test('adds a repair without choosing a product from the Current Quote button', a
   await addRepair.click()
   await fillRoomLocation(page, 'Bedroom 1')
   await page.getByRole('button', { name: 'Continue' }).click()
-  await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Extras', level: 2 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Product', exact: true })).toHaveCount(0)
   await page.getByLabel('Extra / repair description').fill('Re-mesh existing flyscreen window')
   await page.getByLabel('Work price ($)').fill('80')

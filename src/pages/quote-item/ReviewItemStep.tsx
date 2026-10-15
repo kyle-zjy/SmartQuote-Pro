@@ -112,7 +112,7 @@ export default function ReviewItemStep({
         <dd>{colourName}</dd>
         <dt>Fitting extras</dt>
         <dd>{fitExtraItems.length > 0 ? fitExtraItems.map((e) => fitExtraPhrase(e.addonName)).join(', ') : 'None'}</dd>
-        <dt>Add-ons</dt>
+        <dt>{draft.serviceOnly ? 'Extras' : 'Add-ons'}</dt>
         <dd>
           {draft.addons.length > 0
             ? draft.addons.map((a) => `${a.name} (${formatCurrency(a.price)})`).join(', ')

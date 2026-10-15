@@ -43,12 +43,14 @@ export default function AddonStep({
   const sections = useMemo(() => {
     const map = new Map<string, AddonItem[]>()
     for (const item of data) {
+      const isExtra = item.section?.trim().toLowerCase() === 'extras'
+      if (isExtra !== draft.serviceOnly) continue
       if (draft.productKey === 'flyscreens' && item.name === 'TRIPLE LOCKS') continue
       const key = item.section ?? 'Other'
       map.set(key, [...(map.get(key) ?? []), item])
     }
     return map
-  }, [data, draft.productKey])
+  }, [data, draft.productKey, draft.serviceOnly])
 
   const selectedNames = new Set([...draft.addons.map((a) => a.name), ...draft.fitExtras])
 
@@ -73,7 +75,7 @@ export default function AddonStep({
 
   return (
     <div className="wizard-panel">
-      <h2>Add-ons</h2>
+      <h2>{draft.serviceOnly ? 'Extras' : 'Add-ons'}</h2>
       <p className="muted">For {contextLabel}</p>
       {draft.serviceOnly ? (
         <div className="calculator">
@@ -113,7 +115,7 @@ export default function AddonStep({
         </div>
       )}
 
-      <p className="muted small">Select any priced add-on, then edit its price for this quote if needed.</p>
+      <p className="muted small">Select any priced {draft.serviceOnly ? 'extra' : 'add-on'}, then edit its price for this quote if needed.</p>
 
       {[...sections.entries()].map(([section, sectionItems]) => (
         <div key={section} className="addon-section">
