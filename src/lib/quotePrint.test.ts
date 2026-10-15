@@ -26,6 +26,7 @@ describe('quote print audience', () => {
     const customer = render('customer')
     expect(customer).toContain('Medium Pet Door')
     expect(customer).toContain(PET_DOOR_DISCLAIMER)
+    expect(customer.indexOf(PET_DOOR_DISCLAIMER)).toBeGreaterThan(customer.indexOf('Extra — Medium Pet Door'))
     for (const text of [item.note, 'Lock height', 'Lock side', 'Centre tongue', 'Door bowed']) {
       expect(customer).not.toContain(text)
     }
@@ -150,12 +151,20 @@ describe('dimension shown to each audience', () => {
 describe('custom customer notes', () => {
   it('uses edited notes only on the customer version', () => {
     const line = { ...item, customerNote: 'Customer approved the pet door location.\nConfirm access before installation.' }
-    expect(render('customer', line)).toContain(line.customerNote)
-    expect(render('customer', line)).not.toContain(PET_DOOR_DISCLAIMER)
+    const customer = render('customer', line)
+    expect(customer).toContain(line.customerNote)
+    expect(customer).not.toContain(PET_DOOR_DISCLAIMER)
+    expect(customer.indexOf(line.customerNote)).toBeGreaterThan(customer.indexOf('Extra — Medium Pet Door'))
     expect(render('factory', line)).not.toContain(line.customerNote)
     expect(render('factory', line)).toContain(item.note)
     const updated = { ...line, ...removeQuoteExtra(line, 'PET DOOR - MEDIUM') }
     expect(updated.customerNote).toBe(line.customerNote)
+  })
+
+  it('keeps unrelated customer notes with the main product', () => {
+    const line = { ...item, customerNote: 'Call the customer before installation.' }
+    const customer = render('customer', line)
+    expect(customer.indexOf(line.customerNote)).toBeLessThan(customer.indexOf('Extra — Medium Pet Door'))
   })
 
   it('preserves a deliberately cleared note without regenerating the disclaimer', () => {

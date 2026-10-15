@@ -1,4 +1,4 @@
-import { customerQuoteNote, displayDescription, productPrice, quoteExtras, extraLabel, type QuoteAudience } from '../lib/quotePrint'
+import { customerQuoteNote, displayDescription, productPrice, quoteExtras, extraLabel, isPetDoorExtra, petDoorCustomerQuoteNote, type QuoteAudience } from '../lib/quotePrint'
 import type { QuoteLineItem } from '../lib/quoteContext'
 import { lineAmount } from '../lib/quoteTotals'
 import { usePricing } from '../lib/pricingContext'
@@ -37,12 +37,14 @@ export default function QuoteLineItemRow({
 }) {
   const { data: pricingData } = usePricing()
   const customerNote = customerQuoteNote(item)
+  const petDoorNote = petDoorCustomerQuoteNote(item)
   const extras = quoteExtras(item)
+  const petDoorExtraIndex = extras.findIndex((extra) => isPetDoorExtra(extra.name))
   const basePrice = productPrice(item)
   const description = displayDescription(item, audience, pricingData)
   const details = (
     <>
-      {audience === 'customer' && customerNote && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {customerNote}</div>}
+      {audience === 'customer' && customerNote && !petDoorNote && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {customerNote}</div>}
       {audience === 'factory' && (
         <>
           {item.configurationCode && <div className="small">Configuration: {item.configurationCode}</div>}
@@ -115,7 +117,12 @@ export default function QuoteLineItemRow({
     {extras.map((extra, index) => (
       <tr key={`${extra.name}-${index}`} className="quote-sheet__extra">
         <td className="quote-sheet__qty">{item.quantity}</td>
-        <td>Extra — {extraLabel(extra.name)}</td>
+        <td>
+          <div>Extra — {extraLabel(extra.name)}</div>
+          {audience === 'customer' && index === petDoorExtraIndex && petDoorNote && (
+            <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {petDoorNote}</div>
+          )}
+        </td>
         <td className="quote-sheet__price">{formatCurrency(extra.price)}</td>
         <td className="quote-sheet__price">{formatCurrency(lineAmount(extra.price, item.quantity))}</td>
         {!readOnly && <td className="no-print" />}
