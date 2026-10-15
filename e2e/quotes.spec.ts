@@ -59,7 +59,7 @@ test.describe('quotes list', () => {
 
     await page.getByRole('button', { name: 'Open' }).click()
     await expect(page).toHaveURL(/\/quotes\/\d+$/)
-    await expect(page.getByLabel('Customer')).toHaveValue(CUSTOMER.name)
+    await expect(page.getByText(CUSTOMER.name, { exact: false }).first()).toBeVisible()
 
     await goTo(page, /^Quotes/)
     await page.getByRole('button', { name: 'Delete' }).click()

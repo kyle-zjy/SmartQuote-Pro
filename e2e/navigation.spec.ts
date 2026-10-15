@@ -59,8 +59,6 @@ test.describe('navigation', () => {
     await startNewQuote(page, { name: 'Current Customer', phone: '0417001615', address: '2 Current St' })
     await addOpening(page, { location: 'Current job', configCode: 'HDX-L' })
     const workingUrl = page.url()
-    const customer = await page.getByLabel('Customer').inputValue()
-
     await page.getByRole('navigation').first().getByRole('link', { name: /^Quotes/ }).click()
     await expect(page.getByRole('heading', { name: 'Quotes', exact: true })).toBeVisible()
     await page.getByRole('button', { name: 'Snapshot' }).click()
@@ -68,7 +66,7 @@ test.describe('navigation', () => {
     await page.locator('.quote-preview--snapshot').getByRole('button', { name: 'Continue current quote' }).click()
 
     await expect(page).toHaveURL(workingUrl)
-    await expect(page.getByLabel('Customer')).toHaveValue(customer)
+    await expect(page.getByText('Current Customer', { exact: false }).first()).toBeVisible()
     await expect(page.locator('.quote-item-card')).toContainText('Current job')
     await page.getByRole('navigation').first().getByRole('link', { name: /^Quotes/ }).click()
     await page.getByRole('link', { name: /^Continue quote / }).click()

@@ -5,7 +5,6 @@ import colours from '../data/colours.json'
 import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
-import QuoteAddresses from '../components/QuoteAddresses'
 import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
 import { removeQuoteExtra } from '../lib/quotePrint'
@@ -13,7 +12,6 @@ import { groupQuoteItemsByLocation } from '../lib/groupQuoteItems'
 import { isOtherFrameColour } from '../lib/frameColour'
 import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
 import { colourRecord, useQuote } from '../lib/quoteContext'
-import { formatPhone } from '../lib/phoneFormat'
 import { useAuth } from '../lib/authContext'
 import { getReview, recordQuoteOwner, recordSubmission } from '../lib/reviewStore'
 import { findStaff } from '../lib/staffStore'
@@ -42,18 +40,12 @@ export default function QuoteWorkspace() {
   const {
     items,
     customer,
-    setCustomer,
-    shipSameAsBill,
-    shipTo,
-    setShipTo,
     frameColour,
     setFrameColour,
     customFrameColour,
     setCustomFrameColour,
     colourExtra,
     setColourExtraOverride,
-    paid,
-    setPaid,
     gstEnabled,
     setGstEnabled,
     quoteNo,
@@ -257,14 +249,14 @@ export default function QuoteWorkspace() {
       {dealSettled && (
         <p className={`quote-issued-banner quote-issued-banner--${dealStatus}`}>
           This quote is {dealStatus === 'closed' ? 'closed (deal won)' : 'abandoned'}. Reopen it from Quotes to keep
-          editing. Amount paid can still be recorded.
+          editing.
         </p>
       )}
       {issued && !dealSettled && (
         <p className="quote-issued-banner">
           Issued{issuedSnapshot ? ` ${formatIssuedAt(issuedSnapshot.issuedAt)}` : ''}
           {version > 1 ? ` · Rev ${version}` : ''}. Pricing is locked. Choose Revise quote if the customer wants
-          changes — the issued copy stays in Quotes. Amount paid can still be recorded.
+          changes — the issued copy stays in Quotes.
         </p>
       )}
       {((status === 'office-review' && !review) || review?.status === 'pending') && (
@@ -304,50 +296,8 @@ export default function QuoteWorkspace() {
 
       <div className="quote-workspace__grid">
         <section className="quote-editor quote-workspace__left">
-          <h2>Quote details</h2>
+          <h2>Quote settings</h2>
           <div className="quote-editor__grid">
-            <label>
-              Customer
-              <input
-                value={customer.name}
-                onChange={(e) => setCustomer({ ...customer, name: e.target.value })}
-                placeholder="Name"
-                disabled={locked}
-              />
-            </label>
-            <label>
-              Phone
-              <input
-                value={customer.phone}
-                onChange={(e) => setCustomer({ ...customer, phone: formatPhone(e.target.value) })}
-                placeholder="0417-001-615"
-                disabled={locked}
-              />
-            </label>
-            <label className="quote-editor__wide">
-              Email addresses
-              <input
-                type="email"
-                multiple
-                aria-label="Email addresses"
-                value={customer.email ?? ''}
-                onChange={(e) => setCustomer({ ...customer, email: e.target.value })}
-                placeholder="customer@example.com, accounts@example.com"
-                disabled={locked}
-              />
-              <span className="muted small">Separate multiple email addresses with commas.</span>
-            </label>
-            <QuoteAddresses
-              siteAddress={shipSameAsBill ? customer.address : shipTo.address}
-              billingAddress={customer.address}
-              same={shipSameAsBill}
-              disabled={locked}
-              onSiteChange={(address) => {
-                if (shipSameAsBill) setCustomer({ ...customer, address })
-                else setShipTo({ ...shipTo, address })
-              }}
-              onBillingChange={(address) => setCustomer({ ...customer, address })}
-            />
             <label>
               Frame colour (default)
               <select value={frameColour} onChange={(e) => setFrameColour(e.target.value)} disabled={locked}>
@@ -399,29 +349,6 @@ export default function QuoteWorkspace() {
             </p>
           )}
 
-          {!shipSameAsBill && (
-            <div className="quote-editor__grid">
-              <label>
-                Site contact name
-                <input
-                  value={shipTo.name}
-                  onChange={(e) => setShipTo({ ...shipTo, name: e.target.value })}
-                  placeholder="Name"
-                  disabled={locked}
-                />
-              </label>
-              <label>
-                Site contact phone
-                <input
-                  value={shipTo.phone}
-                  onChange={(e) => setShipTo({ ...shipTo, phone: formatPhone(e.target.value) })}
-                  placeholder="0417-001-615"
-                  disabled={locked}
-                />
-              </label>
-            </div>
-          )}
-
           <label className="checkbox-row">
             <input
               type="checkbox"
@@ -431,20 +358,6 @@ export default function QuoteWorkspace() {
             />
             Include GST (10%)
           </label>
-
-          <details className="quote-workspace__payment">
-            <summary>Payment</summary>
-            <label>
-              Amount paid
-              <input
-                type="number"
-                min={0}
-                step={1}
-                value={paid}
-                onChange={(e) => setPaid(Number(e.target.value) || 0)}
-              />
-            </label>
-          </details>
         </section>
 
         <section className="quote-workspace__right">
