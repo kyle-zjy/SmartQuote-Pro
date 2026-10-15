@@ -6,12 +6,14 @@ test('customer and factory previews separate production notes and pet door condi
   await startNewQuote(page)
   await addOpening(page, {
     location: 'Entry', configCode: 'HDX-L',
+    measurements: { H1: '2100', H2: '2100', W1: '900', W2: '900', W3: '900' },
     addons: ['PET DOOR - MEDIUM'], note: 'Cut frame after site measure',
   })
   await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
   const customer = page.getByRole('dialog', { name: 'Preview quote', exact: true })
-  await expect(customer.getByText('Extra — Medium Pet Door')).toBeVisible()
-  await expect(customer.getByText('Customer notes: Adding a pet door means this door is no longer considered a security door.')).toBeVisible()
+  const petDoorRow = customer.locator('tr.quote-sheet__extra').filter({ hasText: 'Extra — Medium Pet Door' })
+  await expect(petDoorRow).toContainText('Customer notes: Adding a pet door means this door is no longer considered a security door.')
+  await expect(customer.getByText('Customer notes: Adding a pet door means this door is no longer considered a security door.')).toHaveCount(1)
   await expect(customer.getByText(/Cut frame after site measure/)).toHaveCount(0)
   await customer.getByRole('button', { name: 'Back' }).click()
   await page.getByRole('button', { name: 'Preview Factory Quote' }).click()
