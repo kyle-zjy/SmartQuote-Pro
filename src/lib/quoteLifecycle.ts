@@ -1,5 +1,6 @@
 import type { QuoteAction, QuoteState } from './quoteContext'
 import { calcQuoteTotals, money } from './quoteTotals'
+import { productWarrantyNotes, type CompanySettings } from '../data/company'
 
 export type QuoteStatus = 'draft' | 'office-review' | 'issued'
 export type DealStatus = 'open' | 'abandoned' | 'closed'
@@ -19,6 +20,8 @@ export interface IssuedSnapshot {
   total: number
   deposit: number
   issuedAt: string
+  /** Optional for compatibility with quotes issued before complete document snapshots. */
+  document?: { company: CompanySettings; warrantyNotes: string[] }
 }
 
 export interface QuoteFinancials {
@@ -91,6 +94,7 @@ export function createIssuedSnapshot(
   colourExtra: number,
   depositRate: number,
   issuedAt = new Date().toISOString(),
+  company?: CompanySettings,
 ): IssuedSnapshot {
   const totals = calcQuoteTotals(state.items, state.gstEnabled, colourExtra, depositRate, state.paid)
   return {
@@ -102,6 +106,10 @@ export function createIssuedSnapshot(
     total: totals.total,
     deposit: totals.deposit,
     issuedAt,
+    ...(company ? { document: {
+      company: JSON.parse(JSON.stringify(company)) as CompanySettings,
+      warrantyNotes: productWarrantyNotes(state.items.map((item) => item.productKey ?? '')),
+    } } : {}),
   }
 }
 

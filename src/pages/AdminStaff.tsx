@@ -1,8 +1,17 @@
-import { useMemo, useState, type FormEvent } from 'react'
+import { useEffect, useMemo, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useQuote } from '../lib/quoteContext'
 import { useAuth } from '../lib/authContext'
-import { addStaff, listStaff, updateStaff, type StaffMember, type StaffRole } from '../lib/staffStore'
+import {
+  AUTH_CHANGED_EVENT,
+  STAFF_KEY,
+  listStaff,
+  type StaffMember,
+  type StaffRole,
+} from '../lib/staffStore'
+import { createStaff, changeStaff, resetStaffPassword } from '../lib/serverStaff'
+import { SERVER_DATA_EVENT, SERVER_MODE } from '../lib/apiClient'
+import { PASSWORD_HINT, validNewPassword } from '../../server/src/passwordPolicy'
 import { listReviews, readOwners, type ReviewStatus } from '../lib/reviewStore'
 import { groupArchivedQuotes } from '../lib/quoteArchive'
 import { displayQuoteNo, displayQuoteRevision } from '../lib/displayQuoteNo'
@@ -26,15 +35,48 @@ export default function AdminStaff() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [expanded, setExpanded] = useState<string | null>(null)
+  const [resetMember, setResetMember] = useState<StaffMember | null>(null)
+  const [resetPassword, setResetPassword] = useState('')
+  const [resetConfirm, setResetConfirm] = useState('')
+  const [adminPassword, setAdminPassword] = useState('')
+  const [resetError, setResetError] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    const refresh = () => setStaff(listStaff())
+    const changed = (event: StorageEvent) => {
+      if (event.key === null || event.key === STAFF_KEY) refresh()
+    }
+    window.addEventListener('storage', changed)
+    window.addEventListener('focus', refresh)
+    window.addEventListener(AUTH_CHANGED_EVENT, refresh)
+    window.addEventListener(SERVER_DATA_EVENT, refresh)
+    return () => {
+      window.removeEventListener('storage', changed)
+      window.removeEventListener('focus', refresh)
+      window.removeEventListener(AUTH_CHANGED_EVENT, refresh)
+      window.removeEventListener(SERVER_DATA_EVENT, refresh)
+    }
+  }, [])
 
   const activity = useMemo(() => {
     const owners = readOwners()
     const reviews = listReviews()
     const groups = groupArchivedQuotes(savedQuotes)
-    const byStaff = new Map<string, Array<{ quoteNo: string; label: string; status: ReviewStatus | null; latest: (typeof groups)[number]['versions'][number] }>>()
+    const byStaff = new Map<
+      string,
+      Array<{
+        quoteNo: string
+        label: string
+        status: ReviewStatus | null
+        latest: (typeof groups)[number]['versions'][number]
+      }>
+    >()
     for (const group of groups) {
       const latest = group.versions[0]
-      const review = reviews.find((r) => r.quoteNo === group.quoteNo && r.version === latest.version)
+      const review = reviews.find(
+        (r) => r.quoteNo === group.quoteNo && r.version === latest.version,
+      )
       const ownerId = owners[group.quoteNo] ?? review?.submittedBy ?? 'unassigned'
       const list = byStaff.get(ownerId) ?? []
       list.push({
@@ -46,13 +88,20 @@ export default function AdminStaff() {
       byStaff.set(ownerId, list)
     }
     const submittedCount = new Map<string, number>()
-    reviews.forEach((r) => submittedCount.set(r.submittedBy, (submittedCount.get(r.submittedBy) ?? 0) + 1))
+    reviews.forEach((r) =>
+      submittedCount.set(r.submittedBy, (submittedCount.get(r.submittedBy) ?? 0) + 1),
+    )
     return { byStaff, submittedCount }
   }, [savedQuotes])
 
-  function handleAdd(event: FormEvent) {
+  async function handleAdd(event: FormEvent) {
     event.preventDefault()
-    const result = addStaff(form)
+    if (!validNewPassword(form.password)) {
+      setError(PASSWORD_HINT)
+      return
+    }
+    setBusy(true)
+    const result = await createStaff(form).finally(() => setBusy(false))
     if (!result.ok) {
       setError(result.error)
       return
@@ -63,15 +112,58 @@ export default function AdminStaff() {
     setMessage(`${result.member.name} added. They can sign in with ${result.member.email}.`)
   }
 
-  function handleUpdate(member: StaffMember, patch: Partial<Pick<StaffMember, 'role' | 'active'>>) {
-    const next = updateStaff(member.id, patch)
+  async function handleUpdate(
+    member: StaffMember,
+    patch: Partial<Pick<StaffMember, 'role' | 'active'>>,
+  ) {
+    let next: StaffMember[]
+    try {
+      next = await changeStaff(member.id, patch)
+    } catch (error) {
+      setError(error instanceof Error ? error.message : 'Could not update this account. Try again.')
+      return
+    }
+    setError('')
     const changed = next.find((m) => m.id === member.id)
-    if (!changed || (patch.role && changed.role !== patch.role) || (patch.active !== undefined && changed.active !== patch.active)) {
+    if (
+      !changed ||
+      (patch.role && changed.role !== patch.role) ||
+      (patch.active !== undefined && changed.active !== patch.active)
+    ) {
       setMessage('At least one active admin is required.')
       return
     }
     setStaff(next)
     setMessage(`${member.name} updated.`)
+  }
+
+  async function handleReset(event: FormEvent) {
+    event.preventDefault()
+    if (!resetMember) return
+    if (!validNewPassword(resetPassword)) {
+      setResetError(PASSWORD_HINT)
+      return
+    }
+    if (resetPassword !== resetConfirm) {
+      setResetError('The temporary passwords do not match.')
+      return
+    }
+    setBusy(true)
+    setResetError('')
+    try {
+      await resetStaffPassword(resetMember.id, adminPassword, resetPassword)
+      setMessage(
+        `Password reset for ${resetMember.name}. Existing sessions ended. They must change the temporary password after signing in.`,
+      )
+      setResetMember(null)
+      setResetPassword('')
+      setResetConfirm('')
+      setAdminPassword('')
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : 'Could not reset this password.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   function openQuote(quoteNo: string) {
@@ -84,7 +176,9 @@ export default function AdminStaff() {
   return (
     <section className="admin-panel">
       <h2>Staff</h2>
-      <p className="muted small">See who created and submitted each quote, add new staff and control admin access.</p>
+      <p className="muted small">
+        See who created and submitted each quote, add new staff and control admin access.
+      </p>
 
       {message ? (
         <p className="admin-panel__message" role="status">
@@ -140,6 +234,21 @@ export default function AdminStaff() {
                   <td>{activity.submittedCount.get(member.id) ?? 0}</td>
                   <td>{member.active ? 'Active' : 'Deactivated'}</td>
                   <td>
+                    {SERVER_MODE && !isSelf && (
+                      <button
+                        type="button"
+                        className="link-button"
+                        onClick={() => {
+                          setResetMember(member)
+                          setResetPassword('')
+                          setResetConfirm('')
+                          setAdminPassword('')
+                          setResetError('')
+                        }}
+                      >
+                        Reset password for {member.name}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="link-button"
@@ -153,7 +262,11 @@ export default function AdminStaff() {
                 isOpen ? (
                   <tr key={`${member.id}:quotes`} className="staff-table__quotes">
                     <td colSpan={7}>
-                      <QuoteList quotes={quotes} onOpen={openQuote} empty={`${member.name} has no saved quotes yet.`} />
+                      <QuoteList
+                        quotes={quotes}
+                        onOpen={openQuote}
+                        empty={`${member.name} has no saved quotes yet.`}
+                      />
                     </td>
                   </tr>
                 ) : null,
@@ -163,10 +276,74 @@ export default function AdminStaff() {
         </table>
       </div>
 
+      {resetMember && (
+        <form className="admin-form" onSubmit={handleReset}>
+          <h3>Reset password for {resetMember.name}</h3>
+          <p className="muted small">
+            Give this temporary password to the staff member privately. They must change it at their
+            next sign-in. Existing sessions will end.
+          </p>
+          <label>
+            Your administrator password
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              maxLength={256}
+              value={adminPassword}
+              onChange={(e) => setAdminPassword(e.target.value)}
+            />
+          </label>
+          <label>
+            New temporary password
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              maxLength={256}
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+            />
+          </label>
+          <p className="muted small">{PASSWORD_HINT}</p>
+          <label>
+            Confirm temporary password
+            <input
+              type="password"
+              autoComplete="new-password"
+              required
+              maxLength={256}
+              value={resetConfirm}
+              onChange={(e) => setResetConfirm(e.target.value)}
+            />
+          </label>
+          {resetError && <p role="alert">{resetError}</p>}
+          <div className="quote-actions">
+            <button type="submit" className="primary-button" disabled={busy}>
+              Reset password
+            </button>
+            <button
+              type="button"
+              className="secondary-button"
+              disabled={busy}
+              onClick={() => {
+                setResetMember(null)
+                setAdminPassword('')
+                setResetPassword('')
+                setResetConfirm('')
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      )}
+
       {unassigned.length > 0 ? (
         <details className="staff-unassigned">
           <summary>
-            {unassigned.length} quote{unassigned.length === 1 ? '' : 's'} saved before sign-in was added (no owner)
+            {unassigned.length} quote{unassigned.length === 1 ? '' : 's'} saved before sign-in was
+            added (no owner)
           </summary>
           <QuoteList quotes={unassigned} onOpen={openQuote} empty="" />
         </details>
@@ -181,7 +358,11 @@ export default function AdminStaff() {
           </label>
           <label>
             Email
-            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => setForm({ ...form, email: e.target.value })}
+            />
           </label>
         </div>
         <div className="field-row">
@@ -190,25 +371,32 @@ export default function AdminStaff() {
             <input
               type="password"
               autoComplete="new-password"
+              maxLength={256}
               value={form.password}
               onChange={(e) => setForm({ ...form, password: e.target.value })}
             />
           </label>
           <label>
             Access
-            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value as StaffRole })}>
+            <select
+              value={form.role}
+              onChange={(e) => setForm({ ...form, role: e.target.value as StaffRole })}
+            >
               <option value="staff">Staff — quotes only</option>
               <option value="admin">Admin — review, staff, settings</option>
             </select>
           </label>
         </div>
+        <p className="muted small">
+          {PASSWORD_HINT} New staff must change their temporary password after signing in.
+        </p>
         {error ? (
           <p className="login-card__error" role="alert">
             {error}
           </p>
         ) : null}
         <div className="quote-actions">
-          <button type="submit" className="primary-button">
+          <button type="submit" className="primary-button" disabled={busy}>
             Add staff member
           </button>
         </div>
@@ -222,7 +410,15 @@ function QuoteList({
   onOpen,
   empty,
 }: {
-  quotes: Array<{ quoteNo: string; label: string; status: ReviewStatus | null; latest: { total: number; quote: { customer: { name: string }; status: import('../lib/quoteLifecycle').QuoteStatus } } }>
+  quotes: Array<{
+    quoteNo: string
+    label: string
+    status: ReviewStatus | null
+    latest: {
+      total: number
+      quote: { customer: { name: string }; status: import('../lib/quoteLifecycle').QuoteStatus }
+    }
+  }>
   onOpen: (quoteNo: string) => void
   empty: string
 }) {

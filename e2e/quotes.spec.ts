@@ -17,7 +17,7 @@ test.describe('quotes list', () => {
 
     const card = page.locator('.saved-quote-card').filter({ hasText: CUSTOMER.name })
     await expect(card).toBeVisible()
-    await expect(card.getByRole('heading', { name: /^00033/ })).toBeVisible()
+    await expect(card.getByRole('heading', { name: /^33\d+/ })).toBeVisible()
     await expect(card.getByText('(draft)')).toBeVisible()
 
     const dealNav = page.getByRole('navigation', { name: 'Filter by deal status' })

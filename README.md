@@ -6,11 +6,28 @@ React + TypeScript quoting tool for GOLDCO Security Group's supply & install pri
 ## Getting started
 
 ```bash
-npm install
-npm run dev
+npm ci
+npm ci --prefix server
+docker compose up -d
+# In server/: copy .env.example to .env if absent, then run:
+# npx prisma migrate deploy && npx prisma generate && npm run prisma:seed && npm run bootstrap
+npm run dev --prefix server          # keep running in a separate terminal
+npm run dev -- --host 127.0.0.1 --port 5174
 ```
 
 Build for production with `npm run build`.
+
+Local UI: `http://localhost:5174`. See [项目逻辑与当前实现](docs/project-logic-zh.md)
+for the quote workflow, data ownership, local setup, and remaining backend work.
+
+The default data source is now the Express API and PostgreSQL. Staff and admins in separate
+browser profiles share quotes, reviews, working copies, photos, accounts, company settings and prices.
+Local development accounts: `staff@goldco.com.au / staff`, `admin@goldco.com.au / admin`.
+Quote backups and draft recovery are under **Quotes → Backup, restore & shared drafts**.
+Existing browser data is preserved; sign in as admin and use **Import previous browser quotes**
+on Quotes to copy missing records to the database. Existing server versions are never overwritten.
+Same-quote editing is protected across tabs, with optimistic revision checks across browsers.
+Newly issued quotes retain the company, bank and terms details used when they were issued.
 
 ## How pricing data flows
 
@@ -21,9 +38,10 @@ imports directly as the default/bundled price list. All prices are rounded to wh
 When the price list is updated, regenerate the data:
 
 ```bash
-pip install openpyxl
-python scripts/generate-pricing-data.py
-python scripts/generate-colours.py
+uv venv .venv                 # only if .venv does not already exist
+uv pip install --python .venv/bin/python openpyxl
+uv run --no-project --python .venv/bin/python scripts/generate-pricing-data.py
+uv run --no-project --python .venv/bin/python scripts/generate-colours.py
 ```
 
 ### Importing an updated price list from the browser
@@ -32,48 +50,69 @@ The Home page also has a drag-and-drop zone that lets a user load a newer versio
 xlsx directly in the browser, without rebuilding the app. `src/lib/xlsxImport.ts` is a TypeScript port
 of the same extraction algorithm as `scripts/generate-pricing-data.py` (kept in sync manually), so the
 uploaded file **must use the same template** — same sheet names, same title text, same matrix/extras
-layout — only the numbers are expected to change. Imported data is held in memory only
-(`src/lib/pricingContext.tsx`, not persisted to `localStorage`), so refreshing the page reverts to the
-bundled default. `documents/Supply & Install (TEST - updated prices).xlsx` is a same-template copy
+layout — only the numbers are expected to change. Admin imports are saved to the shared database
+and refresh in other connected browsers. Saved line prices and issued documents remain fixed.
+`documents/Supply & Install (TEST - updated prices).xlsx` is a same-template copy
 with prices bumped ~10% and dates shifted, generated for exercising this import path.
 
-Backend handoff: Chinese teammate brief `docs/backend-handoff-zh.md`; English contract `docs/backend-api-and-schema.md`.
+Backend handoff: [Chinese teammate brief](docs/backend-handoff-zh.md); [English contract](docs/backend-api-and-schema-en.md).
 
 ## Backend (server/)
 
-A minimal Postgres-backed API skeleton lives in `server/` — catalog data only (products,
-addons, colours, company settings). It does not replace the frontend's bundled JSON yet;
-see `docs/backend-handoff-zh.md` for the full contract this is building toward.
+The backend provides database authentication, staff administration and a versioned workspace API.
+See [current backend integration](docs/backend-integration-zh.md) for the implemented contract;
+the older teammate handoff describes the original normalized-schema proposal.
 
 ```bash
 docker compose up -d                 # starts Postgres on localhost:5432
 cd server
-cp .env.example .env
-npm install
-npx prisma migrate dev --name init   # creates tables
-npx prisma db seed                   # loads src/data/*.json + company settings
+cp -n .env.example .env              # preserve an existing local configuration
+npm ci
+npx prisma generate
+npx prisma migrate deploy           # applies committed migrations
+npx prisma db seed                  # initializes an empty database only
+npm run bootstrap                   # initializes missing shared defaults and local accounts
 npm run dev                          # http://localhost:3001
 ```
 
-Then check `curl localhost:3001/api/v1/products`, `/addons`, `/colours`, `/company`, and
-`/health`. Quote/customer CRUD, auth, and room photos are not implemented yet.
+Check `/health` (process alive) and `/health/ready` (database reachable). All `/api/v1/`
+business routes require the server-issued bearer token obtained from `/api/v1/auth/login`.
+Database connection
+failures return JSON HTTP 503; other unexpected errors return JSON HTTP 500.
+`npm test` inside `server/` checks those failure and recovery paths.
 
-`staff_users` exists in the schema (so `quotes.createdBy` has a target once login lands) but
-nothing seeds or writes to it yet — there is no login flow. Quote numbers are meant to be
-allocated from a Postgres sequence, `quote_number_seq` (starts at `33021`, continuing on from
-the frontend's old client-side counter), not generated in the browser; see the comment above
-`CREATE SEQUENCE quote_number_seq` in `server/prisma/migrations/*_init/migration.sql` for the
-exact allocation pattern once a quote-creation endpoint is added.
+Seeding is transactional and skips a database containing catalog or business records.
+It never clears customers, quotes, staff or existing pricing. Updating an existing catalog
+needs a separate migration/import process. The new application data lives in `workspace_records`
+as complete versioned JSONB documents. This preserves all existing wizard, annotation and issued
+snapshot fields; the original normalized `quotes`/`quote_lines` tables remain intact.
+Quote numbers are allocated transactionally through `workspace_clock`, including manual-number
+reservations. Passwords use salted scrypt hashes; sessions are revocable and expire after 7 days.
+Production bootstrap requires explicit initial passwords. `VITE_API_URL` and `CORS_ORIGINS`
+configure separately hosted frontends; no production deployment is performed by local setup.
+
+Use **My account** to change a password; admins can reset another account's password from
+**Admin → Staff**, confirming their own administrator password. New/reset/imported accounts
+must change their temporary password before accessing shared data. New passwords require
+12–256 characters including letters and numbers. Existing account passwords stay unchanged;
+demo autofill is limited to development builds. Password recovery is handled by the office
+administrator; email recovery is not configured.
+
+In server mode, cache persistence errors have a separate warning and an in-memory fallback;
+they do not turn a confirmed database save into a failed save. Until the cache recovers,
+unsent edits may be lost on reload. Use **Retry browser cache** or download a quote backup.
 
 ## Structure
 
 - `src/data/` — generated pricing JSON (do not hand-edit; regenerate from the xlsx instead)
 - `src/types/pricing.ts` — shared types for the pricing data
 - `src/lib/priceLookup.ts` — width/height price lookup; typed sizes are rounded up to the next available bracket in the matrix
-- `src/lib/pricingContext.tsx` — active price list (bundled default, or an in-session imported one)
+- `src/lib/pricingContext.tsx` — shared active price list, with bundled defaults
 - `src/lib/xlsxImport.ts` — browser-side xlsx parser for the drag-and-drop import
-- `src/lib/quoteContext.tsx` — quote/cart state (React Context + `localStorage`)
-- `src/pages/` — Home (product list + import), ProductCalculator, AddOns, QuoteSummary
+- `src/lib/quoteContext.tsx` — quote/cart state and recoverable local working copies
+- `src/lib/serverWorkspace.ts` — server synchronization, import and revision conflict handling
+- `server/src/workspace.ts` — atomic database writes, workflow permissions and validation
+- `src/pages/` — Home, quote intake/list/workspace, opening/repair wizard, admin settings/reviews/staff
 
 ## Known gap
 

@@ -19,7 +19,7 @@ function formatQuoteDate(iso: string): string {
 }
 
 export default function QuoteDocument({ readOnly = false, audience = 'customer' }: { readOnly?: boolean; audience?: QuoteAudience }) {
-  const { settings } = useCompanySettings()
+  const { settings: liveSettings } = useCompanySettings()
   const {
     items,
     removeItem,
@@ -44,14 +44,16 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
     status,
     dealStatus,
     issuedSnapshot,
+    canEdit,
   } = useQuote()
+  const settings = status === 'issued' ? issuedSnapshot?.document?.company ?? liveSettings : liveSettings
 
-  const linesLocked = readOnly || status === 'issued' || dealStatus !== 'open'
+  const linesLocked = readOnly || status === 'issued' || dealStatus !== 'open' || !canEdit
 
   const billLines = partyLines(customer.name, customer.address, formatPhone(customer.phone))
   const shipParty = shipSameAsBill ? customer : shipTo
   const shipLines = partyLines(shipParty.name, shipParty.address, formatPhone(shipParty.phone))
-  const warrantyNotes = productWarrantyNotes(items.map((item) => item.productKey ?? ''))
+  const warrantyNotes = issuedSnapshot?.document?.warrantyNotes ?? productWarrantyNotes(items.map((item) => item.productKey ?? ''))
   const rooms = [...new Set(items.map((item) => (item.room && item.room.trim() ? item.room : 'Unassigned')))]
 
   return (

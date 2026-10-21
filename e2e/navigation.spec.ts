@@ -55,6 +55,7 @@ test.describe('navigation', () => {
     await startNewQuote(page)
     await addOpening(page, { location: 'Old job', configCode: 'HDX-L' })
     await page.getByRole('button', { name: 'Save quote' }).click()
+    await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
     page.on('dialog', (dialog) => void dialog.accept())
     await startNewQuote(page, { name: 'Current Customer', phone: '0417001615', address: '2 Current St' })
     await addOpening(page, { location: 'Current job', configCode: 'HDX-L' })

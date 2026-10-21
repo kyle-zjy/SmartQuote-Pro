@@ -25,6 +25,7 @@ export default defineConfig({
       : {}),
   } }],
   webServer: {
+    env: { VITE_DATA_MODE: process.env.PLAYWRIGHT_SERVER_MODE === '1' ? 'server' : 'local' },
     command: `npm run dev -- --host ${host} --port ${port} --strictPort`,
     url: baseURL,
     reuseExistingServer: !process.env.CI,

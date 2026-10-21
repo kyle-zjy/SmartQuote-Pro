@@ -223,6 +223,8 @@ test.describe('item wizard', () => {
     await expect(card.getByText(/2200 × 2400 mm/)).toBeVisible()
 
     await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+
+    await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
     await page.getByRole('navigation').first().getByRole('link', { name: /^Quotes/ }).click()
     await page.getByRole('button', { name: 'Open' }).click()
     await expect(page.locator('.quote-item-card').getByText(/2200 × 2400 mm/)).toBeVisible()

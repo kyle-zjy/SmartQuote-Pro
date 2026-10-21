@@ -4,6 +4,10 @@ import { useQuote } from './lib/quoteContext'
 import { ConfigProvider } from 'antd'
 import { AppstoreOutlined, FileTextOutlined, FormOutlined, LogoutOutlined, SettingOutlined } from '@ant-design/icons'
 import { useAuth } from './lib/authContext'
+import ServerSyncStatus from './components/ServerSyncStatus'
+import { SERVER_MODE } from './lib/apiClient'
+
+const MyAccount = lazy(() => import('./pages/MyAccount'))
 
 const Quotes = lazy(() => import('./pages/Quotes'))
 const Home = lazy(() => import('./pages/Home'))
@@ -28,7 +32,7 @@ function PageFallback() {
 }
 
 export default function App() {
-  const { session } = useAuth()
+  const { session, user } = useAuth()
   const { pathname } = useLocation()
 
   if (pathname === '/login' || pathname.startsWith('/login/')) {
@@ -45,6 +49,7 @@ export default function App() {
   }
 
   if (!session) return <Navigate to="/login" replace state={{ from: pathname }} />
+  if (SERVER_MODE && user?.mustChangePassword && pathname !== '/account') return <Navigate to="/account" replace />
   if (pathname.startsWith('/admin') && session.role !== 'admin') {
     return <Navigate to="/login/admin" replace state={{ from: pathname }} />
   }
@@ -89,6 +94,7 @@ function AppShell() {
             {itemCount > 0 ? <span className="nav-count">{itemCount}</span> : null}
           </NavLink>
           {isAdmin ? <NavLink to="/admin"><SettingOutlined aria-hidden="true" />Admin</NavLink> : null}
+          <NavLink to="/account">My account</NavLink>
           <span className="topnav__user" title={user?.email}>
             {user?.name}
             <span className={`topnav__role topnav__role--${isAdmin ? 'admin' : 'staff'}`}>{isAdmin ? 'Admin' : 'Staff'}</span>
@@ -100,9 +106,11 @@ function AppShell() {
       </header>
 
       <main className={contentClass}>
+        <ServerSyncStatus />
         <Suspense fallback={<PageFallback />}>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/account" element={<MyAccount />} />
             <Route path="/quotes" element={<Quotes />} />
             <Route path="/quotes/new" element={<QuoteIntake />} />
             <Route path="/quotes/:id" element={<QuoteWorkspace />} />

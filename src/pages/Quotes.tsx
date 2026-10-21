@@ -2,6 +2,8 @@ import { useCallback, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
 import RevisionSnapshot from '../components/RevisionSnapshot'
+import QuoteBackupPanel from '../components/QuoteBackupPanel'
+import LegacyWorkspaceImport from '../components/LegacyWorkspaceImport'
 import { displayQuoteNo, displayQuoteRevision } from '../lib/displayQuoteNo'
 import { formatCurrency } from '../lib/formatCurrency'
 import { partitionArchivedQuoteGroups, type ArchivedQuoteGroup } from '../lib/quoteArchive'
@@ -49,10 +51,12 @@ export default function Quotes() {
     duplicateQuote,
     addSavedQuoteComment,
     setQuoteDealStatus,
+    archiveStorageError,
   } = useQuote()
   const hasDraft = items.length > 0 || Boolean(customer.name.trim())
   const boards = partitionArchivedQuoteGroups(savedQuotes)
   const [drafts, setDrafts] = useState<Record<string, string>>({})
+  const [message, setMessage] = useState('')
   const [snapshot, setSnapshot] = useState<{ quoteNo: string; version: number } | null>(null)
   const closeSnapshot = useCallback(() => setSnapshot(null), [])
   const snapshotRecord = snapshot
@@ -80,19 +84,22 @@ export default function Quotes() {
     navigate(`/quotes/${encodeURIComponent(savedQuoteNo ?? "")}`)
   }
 
-  function handleDelete(savedQuoteNo: string, savedVersion: number, label: string) {
+  async function handleDelete(savedQuoteNo: string, savedVersion: number, label: string) {
     if (!window.confirm(`Delete ${label}? Older/newer revisions of this quote number are kept.`)) return
-    deleteSavedQuote(savedQuoteNo, savedVersion)
+    try { await deleteSavedQuote(savedQuoteNo, savedVersion) }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Could not delete the saved quote.') }
   }
 
-  function handleDuplicate(savedQuoteNo: string, savedVersion: number) {
+  async function handleDuplicate(savedQuoteNo: string, savedVersion: number) {
     if (hasDraft) {
       const ok = window.confirm(
         'Duplicate this quote? The quote you are editing now will be replaced by the duplicate. Save it first if you still need it.',
       )
       if (!ok) return
     }
-    const newQuoteNo = duplicateQuote(savedQuoteNo, savedVersion)
+    let newQuoteNo: string | null
+    try { newQuoteNo = await duplicateQuote(savedQuoteNo, savedVersion) }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Could not duplicate this quote.'); return }
     if (!newQuoteNo) {
       window.alert('Could not duplicate this quote.')
       return
@@ -101,24 +108,30 @@ export default function Quotes() {
     navigate(`/quotes/${encodeURIComponent(newQuoteNo ?? "")}`)
   }
 
-  function handleAddComment(savedQuoteNo: string, savedVersion: number) {
+  async function handleAddComment(savedQuoteNo: string, savedVersion: number) {
     const key = commentKey(savedQuoteNo, savedVersion)
-    if (!addSavedQuoteComment(savedQuoteNo, savedVersion, drafts[key] ?? '')) return
+    try { if (!await addSavedQuoteComment(savedQuoteNo, savedVersion, drafts[key] ?? '')) return }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Could not save this comment.'); return }
     setDrafts((current) => ({ ...current, [key]: '' }))
   }
 
-  function handleDealStatus(savedQuoteNo: string, next: DealStatus) {
+  async function handleDealStatus(savedQuoteNo: string, next: DealStatus) {
     const messages: Record<DealStatus, string> = {
       open: 'Move this quote back to In progress?',
       abandoned: 'Mark this quote as Abandoned? You can reopen it later.',
       closed: 'Mark this quote as Closed (deal won)? You can reopen it later.',
     }
     if (!window.confirm(messages[next])) return
-    setQuoteDealStatus(savedQuoteNo, next)
+    try { await setQuoteDealStatus(savedQuoteNo, next) }
+    catch (error) { setMessage(error instanceof Error ? error.message : 'Could not update this quote.') }
   }
 
   return (
     <div className="quotes-page">
+      <LegacyWorkspaceImport />
+      {message && <p role="alert">{message}</p>}
+      {archiveStorageError && <p role="alert">{archiveStorageError}</p>}
+      <QuoteBackupPanel />
       <header className="page-header">
         <div>
           <h1>Quotes</h1>

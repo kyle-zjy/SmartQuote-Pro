@@ -1,6 +1,7 @@
 import { formatCurrency } from '../lib/formatCurrency'
 import type { QuoteRoomGroup as RoomGroupData } from '../lib/groupQuoteItems'
 import QuoteItemCard from './QuoteItemCard'
+import RoomPhotos from './RoomPhotos'
 
 export default function QuoteRoomGroup({
   group,
@@ -48,6 +49,11 @@ export default function QuoteRoomGroup({
           />
         ))}
       </div>
+
+      <section aria-label={`Room photos for ${group.location}`}>
+        <h4>Room photos</h4>
+        <RoomPhotos room={group.location} />
+      </section>
 
       <div className="quote-room-group__footer">
         <span>Room total: {formatCurrency(group.subtotal)}</span>

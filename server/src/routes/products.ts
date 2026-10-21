@@ -1,5 +1,6 @@
 import { Router } from 'express'
 import { prisma } from '../db.js'
+import { asyncHandler } from '../http.js'
 
 export const productsRouter = Router()
 
@@ -62,7 +63,7 @@ async function serializeProduct(product: {
   }
 }
 
-productsRouter.get('/', async (_req, res) => {
+productsRouter.get('/', asyncHandler(async (_req, res) => {
   const products = await prisma.product.findMany({
     where: { active: true },
     orderBy: { name: 'asc' },
@@ -72,9 +73,9 @@ productsRouter.get('/', async (_req, res) => {
     note: 'All prices exclude GST.',
     products: await Promise.all(products.map(serializeProduct)),
   })
-})
+}))
 
-productsRouter.get('/:key', async (req, res) => {
+productsRouter.get('/:key', asyncHandler(async (req, res) => {
   const product = await prisma.product.findUnique({
     where: { key: req.params.key },
     include: { categories: { include: { priceCells: true, meshExtras: true } } },
@@ -84,4 +85,4 @@ productsRouter.get('/:key', async (req, res) => {
     return
   }
   res.json(await serializeProduct(product))
-})
+}))

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import path from 'node:path'
-import { PrismaClient } from '@prisma/client'
+import { Prisma, PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
@@ -87,29 +87,15 @@ function readJson<T>(fileName: string): T {
   return JSON.parse(raw) as T
 }
 
-async function clearExisting() {
-  await prisma.quoteLine.deleteMany()
-  await prisma.quote.deleteMany()
-  await prisma.customer.deleteMany()
-  await prisma.colourProduct.deleteMany()
-  await prisma.meshExtra.deleteMany()
-  await prisma.priceCell.deleteMany()
-  await prisma.productCategory.deleteMany()
-  await prisma.product.deleteMany()
-  await prisma.colour.deleteMany()
-  await prisma.addon.deleteMany()
-  await prisma.companySettings.deleteMany()
+async function seedCompanySettings(db: Prisma.TransactionClient) {
+  await db.companySettings.create({ data: COMPANY_SETTINGS })
 }
 
-async function seedCompanySettings() {
-  await prisma.companySettings.create({ data: COMPANY_SETTINGS })
-}
-
-async function seedPricing() {
+async function seedPricing(db: Prisma.TransactionClient) {
   const pricing = readJson<PricingJson>('pricing.json')
 
   for (const product of pricing.products) {
-    const createdProduct = await prisma.product.create({
+    const createdProduct = await db.product.create({
       data: {
         key: product.key,
         name: product.name,
@@ -119,7 +105,7 @@ async function seedPricing() {
     })
 
     for (const category of product.categories) {
-      const createdCategory = await prisma.productCategory.create({
+      const createdCategory = await db.productCategory.create({
         data: {
           productId: createdProduct.id,
           key: category.key,
@@ -137,7 +123,7 @@ async function seedPricing() {
         })),
       )
       if (priceCells.length > 0) {
-        await prisma.priceCell.createMany({ data: priceCells })
+        await db.priceCell.createMany({ data: priceCells })
       }
 
       if (category.extras) {
@@ -148,16 +134,16 @@ async function seedPricing() {
           overPrice: option.over,
         }))
         if (meshExtras.length > 0) {
-          await prisma.meshExtra.createMany({ data: meshExtras })
+          await db.meshExtra.createMany({ data: meshExtras })
         }
       }
     }
   }
 }
 
-async function seedAddons() {
+async function seedAddons(db: Prisma.TransactionClient) {
   const addons = readJson<AddonJson[]>('addons.json')
-  await prisma.addon.createMany({
+  await db.addon.createMany({
     data: addons.map((addon) => ({
       section: addon.section,
       name: addon.name,
@@ -168,13 +154,13 @@ async function seedAddons() {
   })
 }
 
-async function seedColours() {
+async function seedColours(db: Prisma.TransactionClient) {
   const colours = readJson<ColourJson[]>('colours.json')
-  const products = await prisma.product.findMany({ select: { id: true, key: true } })
+  const products = await db.product.findMany({ select: { id: true, key: true } })
   const productIdByKey = new Map(products.map((p) => [p.key, p.id]))
 
   for (const colour of colours) {
-    const createdColour = await prisma.colour.create({
+    const createdColour = await db.colour.create({
       data: { name: colour.name, additionalCharge: colour.additionalCharge },
     })
 
@@ -184,17 +170,30 @@ async function seedColours() {
       .map((productId) => ({ colourId: createdColour.id, productId }))
 
     if (colourProducts.length > 0) {
-      await prisma.colourProduct.createMany({ data: colourProducts })
+      await db.colourProduct.createMany({ data: colourProducts })
     }
   }
 }
 
 async function main() {
-  await clearExisting()
-  await seedCompanySettings()
-  await seedPricing()
-  await seedAddons()
-  await seedColours()
+  // Initialization only: never erase customer work or overwrite an existing catalog.
+  await prisma.$transaction(async (db) => {
+    // Serialize concurrent seed runs, including on an otherwise empty database.
+    await db.$executeRaw`SELECT pg_advisory_xact_lock(33021)`
+    const counts = await Promise.all([
+      db.product.count(), db.productCategory.count(), db.priceCell.count(), db.meshExtra.count(),
+      db.addon.count(), db.colour.count(), db.companySettings.count(),
+      db.customer.count(), db.quote.count(), db.staffUser.count(),
+    ])
+    if (counts.some((count) => count > 0)) {
+      console.log('[seed] Database is not empty; initialization skipped. Existing records were preserved.')
+      return
+    }
+    await seedCompanySettings(db)
+    await seedPricing(db)
+    await seedAddons(db)
+    await seedColours(db)
+  }, { timeout: 60_000 })
 
   const [productCount, priceCellCount, meshExtraCount, addonCount, colourCount] = await Promise.all([
     prisma.product.count(),

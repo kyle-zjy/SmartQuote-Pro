@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { quoteIdFromPath } from '../../lib/quoteRoute'
 import { calcConfiguredGroupPrice } from '../../lib/configuredPrice'
-import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
+import { draftChargesError, draftFittingCharges } from './itemCharges'
 import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { useQuote, type QuoteLineItem } from '../../lib/quoteContext'
@@ -40,8 +40,10 @@ export default function ItemWizard() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { data, addons } = usePricing()
-  const { items, status, dealStatus, frameColour, customFrameColour, addItem, updateItem, setQuantity } = useQuote()
-  const locked = status === 'issued' || dealStatus !== 'open'
+  const { items, status, dealStatus, canEdit, frameColour, customFrameColour, addItem, updateItem, setQuantity } = useQuote()
+  const locked = status === 'issued' || dealStatus !== 'open' || !canEdit
+  const editAllowedRef = useRef(canEdit)
+  editAllowedRef.current = canEdit
 
   const basedOnId = searchParams.get('basedOn')
   const mode = searchParams.get('mode')
@@ -111,30 +113,30 @@ export default function ItemWizard() {
 
   const notFound = (itemId && !sourceItem) || (basedOnId && !sourceItem)
   useEffect(() => {
-    if (notFound) {
+    if (notFound && canEdit) {
       finishedRef.current = true
       clearWizardDraft(draftKey)
     }
     // Only run once on mount for this session -- notFound/draftKey are stable for the life of the route.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [notFound, canEdit])
 
   const latestSnapshotRef = useRef({ step, visited, draft, markers, strokes })
   latestSnapshotRef.current = { step, visited, draft, markers, strokes }
 
   useEffect(() => {
-    if (finishedRef.current) return
+    if (finishedRef.current || !canEdit) return
     const timer = window.setTimeout(() => {
       if (finishedRef.current) return
       saveWizardDraft(draftKey, { step, visited: [...visited], draft, markers, strokes, updatedAt: Date.now() })
     }, WIZARD_DRAFT_PERSIST_MS)
     return () => window.clearTimeout(timer)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [quoteNo, sessionKind, sessionRefId, step, visited, draft, markers, strokes])
+  }, [quoteNo, sessionKind, sessionRefId, step, visited, draft, markers, strokes, canEdit])
 
   useEffect(() => {
     return () => {
-      if (finishedRef.current) return
+      if (finishedRef.current || !editAllowedRef.current) return
       const snap = latestSnapshotRef.current
       saveWizardDraft(draftKey, {
         step: snap.step,
@@ -175,6 +177,7 @@ export default function ItemWizard() {
         <p className="quote-issued-banner quote-issued-banner--abandoned">
           {dealStatus !== 'open'
             ? 'This quote is abandoned or closed. Reopen it from Quotes, or start a new quote, before changing items.'
+            : !canEdit && status !== 'issued' ? 'This quote is read-only in this tab. Return to the quote to request editing access.'
             : 'This quote is issued and locked. Start a new quote before changing items.'}
         </p>
       </div>
@@ -210,7 +213,7 @@ export default function ItemWizard() {
       setError('Describe the extra or repair before saving.')
       return
     }
-    if (draft.serviceOnly && (!Number.isFinite(Number(draft.servicePrice)) || Number(draft.servicePrice) < 0)) {
+    if (draft.serviceOnly && (!draft.servicePrice.trim() || !Number.isFinite(Number(draft.servicePrice)) || Number(draft.servicePrice) < 0)) {
       setError('Enter a valid service price.')
       return
     }
@@ -247,10 +250,13 @@ export default function ItemWizard() {
       return
     }
 
-    const fitExtraTotal = LINE_FIT_EXTRAS.filter((extra) => draft.fitExtras.includes(extra.addonName)).reduce(
-      (sum, extra) => sum + (addons.find((a) => a.name === extra.addonName)?.price ?? 0),
-      0,
-    )
+    const chargeError = draftChargesError(draft, addons)
+    if (chargeError) {
+      setError(chargeError)
+      return
+    }
+    const fittingCharges = draftFittingCharges(draft, addons)
+    const fitExtraTotal = fittingCharges.reduce((sum, extra) => sum + extra.price, 0)
     const addonsTotal = calcAddonsTotal(draft.addons)
     const calculatedPrice = (draft.serviceOnly ? Number(draft.servicePrice || 0) : configured?.unitPrice ?? 0) + fitExtraTotal + addonsTotal
 
@@ -312,8 +318,8 @@ export default function ItemWizard() {
       openingHeightMm: draft.serviceOnly ? undefined : heightMm,
       material: draft.meshOption,
       doubleHung: Boolean(isFlyscreenWindows && draft.doubleHung),
-      fitExtras: draft.fitExtras,
-      fitExtraPrices: draft.fitExtras.map((name) => ({ name, price: addons.find((addon) => addon.name === name)?.price ?? 0 })),
+      fitExtras: fittingCharges.map((extra) => extra.name),
+      fitExtraPrices: fittingCharges,
       frameColourMode: draft.frameColourMode,
       customFrameColour: draft.customFrameColour,
       addons: draft.addons,
@@ -348,6 +354,7 @@ export default function ItemWizard() {
   }
 
   function handleDiscard() {
+    if (locked) return
     if (!window.confirm('Discard this unsaved opening? Any changes on this item will be lost.')) return
     finishedRef.current = true
     clearWizardDraft(draftKey)

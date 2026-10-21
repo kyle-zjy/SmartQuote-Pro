@@ -1,9 +1,10 @@
 import { Router } from 'express'
 import { prisma } from '../db.js'
+import { asyncHandler } from '../http.js'
 
 export const coloursRouter = Router()
 
-coloursRouter.get('/', async (req, res) => {
+coloursRouter.get('/', asyncHandler(async (req, res) => {
   const productKey = typeof req.query.productKey === 'string' ? req.query.productKey : undefined
 
   const colours = await prisma.colour.findMany({
@@ -24,4 +25,4 @@ coloursRouter.get('/', async (req, res) => {
     }))
 
   res.json({ items, total: items.length })
-})
+}))

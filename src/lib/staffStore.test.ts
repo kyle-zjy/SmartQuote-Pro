@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest'
-import { addStaff, listStaff, readSession, signIn, signOut, updateStaff } from './staffStore'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { SESSION_KEY, STAFF_KEY, addStaff, listStaff, readSession, signIn, signOut, updateStaff } from './staffStore'
 import { decideReview, getReview, readOwners, recordQuoteOwner, recordSubmission } from './reviewStore'
 
 class MemoryStorage implements Storage {
@@ -30,6 +30,27 @@ beforeEach(() => {
 })
 
 describe('staffStore', () => {
+  it('rejects malformed sessions and unknown portal roles', () => {
+    for (const session of [null, {}, { staffId: 'staff', role: 'owner', signedInAt: '2026-10-21' }, { staffId: 'staff', role: 'staff', signedInAt: 'invalid' }]) {
+      storage.setItem(SESSION_KEY, JSON.stringify(session))
+      expect(readSession(storage)).toBeNull()
+    }
+  })
+
+  it('does not reactivate default accounts when saved staff data is damaged', () => {
+    for (const raw of ['null', '{}', '[null, {"id":"bad"}]', 'broken']) {
+      storage.setItem(STAFF_KEY, raw)
+      expect(listStaff(storage)).toEqual([])
+      expect(signIn('admin@goldco.com.au', 'admin', 'admin', storage).ok).toBe(false)
+    }
+  })
+
+  it('reports failed staff and session writes without signing in', () => {
+    vi.spyOn(storage, 'setItem').mockImplementation(() => { throw new Error('Storage unavailable') })
+    expect(signIn('staff@goldco.com.au', 'staff', 'staff', storage)).toMatchObject({ ok: false, error: expect.stringMatching(/Could not save/) })
+    expect(addStaff({ name: 'New', email: 'new@test.com', password: '1234', role: 'staff' }, storage)).toMatchObject({ ok: false })
+    expect(readSession(storage)).toBeNull()
+  })
   it('seeds a default admin and staff account', () => {
     expect(listStaff(storage).map((m) => m.role)).toEqual(['admin', 'staff'])
   })

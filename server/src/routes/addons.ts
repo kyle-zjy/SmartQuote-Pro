@@ -1,9 +1,10 @@
 import { Router } from 'express'
 import { prisma } from '../db.js'
+import { asyncHandler } from '../http.js'
 
 export const addonsRouter = Router()
 
-addonsRouter.get('/', async (_req, res) => {
+addonsRouter.get('/', asyncHandler(async (_req, res) => {
   const addons = await prisma.addon.findMany({ orderBy: { name: 'asc' } })
   res.json({
     items: addons.map((addon) => ({
@@ -15,4 +16,4 @@ addonsRouter.get('/', async (_req, res) => {
     })),
     total: addons.length,
   })
-})
+}))

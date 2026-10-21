@@ -1,3 +1,4 @@
+import { workspaceStorage } from './workspaceStorage'
 import { QUOTE_SHEET } from './quoteSheet'
 
 export const SHEET_STORAGE_KEY = 'smartquote-pro:sheet'
@@ -46,7 +47,7 @@ export function defaultSheetDraft(): SheetDraft {
   }
 }
 
-export function loadSheetDraft(storage: Storage = localStorage): SheetDraft {
+export function loadSheetDraft(storage: Storage = workspaceStorage): SheetDraft {
   try {
     const raw = storage.getItem(SHEET_STORAGE_KEY)
     if (!raw) return defaultSheetDraft()
@@ -62,7 +63,7 @@ export function loadSheetDraft(storage: Storage = localStorage): SheetDraft {
   }
 }
 
-export function saveSheetDraft(draft: SheetDraft, storage: Storage = localStorage): void {
+export function saveSheetDraft(draft: SheetDraft, storage: Storage = workspaceStorage): void {
   storage.setItem(SHEET_STORAGE_KEY, JSON.stringify(draft))
 }
 

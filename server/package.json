@@ -4,12 +4,14 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/index.ts",
+    "dev": "node --env-file=.env --import tsx --watch src/index.ts",
     "build": "tsc -b",
-    "start": "node dist/index.js",
+    "start": "node --env-file-if-exists=.env dist/src/index.js",
+    "test": "npm run build && node --test test/*.test.mjs",
     "prisma:migrate": "prisma migrate dev",
     "prisma:generate": "prisma generate",
-    "prisma:seed": "prisma db seed"
+    "prisma:seed": "prisma db seed",
+    "bootstrap": "node --env-file-if-exists=.env --import tsx scripts/bootstrap.ts"
   },
   "prisma": {
     "seed": "tsx prisma/seed.ts"

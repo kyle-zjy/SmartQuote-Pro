@@ -43,6 +43,7 @@ test.describe('sign-in and office review', () => {
   })
 
   test('submit → return with note → resubmit → approve → issue', async ({ page }) => {
+    test.setTimeout(60_000)
     acceptDialogs(page)
 
     await signInAs(page, 'Staff', 'staff@goldco.com.au', 'staff')
@@ -63,13 +64,19 @@ test.describe('sign-in and office review', () => {
     draft.items = [
       { id: 'seed-1', description: 'Supascreen hinged door', detail: '', quantity: 1, unitPrice: 650, room: 'Living Room', location: 'Living Room', note: '' },
     ]
-    await page.goto('about:blank')
-    await page.goto('/login')
-    await page.evaluate((d) => localStorage.setItem('smartquote-pro:quote', JSON.stringify(d)), draft)
+    await page.addInitScript((d) => {
+      const marker = `review-fixture:${d.quoteNo}`
+      if (sessionStorage.getItem(marker)) return
+      localStorage.setItem('smartquote-pro:quote', JSON.stringify(d))
+      sessionStorage.setItem(marker, 'seeded')
+    }, draft)
     await page.goto(`/quotes/${quoteNo}`)
     await expect(page.getByText('1 item', { exact: false }).first()).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Issue quote' })).toBeDisabled()
     await page.getByRole('button', { name: 'Submit for Office Review' }).click()
     await expect(page.getByText('Submitted for office review.')).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Issue quote' })).toBeDisabled()
+    expect(await page.evaluate(() => JSON.parse(localStorage.getItem('smartquote-pro:archive')!)[0].quote.status)).toBe('office-review')
     await signOut(page)
 
     await signInAs(page, 'Admin', 'admin@goldco.com.au', 'admin')
@@ -87,6 +94,7 @@ test.describe('sign-in and office review', () => {
     await signInAs(page, 'Staff', 'staff@goldco.com.au', 'staff')
     await page.goto(`/quotes/${quoteNo}`)
     await expect(page.getByRole('alert')).toHaveText(/Please double-check the living room width/)
+    await expect(page.getByRole('button', { name: 'Issue quote' })).toBeDisabled()
     await page.getByRole('button', { name: 'Resubmit for review' }).click()
     await expect(page.getByText('Resubmitted for office review.')).toBeVisible()
     await signOut(page)
@@ -105,6 +113,18 @@ test.describe('sign-in and office review', () => {
     await signInAs(page, 'Staff', 'staff@goldco.com.au', 'staff')
     await page.goto(`/quotes/${quoteNo}`)
     await expect(page.getByText(/Approved by Office Admin/)).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Issue quote' })).toBeEnabled()
+    await page.getByLabel('Product unit price').fill('700')
+    await expect(page.getByRole('alert')).toHaveText(/changed since submission/)
+    await expect(page.getByRole('button', { name: 'Issue quote' })).toBeDisabled()
+    await page.getByRole('button', { name: 'Resubmit for review' }).click()
+    await expect(page.getByText('Resubmitted for office review.')).toBeVisible()
+    await signOut(page)
+    await signInAs(page, 'Admin', 'admin@goldco.com.au', 'admin')
+    await page.getByRole('article', { name: `Review ${quoteNo}` }).getByRole('button', { name: 'Approve' }).click()
+    await signOut(page)
+    await signInAs(page, 'Staff', 'staff@goldco.com.au', 'staff')
+    await page.goto(`/quotes/${quoteNo}`)
     await page.getByRole('button', { name: 'Issue quote' }).click()
     await expect(page.getByText('Issued and saved on this browser.', { exact: false })).toBeVisible()
   })
@@ -115,13 +135,13 @@ test.describe('sign-in and office review', () => {
     const form = page.locator('form', { has: page.getByRole('heading', { name: 'Add new staff' }) })
     await form.getByLabel('Name').fill('Jamie Fitter')
     await form.getByLabel('Email').fill('jamie@goldco.com.au')
-    await form.getByLabel('Temporary password').fill('fit123')
+    await form.getByLabel('Temporary password').fill('Fitter-pass123')
     await form.getByRole('button', { name: 'Add staff member' }).click()
     await expect(page.getByRole('status')).toHaveText(/Jamie Fitter added/)
     await expect(page.getByRole('cell', { name: 'jamie@goldco.com.au' })).toBeVisible()
     await signOut(page)
 
-    await signInAs(page, 'Staff', 'jamie@goldco.com.au', 'fit123')
+    await signInAs(page, 'Staff', 'jamie@goldco.com.au', 'Fitter-pass123')
     await expect(page.getByText('Jamie Fitter')).toBeVisible()
   })
 })

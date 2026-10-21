@@ -1,0 +1,21 @@
+import { test, expect, acceptDialogs, addOpening, resetApp, startNewQuote } from './helpers'
+
+test('duplicating a quote assigns a new display number and preserves colour pricing', async ({ page }) => {
+  acceptDialogs(page)
+  await resetApp(page)
+  await startNewQuote(page)
+  await addOpening(page)
+  await page.getByLabel('Frame colour (default)').selectOption({ label: 'Deco Bush Cherry Decoral (extra)' })
+  await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
+  const original = await page.evaluate(() => JSON.parse(localStorage.getItem('smartquote-pro:archive')!)[0])
+  await page.goto('/quotes')
+  await page.locator('.saved-quote-card').getByRole('button', { name: 'Duplicate', exact: true }).click()
+  await expect(page).toHaveURL(/\/quotes\/\d+$/)
+  const records = await page.evaluate(() => JSON.parse(localStorage.getItem('smartquote-pro:archive')!))
+  expect(records).toHaveLength(2)
+  const duplicated = records.find((record: { quoteNo: string }) => record.quoteNo !== original.quoteNo)
+  expect(duplicated.quote.quoteNumber).toBe(duplicated.quoteNo)
+  expect(duplicated.total).toBe(original.total)
+  expect(records.find((record: { quoteNo: string }) => record.quoteNo === original.quoteNo)).toEqual(original)
+})

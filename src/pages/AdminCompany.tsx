@@ -1,25 +1,60 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { COMPANY, type CompanySettings } from '../data/company'
 import { useCompanySettings } from '../lib/companySettings'
+import { readCompanySettings } from '../lib/companySettingsStore'
+import { SERVER_MODE } from '../lib/apiClient'
 
 export default function AdminCompany() {
-  const { settings, setSettings, resetSettings } = useCompanySettings()
+  const { settings, setSettings, resetSettings, reloadSettings } = useCompanySettings()
   const [draft, setDraft] = useState<CompanySettings>(settings)
   const [saved, setSaved] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [conflict, setConflict] = useState(false)
+  const edited = useRef(false)
+  const baseline = useRef(JSON.stringify(settings))
+
+  useEffect(() => {
+    const serialized = JSON.stringify(settings)
+    if (serialized === baseline.current) return
+    setSaved(false)
+    if (edited.current) setConflict(true)
+    else {
+      baseline.current = serialized
+      setDraft(settings)
+    }
+  }, [settings])
 
   function update<K extends keyof CompanySettings>(key: K, value: CompanySettings[K]) {
+    edited.current = true
     setDraft((current) => ({ ...current, [key]: value }))
     setSaved(false)
+    setError(null)
   }
 
-  function handleSave() {
-    setSettings(draft)
-    setSaved(true)
+  async function handleSave() {
+    if (JSON.stringify(readCompanySettings()) !== baseline.current) {
+      setConflict(true)
+      setSaved(false)
+      return
+    }
+    const failure = await setSettings(draft)
+    setError(failure)
+    setSaved(!failure)
+    if (!failure) {
+      baseline.current = JSON.stringify(draft)
+      edited.current = false
+    }
   }
 
-  function handleReset() {
+  async function handleReset() {
     if (!window.confirm('Reset company details to the Goldco defaults?')) return
-    resetSettings()
+    const failure = await resetSettings()
+    setError(failure)
+    setSaved(!failure)
+    if (failure) return
+    edited.current = false
+    baseline.current = JSON.stringify(COMPANY)
+    setConflict(false)
     setDraft(COMPANY)
     setSaved(true)
   }
@@ -142,14 +177,27 @@ export default function AdminCompany() {
       </label>
 
       <div className="quote-actions">
-        <button type="button" className="primary-button" onClick={handleSave}>
+        <button type="button" className="primary-button" onClick={handleSave} disabled={conflict}>
           Save settings
         </button>
         <button type="button" className="secondary-button" onClick={handleReset}>
           Reset defaults
         </button>
-        {saved && <span className="muted small">Saved on this browser.</span>}
+        {saved && <span className="muted small">{SERVER_MODE ? 'Saved to the shared workspace.' : 'Saved on this browser.'}</span>}
       </div>
+      {conflict && <div role="alert">
+        <p>Company settings changed elsewhere. Load the latest settings before editing and saving again.</p>
+        <button type="button" className="secondary-button" onClick={() => {
+          const latest = reloadSettings()
+          edited.current = false
+          baseline.current = JSON.stringify(latest)
+          setDraft(latest)
+          setConflict(false)
+          setError(null)
+          setSaved(false)
+        }}>Load latest settings</button>
+      </div>}
+      {error && <p role="alert" className="login-card__error">{error}</p>}
     </div>
   )
 }

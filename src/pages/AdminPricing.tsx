@@ -8,9 +8,8 @@ export default function AdminPricing() {
     <div className="admin-form">
       <h2>Price list</h2>
       <p className="muted small">
-        Upload an updated price list to replace the pricing used across the app for the rest of this browser
-        session. This does not save to a server — closing the browser or clicking "Restore default price list"
-        goes back to the built-in prices.
+        Upload an updated price list to save shared pricing for all staff. Existing quote prices and issued
+        documents keep their saved values. Restore the built-in prices with “Restore default price list”.
       </p>
       <ExcelDropZone />
 

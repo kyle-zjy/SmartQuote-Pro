@@ -11,20 +11,26 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 export default function RoomPhotos({ room }: { room: string }) {
-  const { roomPhotos, addPhoto, removePhoto, setPhotoCaption, status, dealStatus } = useQuote()
+  const { roomPhotos, addPhoto, removePhoto, setPhotoCaption, status, dealStatus, canEdit } = useQuote()
   const photos = roomPhotos[room] ?? []
-  const issued = status === 'issued' || dealStatus !== 'open'
+  const issued = status === 'issued' || dealStatus !== 'open' || !canEdit
   const [activeId, setActiveId] = useState<string | null>(null)
+  const [uploadError, setUploadError] = useState<string | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   const activePhoto = photos.find((p) => p.id === activeId) ?? null
 
   async function handleFiles(files: FileList | null) {
     if (issued || !files) return
-    for (const file of Array.from(files)) {
-      if (!file.type.startsWith('image/')) continue
-      const dataUrl = await readAsDataUrl(file)
-      addPhoto(room, dataUrl)
+    setUploadError(null)
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith('image/')) continue
+        const dataUrl = await readAsDataUrl(file)
+        addPhoto(room, dataUrl)
+      }
+    } catch {
+      setUploadError('Could not read the photo. Try uploading the image again.')
     }
   }
 
@@ -44,6 +50,7 @@ export default function RoomPhotos({ room }: { room: string }) {
         <input
           ref={fileInputRef}
           type="file"
+          aria-label={`${room} room photos`}
           accept="image/*"
           multiple
           hidden
@@ -53,6 +60,7 @@ export default function RoomPhotos({ room }: { room: string }) {
           }}
         />
       </div>
+      {uploadError && <p role="alert">{uploadError}</p>}
 
       {activePhoto && (
         <div className="photo-modal-overlay" onClick={() => setActiveId(null)}>

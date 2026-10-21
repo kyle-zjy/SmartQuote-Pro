@@ -6,6 +6,7 @@ import { isValidQuoteNumber } from '../lib/quoteNumberValidation'
 import QuoteAddresses from '../components/QuoteAddresses'
 import { useAuth } from '../lib/authContext'
 import { recordQuoteOwner } from '../lib/reviewStore'
+import { withQuoteStorageLock } from '../lib/quoteWriteLock'
 
 function todayISO(): string {
   return new Date().toISOString().slice(0, 10)
@@ -26,7 +27,7 @@ export default function QuoteIntake() {
   const [error, setError] = useState('')
   const [date, setDate] = useState(todayISO())
 
-  function handleCreate() {
+  async function handleCreate() {
     if (quoteNumber.trim() && !isValidQuoteNumber(quoteNumber.trim())) {
       setError('Enter a quote number with up to 50 characters. Any characters are allowed.')
       return
@@ -41,7 +42,9 @@ export default function QuoteIntake() {
       return
     }
 
-    const quoteNo = newQuote(quoteNumber.trim() || undefined)
+    let quoteNo: string | null
+    try { quoteNo = await newQuote(quoteNumber.trim() || undefined) }
+    catch (error) { setError(error instanceof Error ? error.message : 'Could not create this quote.'); return }
     if (!quoteNo) {
       setError('This quote number is already in use. Enter another number or leave it blank to generate one.')
       return
@@ -52,7 +55,7 @@ export default function QuoteIntake() {
     setQuoteDate(date)
     if (user) {
       try {
-        recordQuoteOwner(quoteNo, user.id)
+        await withQuoteStorageLock(() => recordQuoteOwner(quoteNo!, user.id))
       } catch {
         // Ownership tracking is best-effort.
       }

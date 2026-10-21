@@ -32,6 +32,8 @@ export interface ItemDraft {
   meshOption: string
   doubleHung: boolean
   fitExtras: string[]
+  fitExtraPrices?: QuoteAddon[]
+  unpricedAddons?: string[]
   frameColourMode: 'default' | 'custom'
   customFrameColour: string
   addons: QuoteAddon[]
@@ -66,6 +68,8 @@ export function emptyItemDraft(): ItemDraft {
     meshOption: STANDARD_MESH,
     doubleHung: false,
     fitExtras: [],
+    fitExtraPrices: [],
+    unpricedAddons: [],
     frameColourMode: 'default',
     customFrameColour: '',
     addons: [],
@@ -137,6 +141,8 @@ export function draftFromItem(item: QuoteLineItem, products: Product[] = []): It
     meshOption: item.material ?? STANDARD_MESH,
     doubleHung: item.doubleHung ?? false,
     fitExtras: item.fitExtras ?? [],
+    fitExtraPrices: item.fitExtraPrices ?? [],
+    unpricedAddons: [],
     frameColourMode: item.frameColourMode ?? 'default',
     customFrameColour: item.customFrameColour ?? '',
     addons: item.addons ?? [],
@@ -159,6 +165,11 @@ interface ComparableItem {
   location?: string
   configurationCode?: string
   productKey?: string
+  categoryKey?: string
+  doubleHung?: boolean
+  measurements?: Record<string, string>
+  fitExtras?: string[]
+  fitExtraPrices?: QuoteAddon[]
   openingWidthMm?: number
   openingHeightMm?: number
   lockHeightMm?: number | null
@@ -189,6 +200,11 @@ function itemSignature(item: ComparableItem): string {
     location: item.location ?? '',
     configurationCode: item.configurationCode ?? '',
     productKey: item.productKey ?? '',
+    categoryKey: item.categoryKey ?? '',
+    doubleHung: item.doubleHung ?? false,
+    measurements: Object.fromEntries(Object.entries(item.measurements ?? {}).sort(([a], [b]) => a.localeCompare(b))),
+    fitExtras: [...(item.fitExtras ?? [])].sort(),
+    fitExtraPrices: [...(item.fitExtraPrices ?? [])].sort((a, b) => a.name.localeCompare(b.name)),
     openingWidthMm: item.openingWidthMm ?? null,
     openingHeightMm: item.openingHeightMm ?? null,
     lockHeightMm: item.lockHeightMm ?? null,

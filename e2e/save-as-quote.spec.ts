@@ -6,6 +6,7 @@ test('saves current edits independently and subsequent saves only update the new
   await startNewQuote(page)
   await addOpening(page, { location: 'Living Room', configCode: 'HDX-L' })
   await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
   const originalURL = page.url()
   const originalArchive = await page.evaluate(() => localStorage.getItem('smartquote-pro:archive'))
 
@@ -19,6 +20,7 @@ test('saves current edits independently and subsequent saves only update the new
   await expect(page.getByLabel('Quote number')).toHaveCount(0)
   await page.getByLabel('Frame colour (default)').selectOption('Bronze')
   await page.getByRole('button', { name: 'Update saved quote', exact: true }).click()
+  await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByLabel('Frame colour (default)')).toHaveValue('Bronze')
 
