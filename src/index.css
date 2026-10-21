@@ -1583,6 +1583,11 @@ textarea:disabled {
   margin: 0.45rem 0 0;
 }
 
+.quote-line-drawing {
+  margin-top: 0.35rem;
+  max-width: 220px;
+}
+
 .quote-sheet-foot {
   display: grid;
   grid-template-columns: 1fr 104px 120px;

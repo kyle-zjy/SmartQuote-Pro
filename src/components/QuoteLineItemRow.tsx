@@ -1,7 +1,10 @@
-import { customerQuoteNote, displayDescription, productPrice, quoteExtras, extraLabel, isPetDoorExtra, petDoorCustomerQuoteNote, type QuoteAudience } from '../lib/quotePrint'
+import { customerQuoteNote, displayDescription, productPrice, quoteExtras, extraLabel, petDoorCustomerQuoteNote, type QuoteAudience } from '../lib/quotePrint'
 import type { QuoteLineItem } from '../lib/quoteContext'
-import { lineAmount } from '../lib/quoteTotals'
+import { itemPrice, lineAmount } from '../lib/quoteTotals'
 import { usePricing } from '../lib/pricingContext'
+import { sheetCodeImage } from '../lib/sheetCodeImages'
+import { configLabel } from '../lib/quoteSheet'
+import MeasurementDrawingPreview from './MeasurementDrawingPreview'
 
 function siteDetails(item: QuoteLineItem): string {
   return [
@@ -39,26 +42,44 @@ export default function QuoteLineItemRow({
   const customerNote = customerQuoteNote(item)
   const petDoorNote = petDoorCustomerQuoteNote(item)
   const extras = quoteExtras(item)
-  const petDoorExtraIndex = extras.findIndex((extra) => isPetDoorExtra(extra.name))
   const basePrice = productPrice(item)
+  const fullPrice = itemPrice(item)
   const description = displayDescription(item, audience, pricingData)
+  const addonsLine = extras
+    .map((extra) => (audience === 'customer' ? `${extraLabel(extra.name)} (${formatCurrency(extra.price)})` : extraLabel(extra.name)))
+    .join(' · ')
   const details = (
     <>
-      {audience === 'customer' && customerNote && !petDoorNote && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {customerNote}</div>}
+      {audience === 'customer' && (
+        <>
+          {customerNote && !petDoorNote && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {customerNote}</div>}
+          {addonsLine && <div className="small">Addons: {addonsLine}</div>}
+          {petDoorNote && <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {petDoorNote}</div>}
+        </>
+      )}
       {audience === 'factory' && (
         <>
           {item.configurationCode && <div className="small">Configuration: {item.configurationCode}</div>}
           {item.measurements && Object.keys(item.measurements).length > 0 && (
             <div className="small">Measurements: {Object.entries(item.measurements).map(([key, value]) => `${key}: ${value}`).join(' · ')}</div>
           )}
+          {addonsLine && <div className="small">Addons: {addonsLine}</div>}
           {siteDetails(item) && <div className="muted small">{siteDetails(item)}</div>}
           {item.note && <div className="muted small">Production notes: {item.note}</div>}
+          {item.measurementDrawing && item.measurementDrawing.length > 0 && item.configurationCode && sheetCodeImage(item.configurationCode) && (
+            <div className="quote-line-drawing">
+              <MeasurementDrawingPreview
+                src={sheetCodeImage(item.configurationCode) ?? ''}
+                alt={configLabel(item.configurationCode)}
+                strokes={item.measurementDrawing}
+              />
+            </div>
+          )}
         </>
       )}
     </>
   )
   return (
-    <>
     <tr>
       <td className="quote-sheet__qty">
         {readOnly ? (
@@ -91,21 +112,25 @@ export default function QuoteLineItemRow({
           </>
         )}
       </td>
-      <td className="quote-sheet__price">
-        {readOnly ? (
-          formatCurrency(basePrice)
-        ) : (
-          <input
-            type="number"
-            min={0}
-            step={1}
-            value={basePrice}
-            onChange={(e) => onUnitPriceChange?.(Number(e.target.value) + extras.reduce((sum, extra) => sum + extra.price, 0))}
-            className="price-input"
-          />
-        )}
-      </td>
-      <td className="quote-sheet__price">{formatCurrency(lineAmount(basePrice, item.quantity))}</td>
+      {audience === 'customer' && (
+        <>
+          <td className="quote-sheet__price">
+            {readOnly ? (
+              formatCurrency(fullPrice)
+            ) : (
+              <input
+                type="number"
+                min={0}
+                step={1}
+                value={basePrice}
+                onChange={(e) => onUnitPriceChange?.(Number(e.target.value) + extras.reduce((sum, extra) => sum + extra.price, 0))}
+                className="price-input"
+              />
+            )}
+          </td>
+          <td className="quote-sheet__price">{formatCurrency(lineAmount(fullPrice, item.quantity))}</td>
+        </>
+      )}
       {!readOnly && (
         <td className="no-print">
           <button type="button" className="link-button" onClick={onRemove}>
@@ -114,20 +139,5 @@ export default function QuoteLineItemRow({
         </td>
       )}
     </tr>
-    {extras.map((extra, index) => (
-      <tr key={`${extra.name}-${index}`} className="quote-sheet__extra">
-        <td className="quote-sheet__qty">{item.quantity}</td>
-        <td>
-          <div>Extra — {extraLabel(extra.name)}</div>
-          {audience === 'customer' && index === petDoorExtraIndex && petDoorNote && (
-            <div className="small" style={{ whiteSpace: 'pre-wrap' }}>Customer notes: {petDoorNote}</div>
-          )}
-        </td>
-        <td className="quote-sheet__price">{formatCurrency(extra.price)}</td>
-        <td className="quote-sheet__price">{formatCurrency(lineAmount(extra.price, item.quantity))}</td>
-        {!readOnly && <td className="no-print" />}
-      </tr>
-    ))}
-    </>
   )
 }

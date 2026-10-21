@@ -68,6 +68,8 @@ export interface QuoteLineItem {
   location?: string
   configurationCode?: string
   measurements?: Record<string, string>
+  /** Freehand annotation drawn over the configuration diagram on the Measure step, if any. */
+  measurementDrawing?: DrawStroke[]
   lockHeightMm?: number | null
   lockSide?: 'left' | 'right' | ''
   centreTongue?: boolean
