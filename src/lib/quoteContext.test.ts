@@ -105,6 +105,11 @@ describe('quote number round-trip (Issue 2)', () => {
 })
 
 describe('nextSequenceValue (auto-numbering guard for alphanumeric quote numbers)', () => {
+  it('recovers an already corrupted or unsafe counter', () => {
+    expect(nextSequenceValue(NaN, '')).toBe(33020)
+    expect(nextSequenceValue(Infinity, '33099')).toBe(33099)
+    expect(nextSequenceValue(33020, '99999999999999999999999')).toBe(33020)
+  })
   it('advances the sequence when the entered quote number is purely numeric and higher', () => {
     expect(nextSequenceValue(33020, '33098')).toBe(33098)
   })
@@ -191,9 +196,10 @@ describe('normalizeQuote opening dimensions', () => {
 
 describe('duplicateQuote independence (Issue 7)', () => {
   it('assigns a new quote number and resets lifecycle fields on the duplicate', () => {
-    const source = sampleQuote('33098', { version: 3, status: 'issued', paid: 200 })
+    const source = sampleQuote('33098', { version: 3, status: 'issued', paid: 200, quoteNumber: 'CUSTOM-OLD' })
     const duplicated = buildDuplicatedQuote(source, '33099')
     expect(duplicated.quoteNo).toBe('33099')
+    expect(duplicated.quoteNumber).toBe('33099')
     expect(duplicated.version).toBe(1)
     expect(duplicated.status).toBe('draft')
     expect(duplicated.dealStatus).toBe('open')

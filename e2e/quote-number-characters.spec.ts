@@ -10,6 +10,7 @@ test('arbitrary quote number survives navigation, saving and reload', async ({ p
   await page.getByRole('button', { name: 'Start quote', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Quote ${number}`)
   await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
   await page.reload()
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Quote ${number}`)
   await page.getByRole('link', { name: '+ Add Opening', exact: true }).click()

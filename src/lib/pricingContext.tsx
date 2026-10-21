@@ -1,63 +1,76 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react'
+import { workspaceStorage } from './workspaceStorage'
+import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import pricingDefault from '../data/pricing.json'
 import addonsDefault from '../data/addons.json'
 import type { AddonItem, PricingData } from '../types/pricing'
-
+import { SERVER_DATA_EVENT, SERVER_MODE } from './apiClient'
+import { sharedRecordRevision, saveSharedSetting } from './serverWorkspace'
 const DEFAULT_DATA = pricingDefault as PricingData
 const DEFAULT_ADDONS = addonsDefault as AddonItem[]
-
 interface PricingState {
   data: PricingData
   addons: AddonItem[]
   source: 'default' | 'imported'
   fileName: string | null
 }
-
-// Feels like (1) Unsafe as hell and (2) Unnecessary on to be sessiononly. 
-// Could instead make it an admin function that changes it for everyone on next system reboot.
 interface PricingContextValue extends PricingState {
-  /** Parses the file client-side and swaps it in for the rest of this browser session only. */
   importFromFile: (file: File) => Promise<{ warnings: string[] }>
-  resetToDefault: () => void
+  resetToDefault: () => Promise<void>
 }
-
 const PricingContext = createContext<PricingContextValue | null>(null)
-
 const initialState: PricingState = {
   data: DEFAULT_DATA,
   addons: DEFAULT_ADDONS,
   source: 'default',
   fileName: null,
 }
-
+const KEY = 'smartquote-pro:pricing'
+function readPricing() {
+  if (SERVER_MODE) {
+    try {
+      return (JSON.parse(workspaceStorage.getItem(KEY) ?? 'null') as PricingState) ?? initialState
+    } catch {
+      /* Use built-in defaults. */
+    }
+  }
+  return initialState
+}
 export function PricingProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<PricingState>(initialState)
-
+  const [state, setState] = useState<PricingState>(readPricing)
+  useEffect(() => {
+    const refresh = () => setState(readPricing())
+    window.addEventListener(SERVER_DATA_EVENT, refresh)
+    return () => window.removeEventListener(SERVER_DATA_EVENT, refresh)
+  }, [])
   const value = useMemo<PricingContextValue>(
     () => ({
       ...state,
-      importFromFile: async (file: File) => {
+      importFromFile: async (file) => {
+        const expected = sharedRecordRevision('pricing')
         const { parseExcelFile } = await import('./xlsxImport')
         const result = await parseExcelFile(file)
-        setState((prev) => ({
+        const next: PricingState = {
           data: result.data,
-          // A missing/unrecognized addons sheet shouldn't wipe out addons that were working before.
-          addons: result.addons.length > 0 ? result.addons : prev.addons,
+          addons: result.addons.length ? result.addons : state.addons,
           source: 'imported',
           fileName: file.name,
-        }))
+        }
+        if (SERVER_MODE) await saveSharedSetting('pricing', next, expected)
+        setState(next)
         return { warnings: result.warnings }
       },
-      resetToDefault: () => setState(initialState),
+      resetToDefault: async () => {
+        if (SERVER_MODE)
+          await saveSharedSetting('pricing', initialState, sharedRecordRevision('pricing'))
+        setState(initialState)
+      },
     }),
     [state],
   )
-
   return <PricingContext.Provider value={value}>{children}</PricingContext.Provider>
 }
-
-export function usePricing(): PricingContextValue {
-  const ctx = useContext(PricingContext)
-  if (!ctx) throw new Error('usePricing must be used within a PricingProvider')
-  return ctx
+export function usePricing() {
+  const value = useContext(PricingContext)
+  if (!value) throw new Error('usePricing must be used within PricingProvider')
+  return value
 }

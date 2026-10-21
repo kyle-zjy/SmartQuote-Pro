@@ -364,11 +364,6 @@ export default function MeasurementStep({
                 Total measured size: {formatSheetMm(size.openingHeight)} × {formatSheetMm(size.openingWidth)} mm
                 ({isSliding ? 'marked widths added together' : 'largest marked height and width'})
               </p>
-              {pricingGroups.map((group, index) => (
-                <p key={`${group.width}-${index}`}>
-                  Size used for pricing{group.measurementKey ? ` (${group.measurementKey}${group.widthDivisor && group.widthDivisor > 1 ? ` ÷ ${group.widthDivisor}` : ''})` : ''}: {formatSheetMm(group.height)} × {formatSheetMm(group.width)} mm × {group.quantity}
-                </p>
-              ))}
             </div>
           ) : (
             <p className="muted small">Mark and fill at least one height and one width to see the screen size.</p>

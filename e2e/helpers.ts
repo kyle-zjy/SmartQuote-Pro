@@ -99,6 +99,16 @@ export async function openLocationAndConfig(
   for (const [key, value] of Object.entries(measurements)) {
     await page.getByLabel(key, { exact: true }).fill(value)
   }
+  // Configurations now require every shown H/W field, including repeated measurements.
+  // Preserve explicit values while completing the helper's otherwise uniform opening.
+  const fields = page.getByRole('spinbutton', { name: /^[HW]\d+$/ })
+  for (const field of await fields.all()) {
+    const name = await field.getAttribute('aria-label') ?? ''
+    const axis = name.match(/^([HW])\d+/)?.[1]
+    if (axis && !await field.inputValue()) {
+      await field.fill((axis === 'H' ? heightMm ?? measurements.H1 : widthMm ?? measurements.W1) ?? '')
+    }
+  }
   if (heightMm) await page.getByLabel('H1', { exact: true }).fill(heightMm)
   if (widthMm) await page.getByLabel('W1', { exact: true }).fill(widthMm)
   await page.getByRole('button', { name: 'Continue' }).click()

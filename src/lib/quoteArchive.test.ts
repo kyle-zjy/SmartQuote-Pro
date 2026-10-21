@@ -63,6 +63,20 @@ function sampleQuote(quoteNo: string, name: string, version = 1): QuoteState {
 }
 
 describe('quoteArchive', () => {
+  it('retains room photo references and captions when quota fallback omits image bytes', () => {
+    const storage = new MemoryStorage()
+    const originalWrite = storage.setItem.bind(storage)
+    storage.setItem = (key, value) => {
+      if (value.includes('data:large-image')) throw new DOMException('Full', 'QuotaExceededError')
+      originalWrite(key, value)
+    }
+    const quote = sampleQuote('photo-quote', 'Ada')
+    quote.roomPhotos = { Living: [{ id: 'photo-1', caption: 'Retain this note', dataUrl: 'data:large-image' }] }
+    const result = upsertArchivedQuote(quote, { total: 100 }, storage)
+    expect(result.photosOmitted).toBe(true)
+    expect(result.record.quote.roomPhotos).toEqual({ Living: [{ id: 'photo-1', caption: 'Retain this note', dataUrl: '' }] })
+    expect(quote.roomPhotos.Living[0].dataUrl).toBe('data:large-image')
+  })
   it('saves a quote and lists newest quote numbers first', () => {
     const storage = new MemoryStorage()
     upsertArchivedQuote(sampleQuote('00033021', 'Ada'), { total: 110 }, storage)

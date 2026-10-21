@@ -1,4 +1,7 @@
+import { workspaceStorage } from '../../lib/workspaceStorage'
 import { isQuotaError } from '../../lib/quotePersist'
+import { SERVER_MODE } from '../../lib/apiClient'
+import { saveRemoteWizard, reportSyncError } from '../../lib/serverWorkspace'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
 import type { ItemDraft } from './itemDraft'
 import type { Step } from './wizardSteps'
@@ -13,7 +16,8 @@ import type { Step } from './wizardSteps'
  * quota issue in one can never corrupt the other.
  */
 
-const STORAGE_KEY = 'smartquote-pro:wizard-drafts'
+export const WIZARD_STORAGE_KEY = 'smartquote-pro:wizard-drafts'
+const STORAGE_KEY = WIZARD_STORAGE_KEY
 export const WIZARD_DRAFT_PERSIST_MS = 300
 const MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000
 
@@ -73,7 +77,7 @@ function stripPhotoData(snapshot: WizardDraftSnapshot): WizardDraftSnapshot {
   }
 }
 
-export function loadWizardDraft(key: WizardDraftKey, storage: Storage = localStorage): WizardDraftSnapshot | null {
+export function loadWizardDraft(key: WizardDraftKey, storage: Storage = workspaceStorage): WizardDraftSnapshot | null {
   try {
     return readAll(storage)[keyString(key)] ?? null
   } catch {
@@ -81,7 +85,7 @@ export function loadWizardDraft(key: WizardDraftKey, storage: Storage = localSto
   }
 }
 
-export function saveWizardDraft(key: WizardDraftKey, snapshot: WizardDraftSnapshot, storage: Storage = localStorage): void {
+export function saveWizardDraft(key: WizardDraftKey, snapshot: WizardDraftSnapshot, storage: Storage = workspaceStorage): void {
   try {
     const all = readAll(storage)
     all[keyString(key)] = snapshot
@@ -92,17 +96,19 @@ export function saveWizardDraft(key: WizardDraftKey, snapshot: WizardDraftSnapsh
       all[keyString(key)] = stripPhotoData(snapshot)
       writeAll(storage, all)
     }
+    if (SERVER_MODE && storage === workspaceStorage) void saveRemoteWizard(key.quoteNo,keyString(key),snapshot as unknown as Record<string,unknown>).catch(reportSyncError)
   } catch {
     // Storage unavailable (quota exhausted even after stripping photos, or private mode) --
     // the wizard keeps working in memory, it just won't survive navigating away this time.
   }
 }
 
-export function clearWizardDraft(key: WizardDraftKey, storage: Storage = localStorage): void {
+export function clearWizardDraft(key: WizardDraftKey, storage: Storage = workspaceStorage): void {
   try {
     const all = readAll(storage)
     delete all[keyString(key)]
     writeAll(storage, all)
+    if (SERVER_MODE && storage === workspaceStorage) void saveRemoteWizard(key.quoteNo,keyString(key),null).catch(reportSyncError)
   } catch {
     // ignore
   }
@@ -111,7 +117,7 @@ export function clearWizardDraft(key: WizardDraftKey, storage: Storage = localSt
 /** In-progress wizard sessions for a quote, most-recently-touched first -- backs a "resume" prompt on the quote workspace. */
 export function listWizardDrafts(
   quoteNo: string,
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
 ): Array<{ key: WizardDraftKey; snapshot: WizardDraftSnapshot }> {
   try {
     const all = readAll(storage)

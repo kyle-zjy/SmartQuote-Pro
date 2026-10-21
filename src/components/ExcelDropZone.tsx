@@ -1,8 +1,11 @@
 import { useRef, useState } from 'react'
 import { usePricing } from '../lib/pricingContext'
+import { useAuth } from '../lib/authContext'
+import { SERVER_MODE } from '../lib/apiClient'
 
 export default function ExcelDropZone() {
   const { data, source, fileName, importFromFile, resetToDefault } = usePricing()
+  const {isAdmin} = useAuth()
   const [isDragging, setIsDragging] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'error'>('idle')
   const [error, setError] = useState<string | null>(null)
@@ -24,13 +27,14 @@ export default function ExcelDropZone() {
     }
   }
 
-  function handleReset() {
-    resetToDefault()
-    setStatus('idle')
-    setError(null)
-    setWarnings([])
+  async function handleReset() {
+    try {
+      await resetToDefault()
+      setStatus('idle'); setError(null); setWarnings([])
+    } catch (error) { setStatus('error'); setError(error instanceof Error ? error.message : 'Could not restore default prices.') }
   }
 
+  if (SERVER_MODE && !isAdmin) return <p className="muted small">Using the shared price list ({data.products.length} products). An administrator can update it from Admin → Pricing.</p>
   return (
     <div className="dropzone-wrap">
       <div

@@ -1,3 +1,4 @@
+import { workspaceStorage } from './workspaceStorage'
 export type ReviewStatus = 'pending' | 'approved' | 'returned'
 
 export interface ReviewRecord {
@@ -6,6 +7,8 @@ export interface ReviewRecord {
   submittedBy: string
   submittedAt: string
   status: ReviewStatus
+  /** Exact commercial content submitted, excluding image data and payments. */
+  contentKey?: string
   reviewedBy?: string
   reviewedAt?: string
   reviewNote?: string
@@ -14,7 +17,7 @@ export interface ReviewRecord {
 export const REVIEW_KEY = 'smartquote-pro:reviews'
 export const OWNER_KEY = 'smartquote-pro:quote-owners'
 
-export function listReviews(storage: Storage = localStorage): ReviewRecord[] {
+export function listReviews(storage: Storage = workspaceStorage): ReviewRecord[] {
   try {
     const parsed = JSON.parse(storage.getItem(REVIEW_KEY) ?? '[]') as ReviewRecord[]
     return Array.isArray(parsed) ? parsed : []
@@ -27,7 +30,7 @@ function writeReviews(reviews: ReviewRecord[], storage: Storage) {
   storage.setItem(REVIEW_KEY, JSON.stringify(reviews))
 }
 
-export function getReview(quoteNo: string, version: number, storage: Storage = localStorage): ReviewRecord | undefined {
+export function getReview(quoteNo: string, version: number, storage: Storage = workspaceStorage): ReviewRecord | undefined {
   return listReviews(storage).find((r) => r.quoteNo === quoteNo && r.version === version)
 }
 
@@ -36,7 +39,8 @@ export function recordSubmission(
   quoteNo: string,
   version: number,
   staffId: string,
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
+  contentKey?: string,
 ): ReviewRecord {
   const record: ReviewRecord = {
     quoteNo,
@@ -44,6 +48,7 @@ export function recordSubmission(
     submittedBy: staffId,
     submittedAt: new Date().toISOString(),
     status: 'pending',
+    contentKey,
   }
   const rest = listReviews(storage).filter((r) => !(r.quoteNo === quoteNo && r.version === version))
   writeReviews([record, ...rest], storage)
@@ -56,11 +61,11 @@ export function decideReview(
   decision: Exclude<ReviewStatus, 'pending'>,
   reviewerId: string,
   note: string,
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
 ): ReviewRecord | null {
   let updated: ReviewRecord | null = null
   const next = listReviews(storage).map((r) => {
-    if (r.quoteNo !== quoteNo || r.version !== version) return r
+    if (r.quoteNo !== quoteNo || r.version !== version || r.status !== 'pending') return r
     updated = {
       ...r,
       status: decision,
@@ -74,7 +79,7 @@ export function decideReview(
   return updated
 }
 
-export function readOwners(storage: Storage = localStorage): Record<string, string> {
+export function readOwners(storage: Storage = workspaceStorage): Record<string, string> {
   try {
     const parsed = JSON.parse(storage.getItem(OWNER_KEY) ?? '{}') as Record<string, string>
     return parsed && typeof parsed === 'object' ? parsed : {}
@@ -83,7 +88,7 @@ export function readOwners(storage: Storage = localStorage): Record<string, stri
   }
 }
 
-export function recordQuoteOwner(quoteNo: string, staffId: string, storage: Storage = localStorage) {
+export function recordQuoteOwner(quoteNo: string, staffId: string, storage: Storage = workspaceStorage) {
   const owners = readOwners(storage)
   if (owners[quoteNo]) return
   storage.setItem(OWNER_KEY, JSON.stringify({ ...owners, [quoteNo]: staffId }))

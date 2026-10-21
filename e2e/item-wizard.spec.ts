@@ -59,8 +59,8 @@ test.describe('item wizard', () => {
     await page.getByLabel('H1', { exact: true }).fill('2100')
     await page.getByLabel('W1', { exact: true }).fill('900')
     await page.getByLabel('W2', { exact: true }).fill('1000')
-    await expect(page.getByText(/Opening used for sizing: 2100 × 1000 mm/)).toBeVisible()
-    await expect(page.getByText(/Size used for pricing: 2100 × 500 mm/)).toBeVisible()
+    await expect(page.getByText(/Total measured size: 2100 × 1000 mm/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing/)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByRole('heading', { name: 'Add-ons' })).toBeVisible()
     await page.getByRole('button', { name: 'Measurements' }).click()
@@ -80,8 +80,7 @@ test.describe('item wizard', () => {
     await page.getByLabel('W2', { exact: true }).fill('900')
 
     await expect(page.getByText(/Total measured size: 2100 .* 1700 mm/)).toBeVisible()
-    await expect(page.getByText(/Size used for pricing \(W1\): 2100 .* 800 mm .* 1/)).toBeVisible()
-    await expect(page.getByText(/Size used for pricing \(W2\): 2100 .* 900 mm .* 1/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing/)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByText('Product price including all panels and mesh: $848.00')).toBeVisible()
   })
@@ -98,7 +97,7 @@ test.describe('item wizard', () => {
     await page.getByLabel('W1', { exact: true }).fill('1600')
 
     await expect(page.getByText(/Total measured size: 2100 .* 1600 mm/)).toBeVisible()
-    await expect(page.getByText(/Size used for pricing \(W1 ÷ 2\): 2100 .* 800 mm .* 2/)).toBeVisible()
+    await expect(page.getByText(/Size used for pricing/)).toHaveCount(0)
     await page.getByRole('button', { name: 'Continue' }).click()
     await expect(page.getByText('Product price including all panels and mesh: $832.00')).toBeVisible()
   })
@@ -224,6 +223,8 @@ test.describe('item wizard', () => {
     await expect(card.getByText(/2200 × 2400 mm/)).toBeVisible()
 
     await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+
+    await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
     await page.getByRole('navigation').first().getByRole('link', { name: /^Quotes/ }).click()
     await page.getByRole('button', { name: 'Open' }).click()
     await expect(page.locator('.quote-item-card').getByText(/2200 × 2400 mm/)).toBeVisible()

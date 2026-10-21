@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { QuoteState } from './quoteContext'
 import { quoteReducer } from './quoteContext'
+import { COMPANY } from '../data/company'
 import {
   canIssueQuote,
   canReviseQuote,
@@ -34,6 +35,16 @@ function draftQuote(overrides: Partial<QuoteState> = {}): QuoteState {
 }
 
 describe('quoteLifecycle', () => {
+  it('freezes company, payment details, validity and terms independently of live settings', () => {
+    const company = structuredClone(COMPANY)
+    const snapshot = createIssuedSnapshot(draftQuote(), 0, 0.5, '2026-10-21T00:00:00.000Z', company)
+    company.name = 'Changed later'
+    company.bank.account = '999'
+    company.validityDays = 7
+    company.termsContract = 'New contract'
+    expect(snapshot.document?.company).toEqual(COMPANY)
+    expect(snapshot.document?.company.bank).not.toBe(company.bank)
+  })
   it('only drafts with line items can be issued', () => {
     expect(canIssueQuote(draftQuote())).toBe(true)
     expect(canIssueQuote(draftQuote({ items: [] }))).toBe(false)
@@ -115,6 +126,13 @@ describe('quoteLifecycle', () => {
 })
 
 describe('quoteReducer issue lock', () => {
+  it('keeps the final and unit price in sync before and after reopening a manual override', () => {
+    const quote = draftQuote()
+    const changed = quoteReducer(quote, { type: 'UPDATE_ITEM', id: '1', patch: { finalPrice: 700, priceOverridden: true } })
+    expect(changed.items[0]).toMatchObject({ unitPrice: 700, finalPrice: 700, calculatedPrice: 1203 })
+    const reopened = quoteReducer(changed, { type: 'LOAD_QUOTE', quote: changed })
+    expect(reopened.items).toEqual(changed.items)
+  })
   it('rejects new line items after the quote is issued', () => {
     const snapshot = createIssuedSnapshot(draftQuote(), 220, 0.5, '2026-08-24T00:00:00.000Z')
     const issued = quoteReducer(draftQuote(), { type: 'ISSUE', snapshot })

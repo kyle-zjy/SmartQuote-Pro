@@ -5,11 +5,12 @@ import ProductQuoteNotes from '../../components/ProductQuoteNotes'
 import { calcConfiguredGroupPrice, STANDARD_MESH } from '../../lib/configuredPrice'
 import { effectiveFrameColour } from '../../lib/frameColour'
 import { formatCurrency } from '../../lib/formatCurrency'
-import { fitExtraPhrase, LINE_FIT_EXTRAS } from '../../lib/lineExtras'
+import { fitExtraPhrase } from '../../lib/lineExtras'
 import { describeStructuredItem, formatItemDimensions, productQuoteLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { adjustedPricingGroups, configLabel, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
 import { calcAddonsTotal, type ItemDraft } from './itemDraft'
+import { draftFittingCharges } from './itemCharges'
 
 export default function ReviewItemStep({
   draft,
@@ -49,14 +50,11 @@ export default function ReviewItemStep({
     })
     : null
 
-  const fitExtraItems = LINE_FIT_EXTRAS.map((extra) => ({
-    ...extra,
-    price: addons.find((item) => item.name === extra.addonName)?.price ?? 0,
-  })).filter((extra) => draft.fitExtras.includes(extra.addonName) && extra.price > 0)
+  const fitExtraItems = draftFittingCharges(draft, addons)
   const fitExtraTotal = fitExtraItems.reduce((sum, extra) => sum + extra.price, 0)
   const addonsTotal = calcAddonsTotal(draft.addons)
   const unitPrice = draft.serviceOnly
-    ? Number(draft.servicePrice || 0) + addonsTotal
+    ? Number(draft.servicePrice || 0) + fitExtraTotal + addonsTotal
     : configured?.unitPrice != null ? configured.unitPrice + fitExtraTotal + addonsTotal : null
   const lineTotal = unitPrice != null ? unitPrice * draft.quantity : null
 
@@ -111,8 +109,8 @@ export default function ReviewItemStep({
         <dt>Frame colour</dt>
         <dd>{colourName}</dd>
         <dt>Fitting extras</dt>
-        <dd>{fitExtraItems.length > 0 ? fitExtraItems.map((e) => fitExtraPhrase(e.addonName)).join(', ') : 'None'}</dd>
-        <dt>Add-ons</dt>
+        <dd>{fitExtraItems.length > 0 ? fitExtraItems.map((e) => `${fitExtraPhrase(e.name)} (${formatCurrency(e.price)})`).join(', ') : 'None'}</dd>
+        <dt>{draft.serviceOnly ? 'Extras' : 'Add-ons'}</dt>
         <dd>
           {draft.addons.length > 0
             ? draft.addons.map((a) => `${a.name} (${formatCurrency(a.price)})`).join(', ')

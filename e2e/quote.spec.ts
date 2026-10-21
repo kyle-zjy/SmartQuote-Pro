@@ -6,12 +6,14 @@ test('customer and factory previews separate production notes and pet door condi
   await startNewQuote(page)
   await addOpening(page, {
     location: 'Entry', configCode: 'HDX-L',
+    measurements: { H1: '2100', H2: '2100', W1: '900', W2: '900', W3: '900' },
     addons: ['PET DOOR - MEDIUM'], note: 'Cut frame after site measure',
   })
   await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
   const customer = page.getByRole('dialog', { name: 'Preview quote', exact: true })
-  await expect(customer.getByText('Extra — Medium Pet Door')).toBeVisible()
-  await expect(customer.getByText('Customer notes: Adding a pet door means this door is no longer considered a security door.')).toBeVisible()
+  const petDoorRow = customer.locator('tr.quote-sheet__extra').filter({ hasText: 'Extra — Medium Pet Door' })
+  await expect(petDoorRow).toContainText('Customer notes: Adding a pet door means this door is no longer considered a security door.')
+  await expect(customer.getByText('Customer notes: Adding a pet door means this door is no longer considered a security door.')).toHaveCount(1)
   await expect(customer.getByText(/Cut frame after site measure/)).toHaveCount(0)
   await customer.getByRole('button', { name: 'Back' }).click()
   await page.getByRole('button', { name: 'Preview Factory Quote' }).click()
@@ -38,6 +40,7 @@ test('extras can be removed individually and stay removed after reloading', asyn
   await expect(card.getByLabel('Product unit price')).toHaveValue(productPrice)
   await expect.poll(async () => parseAud(await total.innerText())).toBeCloseTo(before - 190 * 2 * 1.1, 2)
   await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
   await page.reload()
   await expect(card.getByText('Extra — Medium Pet Door')).toHaveCount(0)
   await expect(card.getByText('Extra — TRIPLE LOCKS')).toBeVisible()
@@ -91,7 +94,7 @@ test.describe('quote workspace', () => {
     await expect(page.getByText('This quote is submitted for office review and can still be edited.')).toBeVisible()
 
     await page.getByRole('button', { name: 'Issue quote' }).click()
-    await expect(page.getByText(/^Issued/)).toBeVisible()
+    await expect(page.getByText('Issued', { exact: true })).toBeVisible()
     await expect(page.getByLabel('Frame colour (default)')).toBeDisabled()
 
     await expect(page.getByRole('button', { name: '+ Add Opening' })).toBeDisabled()
@@ -135,7 +138,7 @@ test.describe('quote workspace', () => {
     await page.getByRole('button', { name: 'Clear items' }).click()
 
     await expect(page.locator('.quote-item-card')).toHaveCount(0)
-    await expect(page.getByText('No openings added yet.')).toBeVisible()
+    await expect(page.getByText('No openings added yet', { exact: true })).toBeVisible()
   })
 })
 
@@ -215,6 +218,7 @@ test('custom customer notes survive saving and stay out of the factory preview',
     customerNote: 'Client approved the pet door location.', note: 'Door requires factory inspection.',
   })
   await page.getByRole('button', { name: 'Save quote', exact: true }).click()
+  await expect(page.getByText('Saved on this browser. Open it later from Quotes.', { exact: true })).toBeVisible()
   await page.reload()
   await page.getByRole('button', { name: 'Preview Customer Quote' }).click()
   const customer = page.getByRole('dialog', { name: 'Preview quote', exact: true })

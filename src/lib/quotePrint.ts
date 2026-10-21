@@ -10,9 +10,13 @@ export type QuoteAudience = 'customer' | 'factory'
 // Replace with Goldco's approved wording when supplied.
 export const PET_DOOR_DISCLAIMER = 'Adding a pet door means this door is no longer considered a security door.'
 
+export function isPetDoorExtra(name: string): boolean {
+  return /\bpet\s*door\b/i.test(name)
+}
+
 export function petDoorOptions(item: Pick<QuoteLineItem, 'addons' | 'fitExtras'>): string[] {
   const names = [...(item.addons ?? []).map((addon) => addon.name), ...(item.fitExtras ?? [])]
-  return [...new Set(names.filter((name) => /\bpet\s*door\b/i.test(name)).map((name) => {
+  return [...new Set(names.filter(isPetDoorExtra).map((name) => {
     const size = name.match(/^pet\s*door\s*-\s*(small|medium|large)$/i)?.[1]
     return size ? `${size[0].toUpperCase()}${size.slice(1).toLowerCase()} Pet Door` : name
   }))]
@@ -58,6 +62,14 @@ export function removeQuoteExtra(item: QuoteLineItem, name: string): Partial<Quo
 export function customerQuoteNote(item: Pick<QuoteLineItem, 'customerNote' | 'addons' | 'fitExtras'>): string {
   // An explicitly empty note must stay empty; fallback only for older/unedited items.
   return item.customerNote ?? (petDoorOptions(item).length > 0 ? PET_DOOR_DISCLAIMER : '')
+}
+
+export function petDoorCustomerQuoteNote(
+  item: Pick<QuoteLineItem, 'customerNote' | 'addons' | 'fitExtras'>,
+): string {
+  if (petDoorOptions(item).length === 0) return ''
+  const note = customerQuoteNote(item)
+  return /\bpet[\s-]*door\b/i.test(note) ? note : ''
 }
 
 /**

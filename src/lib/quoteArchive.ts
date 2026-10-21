@@ -1,3 +1,4 @@
+import { workspaceStorage } from './workspaceStorage'
 import { parseDealStatus, type DealStatus } from './quoteLifecycle'
 import type { QuoteState } from './quoteContext'
 
@@ -57,9 +58,10 @@ function readArchive(storage: Storage): ArchivedQuote[] {
     const raw = storage.getItem(ARCHIVE_KEY)
     if (!raw) return []
     const parsed = JSON.parse(raw) as ArchivedQuote[]
-    return Array.isArray(parsed) ? parsed.map(normalizeRecord) : []
+    if (!Array.isArray(parsed) || parsed.some((record) => !record?.quote || !record.quoteNo || !Array.isArray(record.quote.items))) throw new Error('Invalid archive')
+    return parsed.map(normalizeRecord)
   } catch {
-    return []
+    throw new Error('Saved quote data could not be read. It has been preserved. Download its raw recovery copy; a valid backup can be restored in a clean browser.')
   }
 }
 
@@ -70,7 +72,9 @@ function writeArchive(storage: Storage, records: ArchivedQuote[]): void {
 function withoutPhotos(quote: QuoteState): QuoteState {
   return {
     ...quote,
-    roomPhotos: {},
+    roomPhotos: Object.fromEntries(Object.entries(quote.roomPhotos).map(([room, photos]) => [
+      room, photos.map((photo) => ({ ...photo, dataUrl: '' })),
+    ])),
     items: quote.items.map((item) =>
       item.photos
         ? { ...item, photos: item.photos.map((photo) => ({ ...photo, dataUrl: '', annotatedDataUrl: null })) }
@@ -79,7 +83,7 @@ function withoutPhotos(quote: QuoteState): QuoteState {
   }
 }
 
-export function listArchivedQuotes(storage: Storage = localStorage): ArchivedQuote[] {
+export function listArchivedQuotes(storage: Storage = workspaceStorage): ArchivedQuote[] {
   return [...readArchive(storage)].sort((a, b) => {
     if (a.quoteNo !== b.quoteNo) return b.quoteNo.localeCompare(a.quoteNo)
     if (a.version !== b.version) return b.version - a.version
@@ -119,7 +123,7 @@ export function partitionArchivedQuoteGroups(records: ArchivedQuote[]): Record<D
 export function getArchivedQuote(
   quoteNo: string,
   version?: number,
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
 ): ArchivedQuote | undefined {
   const matches = readArchive(storage).filter((record) => record.quoteNo === quoteNo)
   if (version !== undefined) return matches.find((record) => record.version === version)
@@ -129,7 +133,7 @@ export function getArchivedQuote(
 export function upsertArchivedQuote(
   quote: QuoteState,
   totals: { total: number },
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
 ): ArchiveWriteResult {
   const version = Math.max(1, quote.version || 1)
   const itemCount = quote.items.reduce((sum, item) => sum + item.quantity, 0)
@@ -163,7 +167,7 @@ export function upsertArchivedQuote(
   return { record: stripped, photosOmitted: true }
 }
 
-export function deleteArchivedQuote(quoteNo: string, version: number, storage: Storage = localStorage): void {
+export function deleteArchivedQuote(quoteNo: string, version: number, storage: Storage = workspaceStorage): void {
   writeArchive(
     storage,
     readArchive(storage).filter((record) => !(record.quoteNo === quoteNo && record.version === version)),
@@ -174,7 +178,7 @@ export function addArchivedQuoteComment(
   quoteNo: string,
   version: number,
   text: string,
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
 ): RevisionComment | null {
   const trimmed = text.trim()
   if (!trimmed) return null
@@ -197,7 +201,7 @@ export function addArchivedQuoteComment(
 export function setArchivedQuoteDealStatus(
   quoteNo: string,
   dealStatus: DealStatus,
-  storage: Storage = localStorage,
+  storage: Storage = workspaceStorage,
 ): void {
   writeArchive(
     storage,

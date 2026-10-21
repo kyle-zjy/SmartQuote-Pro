@@ -1,21 +1,20 @@
-import express from 'express'
-import { productsRouter } from './routes/products.js'
-import { addonsRouter } from './routes/addons.js'
-import { coloursRouter } from './routes/colours.js'
-import { companyRouter } from './routes/company.js'
-
-const app = express()
+import { app } from './app.js'
+import { prisma } from './db.js'
 const port = Number(process.env.PORT ?? 3001)
 
-app.get('/health', (_req, res) => {
-  res.json({ ok: true })
-})
-
-app.use('/api/v1/products', productsRouter)
-app.use('/api/v1/addons', addonsRouter)
-app.use('/api/v1/colours', coloursRouter)
-app.use('/api/v1/company', companyRouter)
-
-app.listen(port, () => {
+const server = app.listen(port, () => {
   console.log(`[server] listening on http://localhost:${port}`)
 })
+
+let stopping = false
+function shutdown() {
+  if (stopping) return
+  stopping = true
+  const timeout = setTimeout(() => process.exit(1), 10_000)
+  timeout.unref()
+  server.close(() => {
+    void prisma.$disconnect().then(() => process.exit(0)).catch(() => process.exit(1))
+  })
+}
+process.on('SIGTERM', shutdown)
+process.on('SIGINT', shutdown)

@@ -2,6 +2,19 @@ name: Deploy GitHub Pages
 
 on:
   workflow_dispatch:
+    inputs:
+      data_mode:
+        description: 'server requires a public backend; local publishes the browser-only demo'
+        type: choice
+        options:
+          - server
+          - local
+        default: server
+        required: true
+      api_url:
+        description: 'Public HTTPS API URL ending in /api/v1 (server mode only)'
+        type: string
+        required: false
 
 permissions:
   contents: read
@@ -14,6 +27,9 @@ concurrency:
 
 jobs:
   deploy:
+    env:
+      VITE_DATA_MODE: ${{ inputs.data_mode || 'server' }}
+      VITE_API_URL: ${{ inputs.api_url || vars.VITE_API_URL }}
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -26,6 +42,26 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm test
+      - name: Check deployment data source
+        run: |
+          node --input-type=module <<'JS'
+          const mode = process.env.VITE_DATA_MODE
+          if (mode === 'local') {
+            console.log('Publishing browser-only demo. Shared backend features require server mode.')
+          } else if (mode === 'server') {
+            let url
+            try { url = new URL(process.env.VITE_API_URL) } catch {
+              throw new Error('Server mode requires api_url or the VITE_API_URL repository variable.')
+            }
+            if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
+                !url.pathname.replace(/\/$/, '').endsWith('/api/v1') ||
+                /^(localhost|127\.|\[?::1\]?)/i.test(url.hostname)) {
+              throw new Error('Use a public HTTPS API address ending in /api/v1, without credentials or query parameters.')
+            }
+          } else {
+            throw new Error('Choose server or local data mode.')
+          }
+          JS
       - run: npm run build
         env:
           GITHUB_PAGES: 'true'

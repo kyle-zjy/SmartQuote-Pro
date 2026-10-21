@@ -10,11 +10,13 @@ import { formatCurrency } from '../lib/formatCurrency'
 import { removeQuoteExtra } from '../lib/quotePrint'
 import { groupQuoteItemsByLocation } from '../lib/groupQuoteItems'
 import { isOtherFrameColour } from '../lib/frameColour'
-import { canIssueQuote, canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
+import { canReviseQuote, canSubmitForReview } from '../lib/quoteLifecycle'
 import { colourRecord, useQuote } from '../lib/quoteContext'
 import { useAuth } from '../lib/authContext'
-import { getReview, recordQuoteOwner, recordSubmission } from '../lib/reviewStore'
+import { getReview } from '../lib/reviewStore'
+import { reviewMatchesQuote } from '../lib/quoteReview'
 import { findStaff } from '../lib/staffStore'
+import { SERVER_MODE } from '../lib/apiClient'
 import { STEP_LABELS } from './quote-item/wizardSteps'
 import {
   clearWizardDraft,
@@ -61,6 +63,7 @@ export default function QuoteWorkspace() {
     saveAsSeparateQuote,
     submitForReview,
     issueQuote,
+    canIssue,
     reviseQuote,
     removeItem,
     setQuantity,
@@ -73,12 +76,12 @@ export default function QuoteWorkspace() {
   const [message, setMessage] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [wizardDrafts, setWizardDrafts] = useState(() => listWizardDrafts(quoteNo))
-  const { user } = useAuth()
+  const { isAdmin } = useAuth()
   const [reviewTick, setReviewTick] = useState(0)
 
   const issued = status === 'issued'
   const dealSettled = dealStatus !== 'open'
-  const locked = issued || dealSettled
+  const locked = issued || dealSettled || !quote.canEdit
 
   useEffect(() => {
     setWizardDrafts(listWizardDrafts(quoteNo))
@@ -136,6 +139,7 @@ export default function QuoteWorkspace() {
   const roomGroups = groupQuoteItemsByLocation(items)
   void reviewTick
   const review = locked ? undefined : getReview(quoteNo, version || 1)
+  const reviewChanged = Boolean(review && !reviewMatchesQuote(review, quote, { colourExtra, depositRate: settings.depositRate }))
   const reviewer = review?.reviewedBy ? findStaff(review.reviewedBy) : undefined
 
   function handleClear() {
@@ -143,54 +147,46 @@ export default function QuoteWorkspace() {
   }
 
   function handleDiscardWizardDraft(key: WizardDraftKey) {
+    if (locked) return
     if (!window.confirm('Discard this unsaved opening? Any changes on it will be lost.')) return
     clearWizardDraft(key)
     setWizardDrafts(listWizardDrafts(quoteNo))
   }
 
-  function handleSaveQuote() {
-    const result = saveCurrentQuote()
-    setMessage(
-      result.photosOmitted
-        ? 'Saved on this browser. Photos were left off this copy because they were too large to store.'
-        : 'Saved on this browser. Open it later from Quotes.',
-    )
+  async function handleSaveQuote() {
+    try {
+      const result = await saveCurrentQuote()
+      setMessage(
+        result.photosOmitted
+          ? 'Saved on this browser. Photos were left off this copy because they were too large to store.'
+          : SERVER_MODE ? 'Saved to the shared workspace. Open it from Quotes in any connected browser.' : 'Saved on this browser. Open it later from Quotes.',
+      )
+    } catch {
+      setMessage('Could not save this quote. Your edits are still here. Free up browser storage and try again.')
+    }
   }
 
-  function handleSubmitForReview() {
-    if (!submitForReview()) return
-    trackSubmission()
+  async function handleSubmitForReview() {
+    if (!await submitForReview()) {
+      setMessage('Could not submit. Check the customer, site address and items, and make sure browser storage is available.')
+      return
+    }
+    setReviewTick((t) => t + 1)
     setMessage('Submitted for office review.')
   }
 
-  function trackSubmission() {
-    if (!user) return
-    try {
-      recordQuoteOwner(quoteNo, user.id)
-      recordSubmission(quoteNo, version || 1, user.id)
-    } catch {
-      // Review tracking is best-effort; the quote itself is already submitted.
+  async function handleResubmit() {
+    if (!await submitForReview()) {
+      setMessage('Could not resubmit. Check the customer, site address and items, and make sure browser storage is available.')
+      return
     }
     setReviewTick((t) => t + 1)
-  }
-
-  function handleResubmit() {
-    if (status === 'draft') {
-      if (!submitForReview()) return
-    } else {
-      try {
-        saveCurrentQuote()
-      } catch {
-        // Keep going; the review record still points at this revision.
-      }
-    }
-    trackSubmission()
     setMessage('Resubmitted for office review.')
   }
 
-  function handleSaveAsSeparateQuote() {
+  async function handleSaveAsSeparateQuote() {
     try {
-      const result = saveAsSeparateQuote()
+      const result = await saveAsSeparateQuote()
       navigate(`/quotes/${encodeURIComponent(result.record.quoteNo ?? "")}`, { replace: true })
       setMessage(
         result.photosOmitted
@@ -202,7 +198,7 @@ export default function QuoteWorkspace() {
     }
   }
 
-  function handleIssueQuote() {
+  async function handleIssueQuote() {
     if (
       !window.confirm(
         'Issue this quote? Line items and prices will be locked. Changing the price list later will not change this quote.',
@@ -210,11 +206,14 @@ export default function QuoteWorkspace() {
     ) {
       return
     }
-    if (!issueQuote()) return
-    setMessage('Issued and saved on this browser. Open it later from Quotes.')
+    if (!await issueQuote()) {
+      setMessage('Could not issue. Staff need approval for the current quote, and the issued copy must be saved successfully.')
+      return
+    }
+    setMessage(SERVER_MODE ? 'Issued and saved to the shared workspace.' : 'Issued and saved on this browser. Open it later from Quotes.')
   }
 
-  function handleReviseQuote() {
+  async function handleReviseQuote() {
     if (
       !window.confirm(
         'Create a new revision? The issued quote stays in Quotes. This copy unlocks so you can change lines and prices.',
@@ -224,12 +223,16 @@ export default function QuoteWorkspace() {
     }
     const reason = window.prompt('Why is this quote being revised? (saved on the new revision)')
     if (reason === null) return
-    if (!reviseQuote(reason)) return
+    if (!await reviseQuote(reason)) {
+      setMessage('Could not save the revision. The issued quote is still here. Check browser storage and try again.')
+      return
+    }
     setMessage('Revision opened. Previous issued quote is kept in Quotes. Add more notes under the version in Quotes.')
   }
 
   return (
     <div className="quote-workspace">
+      {quote.archiveStorageError && <p role="alert">{quote.archiveStorageError}</p>}
       <header className="quote-workspace__header">
         <div>
           <h1>
@@ -246,6 +249,10 @@ export default function QuoteWorkspace() {
         </Link>
       </header>
 
+      {!quote.canEdit && <div className="quote-issued-banner" role="status">
+        <p>{quote.editPending ? 'Checking editing access…' : 'This quote is open in another tab. This tab is read-only to protect your edits.'}</p>
+        {!quote.editPending && <button type="button" className="secondary-button" onClick={quote.retryEditing}>Edit in this tab</button>}
+      </div>}
       {dealSettled && (
         <p className={`quote-issued-banner quote-issued-banner--${dealStatus}`}>
           This quote is {dealStatus === 'closed' ? 'closed (deal won)' : 'abandoned'}. Reopen it from Quotes to keep
@@ -259,10 +266,20 @@ export default function QuoteWorkspace() {
           changes — the issued copy stays in Quotes.
         </p>
       )}
-      {((status === 'office-review' && !review) || review?.status === 'pending') && (
+      {issued && !issuedSnapshot?.document && <p className="quote-issued-banner">
+        This older issued quote has no saved company and terms snapshot. Its document uses current company details.
+      </p>}
+      {quote.photoStorageError && <div className="quote-issued-banner" role="alert">
+        <p>{quote.photoStorageError}</p>
+        <button type="button" className="secondary-button" onClick={quote.retryPhotoStorage}>Retry photo storage</button>
+      </div>}
+      {!reviewChanged && ((status === 'office-review' && !review) || review?.status === 'pending') && (
         <p className="quote-issued-banner">This quote is submitted for office review and can still be edited.</p>
       )}
-      {review?.status === 'approved' && (
+      {reviewChanged && review?.status !== 'returned' && (
+        <p className="quote-issued-banner" role="alert">This quote has changed since submission. Resubmit it for office review before staff can issue it.</p>
+      )}
+      {!reviewChanged && review?.status === 'approved' && (
         <p className="quote-issued-banner quote-review-banner--approved">
           Approved by {reviewer?.name ?? 'the office'}
           {review.reviewNote ? `: ${review.reviewNote}` : '.'} Ready to issue.
@@ -286,7 +303,7 @@ export default function QuoteWorkspace() {
               <Link to={wizardDraftPath(key)} className="link-button">
                 Resume
               </Link>
-              <button type="button" className="link-button" onClick={() => handleDiscardWizardDraft(key)}>
+              <button type="button" className="link-button" disabled={locked} onClick={() => handleDiscardWizardDraft(key)}>
                 Discard
               </button>
             </div>
@@ -424,13 +441,13 @@ export default function QuoteWorkspace() {
                 type="button"
                 className="primary-button"
                 onClick={handleSubmitForReview}
-                disabled={!canSubmitForReview(quote)}
+                disabled={!quote.canEdit || !canSubmitForReview(quote)}
               >
                 Submit for Office Review
               </button>
             )}
-            {review?.status === 'returned' && (
-              <button type="button" className="primary-button" onClick={handleResubmit}>
+            {(review?.status === 'returned' || reviewChanged || (status === 'office-review' && !review)) && !locked && (
+              <button type="button" className="primary-button" disabled={!quote.canEdit} onClick={handleResubmit}>
                 Resubmit for review
               </button>
             )}
@@ -439,17 +456,18 @@ export default function QuoteWorkspace() {
                 type="button"
                 className={status === 'office-review' ? 'primary-button' : 'secondary-button'}
                 onClick={handleIssueQuote}
-                disabled={!canIssueQuote(quote)}
+                disabled={!canIssue}
               >
                 Issue quote
               </button>
             )}
+            {!isAdmin && !locked && !canIssue && <span className="muted small">Office approval is required before issuing.</span>}
             {status === 'issued' && !dealSettled && (
               <button
                 type="button"
                 className="primary-button"
                 onClick={handleReviseQuote}
-                disabled={!canReviseQuote(quote)}
+                disabled={!quote.canEdit || !canReviseQuote(quote)}
               >
                 Revise quote
               </button>
@@ -465,7 +483,7 @@ export default function QuoteWorkspace() {
             <button type="button" className="secondary-button" onClick={() => setPreviewAudience('factory')} disabled={items.length === 0}>
               Preview Factory Quote
             </button>
-            <button type="button" className="secondary-button" onClick={handleSaveQuote}>
+            <button type="button" className="secondary-button" disabled={!quote.canEdit} onClick={handleSaveQuote}>
               {alreadySaved ? 'Update saved quote' : 'Save quote'}
             </button>
             {!locked && (

@@ -35,14 +35,14 @@ model CompanySettings {
 }
 
 model Product {
-  id           String    @id @default(uuid())
-  key          String    @unique
-  name         String
-  pricingAsAt  DateTime? @db.Date
-  note         String?
-  active       Boolean   @default(true)
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @updatedAt
+  id          String    @id @default(uuid())
+  key         String    @unique
+  name        String
+  pricingAsAt DateTime? @db.Date
+  note        String?
+  active      Boolean   @default(true)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   categories     ProductCategory[]
   colourProducts ColourProduct[]
@@ -138,20 +138,53 @@ model Addon {
   @@map("addons")
 }
 
-// Auth is not implemented yet (see docs/backend-handoff-zh.md §5.1) -- this
-// table exists so quotes.createdBy has somewhere to point once login lands.
+// Shared accounts use salted password hashes and revocable server sessions.
 model StaffUser {
+  mustChangePassword Boolean @default(false)
   id           String   @id @default(uuid())
   email        String   @unique @db.Citext
   name         String
   passwordHash String?
   role         String   @default("staff") // 'staff' | 'admin'
+  active       Boolean  @default(true)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  quotes Quote[]
+  quotes   Quote[]
+  sessions AuthSession[]
 
   @@map("staff_users")
+}
+
+model AuthSession {
+  tokenHash String    @id
+  userId    String
+  role      String
+  expiresAt DateTime
+  user      StaffUser @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@map("auth_sessions")
+}
+
+// Versioned application documents preserve all measurement, photo and issued-document fields.
+// Keys identify individual quote revisions, reviews, working copies and shared settings.
+model WorkspaceRecord {
+  id        String   @id
+  value     Json
+  revision  Int      @default(1)
+  deleted   Boolean  @default(false)
+  updatedAt DateTime @updatedAt
+
+  @@map("workspace_records")
+}
+
+model WorkspaceClock {
+  id            String @id @default("main")
+  revision      Int    @default(0)
+  quoteSequence Int    @default(33020)
+
+  @@map("workspace_clock")
 }
 
 model Customer {
@@ -168,31 +201,31 @@ model Customer {
 }
 
 model Quote {
-  id                   String    @id @default(uuid())
-  quoteNo              String    @unique
-  quoteSuffix          String?
-  quoteDate            DateTime  @db.Date
-  customerId           String?
-  shipSameAsBill       Boolean   @default(true)
-  shipName             String?
-  shipPhone            String?
-  shipAddress          String?
-  colourId             String?
-  customFrameColour    String?
-  colourExtraOverride  Decimal?  @db.Decimal(10, 2)
-  status               String    @default("draft")
-  gstEnabled           Boolean   @default(true)
-  colourSurcharge      Decimal?  @db.Decimal(10, 2)
-  saleAmount           Decimal?  @db.Decimal(10, 2)
-  gstAmount            Decimal?  @db.Decimal(10, 2)
-  totalAmount          Decimal?  @db.Decimal(10, 2)
-  depositAmount        Decimal?  @db.Decimal(10, 2)
-  paid                 Decimal   @default(0) @db.Decimal(10, 2)
-  validUntil           DateTime? @db.Date
-  issuedAt             DateTime?
-  createdBy            String?
-  createdAt            DateTime  @default(now())
-  updatedAt            DateTime  @updatedAt
+  id                  String    @id @default(uuid())
+  quoteNo             String    @unique
+  quoteSuffix         String?
+  quoteDate           DateTime  @db.Date
+  customerId          String?
+  shipSameAsBill      Boolean   @default(true)
+  shipName            String?
+  shipPhone           String?
+  shipAddress         String?
+  colourId            String?
+  customFrameColour   String?
+  colourExtraOverride Decimal?  @db.Decimal(10, 2)
+  status              String    @default("draft")
+  gstEnabled          Boolean   @default(true)
+  colourSurcharge     Decimal?  @db.Decimal(10, 2)
+  saleAmount          Decimal?  @db.Decimal(10, 2)
+  gstAmount           Decimal?  @db.Decimal(10, 2)
+  totalAmount         Decimal?  @db.Decimal(10, 2)
+  depositAmount       Decimal?  @db.Decimal(10, 2)
+  paid                Decimal   @default(0) @db.Decimal(10, 2)
+  validUntil          DateTime? @db.Date
+  issuedAt            DateTime?
+  createdBy           String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   customer       Customer?   @relation(fields: [customerId], references: [id])
   colour         Colour?     @relation(fields: [colourId], references: [id])
@@ -203,24 +236,24 @@ model Quote {
 }
 
 model QuoteLine {
-  id               String   @id @default(uuid())
-  quoteId          String
-  sortOrder        Int      @default(0)
-  productId        String?
-  categoryId       String?
-  addonId          String?
-  description      String
-  room             String?
-  note             String?
-  widthMm          Int?
-  heightMm         Int?
-  matchedWidthMm   Int?
-  matchedHeightMm  Int?
-  meshOption       String?
-  quantity         Int      @default(1)
-  unitPrice        Decimal  @db.Decimal(10, 2)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  id              String   @id @default(uuid())
+  quoteId         String
+  sortOrder       Int      @default(0)
+  productId       String?
+  categoryId      String?
+  addonId         String?
+  description     String
+  room            String?
+  note            String?
+  widthMm         Int?
+  heightMm        Int?
+  matchedWidthMm  Int?
+  matchedHeightMm Int?
+  meshOption      String?
+  quantity        Int      @default(1)
+  unitPrice       Decimal  @db.Decimal(10, 2)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   quote    Quote            @relation(fields: [quoteId], references: [id], onDelete: Cascade)
   product  Product?         @relation(fields: [productId], references: [id])
