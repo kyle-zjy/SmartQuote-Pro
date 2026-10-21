@@ -17,6 +17,18 @@ npm run dev -- --host 127.0.0.1 --port 5174
 
 Build for production with `npm run build`.
 
+### GitHub Pages demo
+
+Run **Deploy GitHub Pages** in GitHub Actions with `data_mode=local` to publish
+the browser-only demo without an API or database. Data stays in each browser;
+server account administration and cross-browser sharing require the full backend.
+Production demo login fields are empty: use `admin@goldco.com.au / admin` or
+`staff@goldco.com.au / staff` for a fresh browser profile.
+
+Once a backend is deployed, choose `data_mode=server` and provide its public HTTPS
+`api_url` ending in `/api/v1` (or set the repository variable `VITE_API_URL`).
+Server deployments reject a missing or invalid API address before publishing.
+
 Local UI: `http://localhost:5174`. See [项目逻辑与当前实现](docs/project-logic-zh.md)
 for the quote workflow, data ownership, local setup, and remaining backend work.
 
