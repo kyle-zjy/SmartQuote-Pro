@@ -52,7 +52,8 @@ export function LoginForm() {
   const { session, signIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
-  const demoAccount = import.meta.env.DEV ? DEFAULT_STAFF.find((member) => member.role === portal) : undefined
+  const demoLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_DATA_MODE === 'local'
+  const demoAccount = demoLoginEnabled ? DEFAULT_STAFF.find((member) => member.role === portal) : undefined
   const [email, setEmail] = useState(demoAccount?.email ?? '')
   const [password, setPassword] = useState(demoAccount?.password ?? '')
   const [error, setError] = useState('')
@@ -110,7 +111,7 @@ export function LoginForm() {
         <button type="submit" className="primary-button login-card__submit">
           Sign in
         </button>
-        <p className="muted small">{import.meta.env.DEV ? config.hint : 'Use the account provided by your office.'}</p>
+        <p className="muted small">{demoLoginEnabled ? config.hint : 'Use the account provided by your office.'}</p>
         <p className="muted small">Forgot your password? Contact your office administrator to reset it.</p>
         <div className="login-card__switch">
           <Link to="/login" className="link-button">

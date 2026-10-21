@@ -293,7 +293,9 @@ on somebody else's computer.
 
 To intentionally publish a browser-only demo, select `data_mode=local` instead.
 That mode does not provide shared data or administrator password-reset APIs.
-Production builds do not fill in demo login credentials automatically.
+During testing, browser-only demo builds pre-fill the selected portal's default
+test credentials. The fields remain editable and users must still click Sign in.
+Shared-mode production builds do not fill in demo credentials automatically.
 
 ## 10. Transfer data deliberately
 

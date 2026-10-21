@@ -24,8 +24,9 @@ For the later shared deployment, see the [English production deployment guide](d
 Run **Deploy GitHub Pages** in GitHub Actions with `data_mode=local` to publish
 the browser-only demo without an API or database. Data stays in each browser;
 server account administration and cross-browser sharing require the full backend.
-Production demo login fields are empty: use `admin@goldco.com.au / admin` or
-`staff@goldco.com.au / staff` for a fresh browser profile.
+During testing, the browser-only demo pre-fills `admin@goldco.com.au / admin` or
+`staff@goldco.com.au / staff` according to the selected login portal. Click Sign in
+to continue; the fields remain editable for other test accounts.
 
 Once a backend is deployed, choose `data_mode=server` and provide its public HTTPS
 `api_url` ending in `/api/v1` (or set the repository variable `VITE_API_URL`).
@@ -109,7 +110,8 @@ Use **My account** to change a password; admins can reset another account's pass
 **Admin → Staff**, confirming their own administrator password. New/reset/imported accounts
 must change their temporary password before accessing shared data. New passwords require
 12–256 characters including letters and numbers. Existing account passwords stay unchanged;
-demo autofill is limited to development builds. Password recovery is handled by the office
+demo autofill is enabled for development and browser-only demo builds. Shared-mode
+production builds require manual credentials. Password recovery is handled by the office
 administrator; email recovery is not configured.
 
 In server mode, cache persistence errors have a separate warning and an in-memory fallback;
