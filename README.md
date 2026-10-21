@@ -19,6 +19,8 @@ Build for production with `npm run build`.
 
 ### GitHub Pages demo
 
+For the later shared deployment, see the [English production deployment guide](docs/deployment-guide-en.md).
+
 Run **Deploy GitHub Pages** in GitHub Actions with `data_mode=local` to publish
 the browser-only demo without an API or database. Data stays in each browser;
 server account administration and cross-browser sharing require the full backend.
