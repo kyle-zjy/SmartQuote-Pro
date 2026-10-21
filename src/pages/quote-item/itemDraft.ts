@@ -1,12 +1,14 @@
 import { STANDARD_MESH } from '../../lib/configuredPrice'
 import type { ItemPhoto, QuoteAddon, QuoteLineItem } from '../../lib/quoteContext'
 import { configFamily } from '../../lib/quoteSheet'
+import type { DrawStroke } from '../../lib/sheetDraw'
 import type { PriceCategory, Product } from '../../types/pricing'
 
 /**
- * Local, wizard-only shape for the opening being built. Diagram markers/strokes are
- * deliberately NOT part of this draft -- they stay ephemeral in ItemWizard's own state
- * and are never persisted onto a QuoteLineItem.
+ * Local, wizard-only shape for the opening being built. Diagram marker positions are
+ * deliberately NOT part of this draft -- they stay ephemeral in ItemWizard's own state and
+ * are never persisted. Annotation strokes also live in ItemWizard's own state, but handleSave
+ * persists them directly onto QuoteLineItem.measurementDrawing rather than through this draft.
  */
 export interface ItemDraft {
   location: string
@@ -192,6 +194,7 @@ interface ComparableItem {
   customerNote?: string
   addons?: QuoteAddon[]
   photos?: ItemPhoto[]
+  measurementDrawing?: DrawStroke[]
   unitPrice: number
 }
 
@@ -229,6 +232,9 @@ function itemSignature(item: ComparableItem): string {
     // Different photos mean a genuinely different opening context, even if every other field matches
     // -- never silently merge quantity and drop one item's photos in the process.
     photos: item.photos ?? [],
+    // Same reasoning as photos: a different drawing means a different opening record, so never
+    // silently merge quantity and drop one item's annotation in the process.
+    measurementDrawing: item.measurementDrawing ?? [],
     unitPrice: item.unitPrice,
   })
 }

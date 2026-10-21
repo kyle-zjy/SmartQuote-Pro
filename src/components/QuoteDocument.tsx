@@ -108,16 +108,24 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
           <colgroup>
             <col className="quote-sheet__col-qty" />
             <col className="quote-sheet__col-desc" />
-            <col className="quote-sheet__col-price" />
-            <col className="quote-sheet__col-price" />
+            {audience === 'customer' && (
+              <>
+                <col className="quote-sheet__col-price" />
+                <col className="quote-sheet__col-price" />
+              </>
+            )}
             {!linesLocked && <col className="quote-sheet__col-actions" />}
           </colgroup>
           <thead>
             <tr>
               <th>QTY</th>
               <th>DESCRIPTION</th>
-              <th>UNIT PRICE</th>
-              <th>TOTAL PRICE</th>
+              {audience === 'customer' && (
+                <>
+                  <th>UNIT PRICE</th>
+                  <th>TOTAL PRICE</th>
+                </>
+              )}
               {!linesLocked && <th className="no-print" />}
             </tr>
           </thead>
@@ -129,16 +137,14 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
                 <br />
                 Frame Colour: {displayFrameColour(frameColour, customFrameColour)}
               </td>
-              <td />
-              <td />
+              {audience === 'customer' && (<><td /><td /></>)}
               {!linesLocked && <td className="no-print" />}
             </tr>
             {items.length === 0 ? (
               <tr>
                 <td />
                 <td className="muted">No items yet. Add a product from the calculator to build a quote.</td>
-                <td />
-                <td />
+                {audience === 'customer' && (<><td /><td /></>)}
                 {!linesLocked && <td className="no-print" />}
               </tr>
             ) : (
@@ -165,12 +171,16 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
               <tr>
                 <td>1</td>
                 <td>Powder coating for non-standard colour</td>
-                <td className="quote-sheet__price">{formatCurrency(colourExtra)}</td>
-                <td className="quote-sheet__price">{formatCurrency(colourExtra)}</td>
+                {audience === 'customer' && (
+                  <>
+                    <td className="quote-sheet__price">{formatCurrency(colourExtra)}</td>
+                    <td className="quote-sheet__price">{formatCurrency(colourExtra)}</td>
+                  </>
+                )}
                 {!linesLocked && <td className="no-print" />}
               </tr>
             )}
-            {items.length > 0 && (
+            {items.length > 0 && audience === 'customer' && (
               <tr className="quote-sheet__notes">
                 <td />
                 <td>
@@ -195,38 +205,42 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
         </table>
       </div>
 
-      <div className="quote-sheet-foot">
-        <div className="quote-sheet-foot__terms">
-          <p className="quote-sheet-foot__contract">{settings.termsContract}</p>
-          <p className="quote-sheet-foot__sizes">{settings.sizeDisclaimer}</p>
-        </div>
-        <div className="quote-sheet-foot__totals">
-          <span>Sale Amt</span>
-          <span>{formatCurrency(subtotal)}</span>
-          <span>GST</span>
-          <span>{formatCurrency(gstAmount)}</span>
-          <span>Paid</span>
-          <span>{formatCurrency(paid)}</span>
-          <span>Total Amt</span>
-          <span>{formatCurrency(total)}</span>
-        </div>
-        <div className="quote-sheet-foot__valid">
-          <p>This Quote Valid for {settings.validityDays} Days*</p>
-          <p className="quote-sheet-foot__tnc">*Subject to T&amp;Cs</p>
-        </div>
-        <div className="quote-sheet-foot__balance">
-          <span>Balance Due</span>
-          <span>{formatCurrency(balance)}</span>
-        </div>
-      </div>
+      {audience === 'customer' && (
+        <>
+          <div className="quote-sheet-foot">
+            <div className="quote-sheet-foot__terms">
+              <p className="quote-sheet-foot__contract">{settings.termsContract}</p>
+              <p className="quote-sheet-foot__sizes">{settings.sizeDisclaimer}</p>
+            </div>
+            <div className="quote-sheet-foot__totals">
+              <span>Sale Amt</span>
+              <span>{formatCurrency(subtotal)}</span>
+              <span>GST</span>
+              <span>{formatCurrency(gstAmount)}</span>
+              <span>Paid</span>
+              <span>{formatCurrency(paid)}</span>
+              <span>Total Amt</span>
+              <span>{formatCurrency(total)}</span>
+            </div>
+            <div className="quote-sheet-foot__valid">
+              <p>This Quote Valid for {settings.validityDays} Days*</p>
+              <p className="quote-sheet-foot__tnc">*Subject to T&amp;Cs</p>
+            </div>
+            <div className="quote-sheet-foot__balance">
+              <span>Balance Due</span>
+              <span>{formatCurrency(balance)}</span>
+            </div>
+          </div>
 
-      <div className="quote-doc__bank">
-        <p>
-          Bank Details: {settings.bank.name} &nbsp;&nbsp; BSB: {settings.bank.bsb} &nbsp;&nbsp; ACC:{' '}
-          {settings.bank.account}
-        </p>
-        <p>Please use your quote number as the reference for all payments</p>
-      </div>
+          <div className="quote-doc__bank">
+            <p>
+              Bank Details: {settings.bank.name} &nbsp;&nbsp; BSB: {settings.bank.bsb} &nbsp;&nbsp; ACC:{' '}
+              {settings.bank.account}
+            </p>
+            <p>Please use your quote number as the reference for all payments</p>
+          </div>
+        </>
+      )}
 
       {!readOnly && rooms.length > 0 && (
         <div className="no-print quote-doc__photos">

@@ -95,7 +95,10 @@ export default function ItemWizard() {
   const [error, setError] = useState<string | null>(null)
 
   const [markers, setMarkers] = useState<Record<string, MarkerPosition>>(() => initialSnapshot?.markers ?? {})
-  const [strokes, setStrokes] = useState<DrawStroke[]>(() => initialSnapshot?.strokes ?? [])
+  const [strokes, setStrokes] = useState<DrawStroke[]>(() =>
+    initialSnapshot?.strokes ??
+      ((sessionKind === 'edit' || sessionKind === 'duplicate') ? sourceItem?.measurementDrawing ?? [] : []),
+  )
   const prevConfigRef = useRef(draft.configurationCode)
 
   useEffect(() => {
@@ -324,6 +327,7 @@ export default function ItemWizard() {
       customFrameColour: draft.customFrameColour,
       addons: draft.addons,
       photos: draft.photos,
+      measurementDrawing: strokes,
     }
 
     if (itemId) {

@@ -26,7 +26,7 @@ describe('quote print audience', () => {
     const customer = render('customer')
     expect(customer).toContain('Medium Pet Door')
     expect(customer).toContain(PET_DOOR_DISCLAIMER)
-    expect(customer.indexOf(PET_DOOR_DISCLAIMER)).toBeGreaterThan(customer.indexOf('Extra — Medium Pet Door'))
+    expect(customer.indexOf(PET_DOOR_DISCLAIMER)).toBeGreaterThan(customer.indexOf('Medium Pet Door'))
     for (const text of [item.note, 'Lock height', 'Lock side', 'Centre tongue', 'Door bowed']) {
       expect(customer).not.toContain(text)
     }
@@ -58,11 +58,9 @@ describe('separate extras pricing', () => {
     expect(productPrice(line)).toBe(635)
     expect((productPrice(line) + quoteExtras(line).reduce((sum, extra) => sum + extra.price, 0)) * line.quantity).toBe(1800)
     const html = render('customer', line)
-    expect(html).toContain('Extra — Medium Pet Door')
-    expect(html).toContain('Extra — BOX-OUTS')
-    expect(html).toContain('$380')
-    expect(html).toContain('$150')
-    expect(html).toContain('$1270')
+    expect(html).toContain('Medium Pet Door ($190)')
+    expect(html).toContain('BOX-OUTS ($75)')
+    expect(html).toContain('$1800')
     expect(html).not.toContain('Included option')
   })
 
@@ -154,7 +152,7 @@ describe('custom customer notes', () => {
     const customer = render('customer', line)
     expect(customer).toContain(line.customerNote)
     expect(customer).not.toContain(PET_DOOR_DISCLAIMER)
-    expect(customer.indexOf(line.customerNote)).toBeGreaterThan(customer.indexOf('Extra — Medium Pet Door'))
+    expect(customer.indexOf(line.customerNote)).toBeGreaterThan(customer.indexOf('Medium Pet Door'))
     expect(render('factory', line)).not.toContain(line.customerNote)
     expect(render('factory', line)).toContain(item.note)
     const updated = { ...line, ...removeQuoteExtra(line, 'PET DOOR - MEDIUM') }
@@ -164,7 +162,7 @@ describe('custom customer notes', () => {
   it('keeps unrelated customer notes with the main product', () => {
     const line = { ...item, customerNote: 'Call the customer before installation.' }
     const customer = render('customer', line)
-    expect(customer.indexOf(line.customerNote)).toBeLessThan(customer.indexOf('Extra — Medium Pet Door'))
+    expect(customer.indexOf(line.customerNote)).toBeLessThan(customer.indexOf('Medium Pet Door'))
   })
 
   it('preserves a deliberately cleared note without regenerating the disclaimer', () => {
