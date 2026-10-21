@@ -4,7 +4,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { quoteIdFromPath } from '../../lib/quoteRoute'
 import { calcConfiguredGroupPrice } from '../../lib/configuredPrice'
 import { LINE_FIT_EXTRAS } from '../../lib/lineExtras'
-import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
+import { describeStructuredItem, formatItemDimensions, productQuoteLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { useQuote, type QuoteLineItem } from '../../lib/quoteContext'
 import type { DrawStroke, MarkerPosition } from '../../lib/sheetDraw'
@@ -274,7 +274,7 @@ export default function ItemWizard() {
       }
     }
 
-    const productLabel = product && category ? `${product.name} ${openingLabel(category.key, category.label)}` : ''
+    const productLabel = product && category ? productQuoteLabel({ productKey: product.key, productName: product.name, categoryKey: category.key, categoryLabel: category.label, configurationCode: draft.configurationCode, meshOption: draft.meshOption }) : ''
     const description = draft.serviceOnly
       ? `${draft.location} — ${draft.serviceDescription.trim()}`
       : describeStructuredItem({ location: draft.location, productLabel, widthMm, heightMm })

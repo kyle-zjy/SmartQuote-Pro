@@ -6,7 +6,7 @@ import { calcConfiguredGroupPrice, STANDARD_MESH } from '../../lib/configuredPri
 import { effectiveFrameColour } from '../../lib/frameColour'
 import { formatCurrency } from '../../lib/formatCurrency'
 import { fitExtraPhrase, LINE_FIT_EXTRAS } from '../../lib/lineExtras'
-import { describeStructuredItem, formatItemDimensions, openingLabel } from '../../lib/lineDescription'
+import { describeStructuredItem, formatItemDimensions, productQuoteLabel } from '../../lib/lineDescription'
 import { usePricing } from '../../lib/pricingContext'
 import { adjustedPricingGroups, configLabel, findSheetConfig, sheetSizeFromMeasures } from '../../lib/quoteSheet'
 import { calcAddonsTotal, type ItemDraft } from './itemDraft'
@@ -62,7 +62,7 @@ export default function ReviewItemStep({
 
   const colourName = effectiveFrameColour(draft, quoteFrameColour, quoteCustomFrameColour)
   const productLabel =
-    product && category ? `${product.name} ${openingLabel(category.key, category.label)}` : ''
+    product && category ? productQuoteLabel({ productKey: product.key, productName: product.name, categoryKey: category.key, categoryLabel: category.label, configurationCode: draft.configurationCode, meshOption: draft.meshOption }) : ''
   const description = draft.serviceOnly ? `${draft.location} — ${draft.serviceDescription.trim()}` : describeStructuredItem({
     location: draft.location,
     productLabel,

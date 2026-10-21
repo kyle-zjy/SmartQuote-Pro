@@ -10,6 +10,32 @@ export function openingLabel(categoryKey: string, categoryLabel: string): string
   return categoryLabel.toLowerCase()
 }
 
+/** Standard product/material wording from Item list - ANU.xls (ITEM list 28-9-26).
+ * Selected mesh replaces the standard material; hardware remains in its own options. */
+export function productQuoteLabel(input: {
+  productKey: string
+  productName: string
+  categoryKey: string
+  categoryLabel: string
+  configurationCode?: string
+  meshOption?: string
+}): string {
+  const products: Record<string, { name: string; mesh: string }> = {
+    supascreen: { name: 'SupaScreen', mesh: '316 marine grade stainless steel woven mesh' },
+    intrudaguard: { name: 'Intrudaguard', mesh: '5052 marine grade aluminium perforated mesh' },
+    '7mm-diamond': { name: '7mm Diamond Grille (Barrier ONLY)', mesh: 'fibreglass mesh' },
+    flyscreens: { name: 'Flyscreen', mesh: 'fibreglass mesh' },
+  }
+  const product = products[input.productKey]
+  const opening = input.categoryKey === 'windows' ? 'FIXED window screen'
+    : input.configurationCode?.startsWith('HD') ? 'hinged door'
+    : input.configurationCode?.startsWith('SD') ? 'sliding door'
+    : openingLabel(input.categoryKey, input.categoryLabel)
+  const label = opening.charAt(0).toUpperCase() + opening.slice(1)
+  const mesh = input.meshOption && input.meshOption !== 'Standard' ? input.meshOption : product?.mesh
+  return `${product?.name ?? input.productName} - ${label}${mesh ? ` with ${mesh}` : ''}`
+}
+
 /** Formats the complete item size in the customer-facing Height × Width convention. */
 export function formatItemDimensions(heightMm: number, widthMm: number): string {
   return `${Math.round(heightMm)} × ${Math.round(widthMm)} mm`
