@@ -6,7 +6,8 @@ test('arbitrary quote number survives navigation, saving and reload', async ({ p
   const number = '报价 /? #%2F & + 🐱'
   await page.goto('/quotes/new')
   await page.getByLabel('Quote number').fill(number)
-  await page.getByLabel('Customer', { exact: true }).fill('Character test')
+  await page.getByLabel('First Name', { exact: true }).fill('Character')
+  await page.getByLabel('Surname', { exact: true }).fill('test')
   await page.getByRole('button', { name: 'Start quote', exact: true }).click()
   await expect(page.getByRole('heading', { level: 1 })).toContainText(`Quote ${number}`)
   await page.getByRole('button', { name: 'Save quote', exact: true }).click()

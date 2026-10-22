@@ -8,7 +8,8 @@ test.beforeEach(async ({ page }) => {
 test('discounts final prices and colour charges before GST and persists the result in the list and PDF', async ({ page }) => {
   test.setTimeout(60_000)
   await page.goto('/quotes/new')
-  await page.getByLabel('Customer', { exact: true }).fill('Discount customer')
+  await page.getByLabel('First Name', { exact: true }).fill('Discount')
+  await page.getByLabel('Surname', { exact: true }).fill('customer')
   await page.getByLabel('Site address', { exact: true }).fill('1 Test Street')
   await page.getByLabel('Discount (%)', { exact: true }).fill('10')
   await page.getByLabel('Discount note', { exact: true }).fill('Pensioner discount')

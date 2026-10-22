@@ -6,6 +6,7 @@ import { isValidQuoteNumber } from '../lib/quoteNumberValidation'
 import QuoteAddresses from '../components/QuoteAddresses'
 import QuoteDiscountFields from '../components/QuoteDiscountFields'
 import type { QuoteDiscount } from '../lib/quoteDiscount'
+import CustomerNameFields from '../components/CustomerNameFields'
 import { useAuth } from '../lib/authContext'
 import { recordQuoteOwner } from '../lib/reviewStore'
 import { withQuoteStorageLock } from '../lib/quoteWriteLock'
@@ -19,7 +20,8 @@ export default function QuoteIntake() {
   const navigate = useNavigate()
   const { user } = useAuth()
 
-  const [name, setName] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [surname, setSurname] = useState('')
   const [siteAddress, setSiteAddress] = useState('')
   const [billingAddress, setBillingAddress] = useState('')
   const [sameAddress, setSameAddress] = useState(true)
@@ -54,8 +56,9 @@ export default function QuoteIntake() {
       setError('This quote number is already in use. Enter another number or leave it blank to generate one.')
       return
     }
-    setCustomer({ name, address: sameAddress ? siteAddress : billingAddress, phone, email: email.trim() })
-    setShipTo({ name, address: siteAddress, phone, email: email.trim() })
+    const names = { firstName: firstName.trim(), surname: surname.trim(), name: [firstName.trim(), surname.trim()].filter(Boolean).join(' ') }
+    setCustomer({ ...names, address: sameAddress ? siteAddress : billingAddress, phone, email: email.trim() })
+    setShipTo({ ...names, address: siteAddress, phone, email: email.trim() })
     setShipSameAsBill(sameAddress)
     setQuoteDate(date)
     if (discount) setDiscount(discount)
@@ -76,10 +79,8 @@ export default function QuoteIntake() {
       </p>
       <h1>New quote</h1>
       <div className="quote-editor__grid">
-        <label>
-          Customer
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Name" />
-        </label>
+        <CustomerNameFields firstName={firstName} surname={surname}
+          onChange={(first, last) => { setFirstName(first); setSurname(last) }} />
         <label>
           Phone
           <input value={phone} onChange={(e) => setPhone(formatPhone(e.target.value))} placeholder="0417-001-615" />

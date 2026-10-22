@@ -48,7 +48,8 @@ test.describe('sign-in and office review', () => {
 
     await signInAs(page, 'Staff', 'staff@goldco.com.au', 'staff')
     await page.goto('/quotes/new')
-    await page.getByLabel('Customer').fill(CUSTOMER.name)
+    await page.getByLabel('First Name', { exact: true }).fill(CUSTOMER.firstName)
+    await page.getByLabel('Surname', { exact: true }).fill(CUSTOMER.surname)
     await page.getByLabel('Phone').fill(CUSTOMER.phone)
     await page.getByLabel('Site address', { exact: true }).fill(CUSTOMER.address)
     await page.getByRole('button', { name: 'Start quote' }).click()

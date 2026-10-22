@@ -52,6 +52,11 @@ Changing the discount or note invalidates earlier approval. Issued quotes retain
 and note in their snapshot; revise the quote to change them. Historical quotes without a
 discount keep their original totals.
 
+New quotes capture **First Name** and **Surname** separately. To update them on an editable quote,
+expand **Customer name** under **Quote settings**. Lists and PDFs display the combined name.
+Older quotes retain their original full name; the name editor keeps it in First Name until it is
+manually separated, without guessing how an existing name should be split.
+
 ## How pricing data flows
 
 The price matrices live in the source Excel file, not in the app. `scripts/generate-pricing-data.py`
