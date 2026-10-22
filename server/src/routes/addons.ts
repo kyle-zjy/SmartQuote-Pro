@@ -4,16 +4,22 @@ import { asyncHandler } from '../http.js'
 
 export const addonsRouter = Router()
 
-addonsRouter.get('/', asyncHandler(async (_req, res) => {
-  const addons = await prisma.addon.findMany({ orderBy: { name: 'asc' } })
-  res.json({
-    items: addons.map((addon) => ({
-      section: addon.section,
-      name: addon.name,
-      price: addon.price === null ? null : Number(addon.price),
-      priceOnRequest: addon.priceOnRequest,
-      unit: addon.unit,
-    })),
-    total: addons.length,
-  })
-}))
+addonsRouter.get(
+  '/',
+  asyncHandler(async (_req, res) => {
+    const addons = await prisma.addon.findMany({
+      where: { active: true },
+      orderBy: { name: 'asc' },
+    })
+    res.json({
+      items: addons.map((addon) => ({
+        section: addon.section,
+        name: addon.name,
+        price: addon.price === null ? null : Number(addon.price),
+        priceOnRequest: addon.priceOnRequest,
+        unit: addon.unit,
+      })),
+      total: addons.length,
+    })
+  }),
+)

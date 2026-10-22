@@ -101,6 +101,12 @@ It never clears customers, quotes, staff or existing pricing. Updating an existi
 needs a separate migration/import process. The new application data lives in `workspace_records`
 as complete versioned JSONB documents. This preserves all existing wizard, annotation and issued
 snapshot fields; the original normalized `quotes`/`quote_lines` tables remain intact.
+Shared price-list changes also synchronize `products`, `product_categories`, `price_cells`,
+`mesh_extras` and `addons` in the same database transaction. Removed catalog entries become
+inactive, while historical quote references and captured prices remain intact. Bootstrap
+reconciles these catalog tables from the existing shared price list rather than replacing
+an imported list with bundled defaults. After applying new migrations to an existing local
+installation, run `npm run bootstrap` from `server/` to reconcile the catalog once.
 Quote numbers are allocated transactionally through `workspace_clock`, including manual-number
 reservations. Passwords use salted scrypt hashes; sessions are revocable and expire after 7 days.
 Production bootstrap requires explicit initial passwords. `VITE_API_URL` and `CORS_ORIGINS`

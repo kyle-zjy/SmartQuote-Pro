@@ -83,8 +83,10 @@ separate database transfer. To collaborate on the same live records, use one
 reachable shared API/database after production or staging hosting is configured.
 
 For later updates, pull the approved code, reinstall dependencies if lockfiles
-changed, apply `npx prisma migrate deploy` from `server/`, rebuild/restart as
-needed, and retain the existing Docker volume. `docker compose down -v` removes
+changed, apply `npx prisma migrate deploy` from `server/`, and run
+`npm run bootstrap` when adopting catalog synchronization for an existing local
+database. It reconciles catalog tables from the current shared price list.
+Rebuild/restart as needed, and retain the existing Docker volume. `docker compose down -v` removes
 the local database volume and is not a normal update step.
 
 ### Where the database is defined
@@ -122,6 +124,11 @@ The database stores application documents in `workspace_records`, with revision
 checks and a shared quote-number clock. Accounts and revocable sessions use
 `staff_users` and `auth_sessions`. The older normalized quote tables remain in
 the schema; copying only those tables would omit the UI's current business data.
+Shared price-list updates synchronize the normalized product, category, size-price,
+mesh-extra and add-on tables in the same transaction as the `pricing` document.
+Removed entries are marked inactive; historical quote identities and captured
+prices are preserved. Configuration drawing definitions remain in the frontend
+catalog and are not converted into configuration database tables by this sync.
 
 ## 4. Prepare accounts and environments
 
@@ -249,8 +256,10 @@ npm run build
 
 Run seeding before bootstrap on a new database. Seeding is initialization-only
 and skips an existing catalog or database containing the records it checks.
-Bootstrap adds missing accounts and shared defaults; it does not overwrite
-existing settings or passwords. Neither command transfers local business data.
+Bootstrap adds missing accounts and shared defaults, and reconciles the normalized
+catalog from the currently saved shared price list. It does not overwrite an
+imported price list, historical quotes, existing settings or passwords. Neither
+command transfers local business data.
 
 Apply committed migrations in a single controlled release step. Do not use
 `prisma migrate dev`, `migrate reset` or `db push` as the production upgrade path.

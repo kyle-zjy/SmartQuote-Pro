@@ -27,8 +27,12 @@ async function serializeProduct(product: {
     pricingAsAt: product.pricingAsAt ? product.pricingAsAt.toISOString().slice(0, 10) : null,
     note: product.note,
     categories: product.categories.map((category) => {
-      const widths = [...new Set(category.priceCells.map((cell) => cell.widthMm))].sort((a, b) => a - b)
-      const heights = [...new Set(category.priceCells.map((cell) => cell.heightMm))].sort((a, b) => a - b)
+      const widths = [...new Set(category.priceCells.map((cell) => cell.widthMm))].sort(
+        (a, b) => a - b,
+      )
+      const heights = [...new Set(category.priceCells.map((cell) => cell.heightMm))].sort(
+        (a, b) => a - b,
+      )
       const widthIndex = new Map(widths.map((w, i) => [w, i]))
       const heightIndex = new Map(heights.map((h, i) => [h, i]))
 
@@ -63,26 +67,38 @@ async function serializeProduct(product: {
   }
 }
 
-productsRouter.get('/', asyncHandler(async (_req, res) => {
-  const products = await prisma.product.findMany({
-    where: { active: true },
-    orderBy: { name: 'asc' },
-    include: { categories: { include: { priceCells: true, meshExtras: true } } },
-  })
-  res.json({
-    note: 'All prices exclude GST.',
-    products: await Promise.all(products.map(serializeProduct)),
-  })
-}))
+productsRouter.get(
+  '/',
+  asyncHandler(async (_req, res) => {
+    const products = await prisma.product.findMany({
+      where: { active: true },
+      orderBy: { name: 'asc' },
+      include: {
+        categories: { where: { active: true }, include: { priceCells: true, meshExtras: true } },
+      },
+    })
+    res.json({
+      note: 'All prices exclude GST.',
+      products: await Promise.all(products.map(serializeProduct)),
+    })
+  }),
+)
 
-productsRouter.get('/:key', asyncHandler(async (req, res) => {
-  const product = await prisma.product.findUnique({
-    where: { key: req.params.key },
-    include: { categories: { include: { priceCells: true, meshExtras: true } } },
-  })
-  if (!product) {
-    res.status(404).json({ error: { code: 'NOT_FOUND', message: `No product with key ${req.params.key}` } })
-    return
-  }
-  res.json(await serializeProduct(product))
-}))
+productsRouter.get(
+  '/:key',
+  asyncHandler(async (req, res) => {
+    const product = await prisma.product.findUnique({
+      where: { key: req.params.key },
+      include: {
+        categories: { where: { active: true }, include: { priceCells: true, meshExtras: true } },
+      },
+    })
+    if (!product?.active) {
+      res
+        .status(404)
+        .json({ error: { code: 'NOT_FOUND', message: `No product with key ${req.params.key}` } })
+      return
+    }
+    res.json(await serializeProduct(product))
+  }),
+)

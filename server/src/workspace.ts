@@ -4,6 +4,7 @@ import { prisma } from './db.js'
 import { asyncHandler } from './http.js'
 import { actor, requireAuth, publicStaff } from './auth.js'
 import { check } from './apiError.js'
+import { validatePricingCatalog, synchronizePricingCatalog } from './catalogSync.js'
 
 // Dynamic JSON is validated by validateQuote/validateCompany before use.
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -372,15 +373,7 @@ workspaceRouter.patch(
               'Only administrators can change company settings or prices.',
             )
             check(value, 400, 'INVALID_SETTINGS', 'Settings cannot be deleted.')
-            if (id === 'pricing')
-              check(
-                object(value.data) &&
-                  Array.isArray(value.data.products) &&
-                  Array.isArray(value.addons),
-                400,
-                'INVALID_PRICING',
-                'Invalid price list.',
-              )
+            if (id === 'pricing') validatePricingCatalog(value)
           } else if (id.startsWith('quote:') || id.startsWith('draft:')) {
             if (!value) {
               const prior = previous?.value as Obj | undefined
@@ -584,6 +577,8 @@ workspaceRouter.patch(
             )
           }
         }
+        if (changes.some((change) => change.id === 'pricing'))
+          await synchronizePricingCatalog(tx, values.get('pricing'))
         const writes = new Set(changes.map((c) => c.id))
         for (const id of values.keys()) if (id.startsWith('owner:') && !old.has(id)) writes.add(id)
         for (const id of writes) {

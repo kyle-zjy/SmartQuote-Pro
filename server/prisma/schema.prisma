@@ -52,6 +52,7 @@ model Product {
 }
 
 model ProductCategory {
+  active           Boolean  @default(true)
   id               String   @id @default(uuid())
   productId        String
   key              String
@@ -124,6 +125,7 @@ model ColourProduct {
 }
 
 model Addon {
+  active         Boolean  @default(true)
   id             String   @id @default(uuid())
   section        String?
   name           String

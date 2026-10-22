@@ -1,6 +1,7 @@
 import { prisma } from '../src/db.js'
 import { hashPassword } from '../src/auth.js'
 import { validNewPassword, PASSWORD_HINT } from '../src/passwordPolicy.js'
+import { synchronizePricingCatalog } from '../src/catalogSync.js'
 import { COMPANY, PRODUCT_WARRANTY_NOTES } from '../../src/data/company.ts'
 import { readFile } from 'node:fs/promises'
 try {
@@ -30,7 +31,8 @@ try {
     const existing = await prisma.staffUser.findUnique({ where: { email: item.email } })
     if (!existing) {
       const { password, ...data } = item
-      if (process.env.NODE_ENV === 'production' && !validNewPassword(password)) throw new Error(PASSWORD_HINT)
+      if (process.env.NODE_ENV === 'production' && !validNewPassword(password))
+        throw new Error(PASSWORD_HINT)
       await prisma.staffUser.create({
         data: { ...data, passwordHash: await hashPassword(password) },
       })
@@ -43,14 +45,26 @@ try {
   const addons = JSON.parse(
     await readFile(new URL('../../src/data/addons.json', import.meta.url), 'utf8'),
   )
-  for (const [id, value] of Object.entries({
-    company: COMPANY,
-    pricing: { data: pricing, addons, source: 'default', fileName: null },
-    warranty: PRODUCT_WARRANTY_NOTES,
-  })) {
-    await prisma.workspaceRecord.upsert({ where: { id }, create: { id, value }, update: {} })
-  }
-  console.log('Shared workspace initialized; existing accounts and records preserved.')
+  await prisma.$transaction(
+    async (tx) => {
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(33021001)`
+      for (const [id, value] of Object.entries({
+        company: COMPANY,
+        pricing: { data: pricing, addons, source: 'default', fileName: null },
+        warranty: PRODUCT_WARRANTY_NOTES,
+      })) {
+        await tx.workspaceRecord.upsert({ where: { id }, create: { id, value }, update: {} })
+      }
+      const active = await tx.workspaceRecord.findUniqueOrThrow({ where: { id: 'pricing' } })
+      if (active.deleted)
+        throw new Error('Restore the shared pricing record before synchronizing the catalog.')
+      await synchronizePricingCatalog(tx, active.value)
+    },
+    { timeout: 30000 },
+  )
+  console.log(
+    'Shared workspace initialized and catalog synchronized; existing accounts and quotes preserved.',
+  )
 } finally {
   await prisma.$disconnect()
 }
