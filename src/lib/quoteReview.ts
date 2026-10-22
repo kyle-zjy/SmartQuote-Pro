@@ -17,6 +17,7 @@ export function quoteReviewContent(quote: QuoteState, terms: ReviewTerms): strin
     version: quote.version,
     quoteNumber: quote.quoteNumber,
     quoteDate: quote.quoteDate,
+    ...(quote.discount !== undefined ? { discount: quote.discount } : {}),
     customer: quote.customer,
     shipSameAsBill: quote.shipSameAsBill,
     shipTo: quote.shipSameAsBill ? null : quote.shipTo,
