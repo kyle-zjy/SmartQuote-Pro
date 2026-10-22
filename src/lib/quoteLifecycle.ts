@@ -1,6 +1,7 @@
 import type { QuoteAction, QuoteState } from './quoteContext'
 import { calcQuoteTotals, money } from './quoteTotals'
 import { productWarrantyNotes, type CompanySettings } from '../data/company'
+import type { QuoteDiscount } from './quoteDiscount'
 
 export type QuoteStatus = 'draft' | 'office-review' | 'issued'
 export type DealStatus = 'open' | 'abandoned' | 'closed'
@@ -12,6 +13,8 @@ export function parseDealStatus(value: unknown): DealStatus {
 }
 
 export interface IssuedSnapshot {
+  /** Absent on historical quotes issued without a discount. */
+  discount?: QuoteDiscount & { amount: number; subtotalBeforeDiscount: number }
   colourExtra: number
   gstEnabled: boolean
   depositRate: number
@@ -25,6 +28,10 @@ export interface IssuedSnapshot {
 }
 
 export interface QuoteFinancials {
+  discountPercent: number
+  discountNote: string
+  discountAmount: number
+  subtotalBeforeDiscount: number
   colourExtra: number
   subtotal: number
   gstAmount: number
@@ -90,14 +97,15 @@ export function isActionLocked(
 }
 
 export function createIssuedSnapshot(
-  state: Pick<QuoteState, 'items' | 'gstEnabled' | 'paid'>,
+  state: Pick<QuoteState, 'items' | 'gstEnabled' | 'paid' | 'discount'>,
   colourExtra: number,
   depositRate: number,
   issuedAt = new Date().toISOString(),
   company?: CompanySettings,
 ): IssuedSnapshot {
-  const totals = calcQuoteTotals(state.items, state.gstEnabled, colourExtra, depositRate, state.paid)
+  const totals = calcQuoteTotals(state.items, state.gstEnabled, colourExtra, depositRate, state.paid, state.discount?.percent ?? 0)
   return {
+    ...(state.discount ? { discount: { ...state.discount, amount: totals.discountAmount, subtotalBeforeDiscount: totals.subtotalBeforeDiscount } } : {}),
     colourExtra,
     gstEnabled: state.gstEnabled,
     depositRate,
@@ -114,13 +122,17 @@ export function createIssuedSnapshot(
 }
 
 export function quoteFinancials(
-  state: Pick<QuoteState, 'status' | 'issuedSnapshot' | 'items' | 'gstEnabled' | 'paid'>,
+  state: Pick<QuoteState, 'status' | 'issuedSnapshot' | 'items' | 'gstEnabled' | 'paid' | 'discount'>,
   live: { colourExtra: number; depositRate: number },
 ): QuoteFinancials {
   if (state.status === 'issued' && state.issuedSnapshot) {
     const snapshot = state.issuedSnapshot
     const paid = money(Math.max(0, state.paid))
     return {
+      discountPercent: snapshot.discount?.percent ?? 0,
+      discountNote: snapshot.discount?.note ?? '',
+      discountAmount: snapshot.discount?.amount ?? 0,
+      subtotalBeforeDiscount: snapshot.discount?.subtotalBeforeDiscount ?? snapshot.subtotal,
       colourExtra: snapshot.colourExtra,
       subtotal: snapshot.subtotal,
       gstAmount: snapshot.gstAmount,
@@ -132,7 +144,9 @@ export function quoteFinancials(
   }
 
   return {
+    discountPercent: state.discount?.percent ?? 0,
+    discountNote: state.discount?.note ?? '',
     colourExtra: live.colourExtra,
-    ...calcQuoteTotals(state.items, state.gstEnabled, live.colourExtra, live.depositRate, state.paid),
+    ...calcQuoteTotals(state.items, state.gstEnabled, live.colourExtra, live.depositRate, state.paid, state.discount?.percent ?? 0),
   }
 }

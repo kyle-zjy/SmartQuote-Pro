@@ -1,4 +1,6 @@
 import { workspaceStorage } from './workspaceStorage'
+import { isValidQuoteDiscount } from './quoteDiscount'
+import { money } from './quoteTotals'
 import { normalizeQuote, type QuoteState, type RoomPhoto } from './quoteContext'
 import { ARCHIVE_KEY, type ArchivedQuote } from './quoteArchive'
 import { DRAFT_STORAGE_KEY, QUOTE_DRAFT_PREFIX, quoteDraftKey, stripRoomPhotoData } from './quotePersist'
@@ -47,6 +49,7 @@ function validateQuote(value: unknown): asserts value is QuoteState {
     typeof value.shipSameAsBill === 'boolean' && typeof value.quoteNumber === 'string' && typeof value.quoteDate === 'string' &&
     typeof value.frameColour === 'string' && typeof value.customFrameColour === 'string' && finite(value.paid) &&
     (value.colourExtraOverride === null || finite(value.colourExtraOverride)))
+  assert(value.discount === undefined || isValidQuoteDiscount(value.discount))
   for (const item of value.items) {
     assert(object(item) && typeof item.id === 'string' && typeof item.description === 'string' && typeof item.detail === 'string' &&
       typeof item.room === 'string' && typeof item.note === 'string' && finite(item.unitPrice) &&
@@ -70,6 +73,14 @@ function validateQuote(value: unknown): asserts value is QuoteState {
     assert(object(value.issuedSnapshot))
     for (const field of ['colourExtra', 'depositRate', 'subtotal', 'gstAmount', 'total', 'deposit']) assert(finite(value.issuedSnapshot[field]))
     assert(typeof value.issuedSnapshot.issuedAt === 'string')
+    const discount = value.issuedSnapshot.discount
+    if (discount !== undefined || value.discount !== undefined) {
+      assert(object(discount) && isValidQuoteDiscount(discount) && isValidQuoteDiscount(value.discount))
+      assert(discount.percent === value.discount.percent && discount.note === value.discount.note &&
+        finite(discount.amount) && finite(discount.subtotalBeforeDiscount))
+      assert(discount.amount === money(discount.subtotalBeforeDiscount * discount.percent / 100) &&
+        value.issuedSnapshot.subtotal === money(discount.subtotalBeforeDiscount - discount.amount))
+    }
     const document = value.issuedSnapshot.document
     if (document !== undefined) {
       assert(object(document) && object(document.company) && object(document.company.bank) &&

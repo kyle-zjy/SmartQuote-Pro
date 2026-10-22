@@ -284,6 +284,10 @@ export default function RevisionSnapshot({
           <section className="snapshot-section">
             <h3>Totals</h3>
             <dl className="snapshot-totals">
+              {financials.discountPercent > 0 && <>
+                <div><dt>Before discount</dt><dd>{formatCurrency(financials.subtotalBeforeDiscount)}</dd></div>
+                <div><dt>Discount ({financials.discountPercent}%)</dt><dd>−{formatCurrency(financials.discountAmount)}</dd></div>
+              </>}
               <div>
                 <dt>Sale amount</dt>
                 <dd>{formatCurrency(financials.subtotal)}</dd>
@@ -305,6 +309,7 @@ export default function RevisionSnapshot({
                 <dd>{formatCurrency(financials.balance)}</dd>
               </div>
             </dl>
+            {financials.discountPercent > 0 && financials.discountNote && <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Discount note: {financials.discountNote}</p>}
           </section>
 
           <section className="snapshot-section">

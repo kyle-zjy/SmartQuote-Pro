@@ -42,6 +42,19 @@ async function backup() {
 }
 
 describe('quote backup and restore', () => {
+  it('retains percentage discounts and notes when restoring a backup and rejects invalid discounts', async () => {
+    const data = await backup()
+    const discount = { percent: 12.5, note: 'Pensioner discount' }
+    data.archives[0].quote.discount = discount
+    data.archives[0].total = 96.25
+    data.drafts[0].discount = discount
+    const target = new MemoryStorage()
+    await restoreQuoteBackup(parseQuoteBackup(JSON.stringify(data)), () => false, target, photoStore())
+    expect(JSON.parse(target.getItem(ARCHIVE_KEY)!)[0].quote.discount).toEqual(discount)
+    expect(JSON.parse(target.getItem(quoteDraftKey('BACKUP-1', 1))!).discount).toEqual(discount)
+    data.archives[0].quote.discount = { percent: 101, note: '' }
+    expect(() => parseQuoteBackup(JSON.stringify(data))).toThrow()
+  })
   it('round-trips quote versions, drafts, reviews and both kinds of photos without login data', async () => {
     const data = await backup()
     const target = new MemoryStorage()

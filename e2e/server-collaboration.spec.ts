@@ -7,6 +7,42 @@ test.describe('database collaboration across isolated browsers', () => {
     'Requires the isolated PostgreSQL integration server.',
   )
   test.setTimeout(90000)
+  test('discounts synchronize across browsers and freeze when the quote is issued', async ({ browser, baseURL }) => {
+    const a = await browser.newContext({ baseURL }), b = await browser.newContext({ baseURL })
+    try {
+      const first = await a.newPage(), second = await b.newPage()
+      await login(first, 'staff')
+      await startNewQuote(first)
+      await addOpening(first)
+      await first.getByLabel('Product unit price', { exact: true }).fill('100')
+      await first.getByLabel('Discount (%)', { exact: true }).fill('10')
+      await first.getByLabel('Discount note', { exact: true }).fill('Defence discount')
+      await first.getByRole('button', { name: 'Save quote', exact: true }).click()
+      await expect(first.getByText(/Saved to the shared workspace/)).toBeVisible()
+      await login(second, 'admin')
+      await second.goto(first.url())
+      await expect(second.getByLabel('Discount (%)', { exact: true })).toHaveValue('10')
+      await expect(second.getByLabel('Discount note', { exact: true })).toHaveValue('Defence discount')
+      await expect(second.locator('.quote-workspace__total-line')).toHaveText('Total: $99.00')
+      await second.getByLabel('Discount (%)', { exact: true }).fill('20')
+      await second.getByRole('button', { name: 'Update saved quote', exact: true }).click()
+      await expect(second.getByText(/Saved to the shared workspace/)).toBeVisible()
+      await second.getByRole('button', { name: 'Issue quote', exact: true }).click()
+      await expect(second.getByText('Issued and saved to the shared workspace.', { exact: true })).toBeVisible()
+      const quoteNo = decodeURIComponent(new URL(second.url()).pathname.split('/')[2])
+      await first.goto('/quotes')
+      const issuedCard = first.getByRole('article').filter({ hasText: new RegExp(`\\b${quoteNo}\\b`) })
+      await expect(issuedCard).toContainText('Issued')
+      await issuedCard.getByRole('button', { name: 'Open', exact: true }).click()
+      await expect(first.getByLabel('Discount (%)', { exact: true })).toHaveValue('20')
+      await expect(first.getByLabel('Discount (%)', { exact: true })).toBeDisabled()
+      await expect(first.getByLabel('Discount note', { exact: true })).toBeDisabled()
+      await expect(first.locator('.quote-workspace__total-line')).toHaveText('Total: $88.00')
+    } finally {
+      await a.close()
+      await b.close()
+    }
+  })
   test('server saves survive browser cache failures and reload in another browser', async ({
     browser,
     baseURL,

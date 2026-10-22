@@ -5,6 +5,7 @@ import colours from '../data/colours.json'
 import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
+import QuoteDiscountFields from '../components/QuoteDiscountFields'
 import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
 import { removeQuoteExtra } from '../lib/quotePrint'
@@ -73,6 +74,7 @@ export default function QuoteWorkspace() {
   } = quote
 
   const [previewAudience, setPreviewAudience] = useState<'customer' | 'factory' | null>(null)
+  const [discountValid, setDiscountValid] = useState(true)
   const [message, setMessage] = useState<string | null>(null)
   const [notFound, setNotFound] = useState(false)
   const [wizardDrafts, setWizardDrafts] = useState(() => listWizardDrafts(quoteNo))
@@ -366,6 +368,12 @@ export default function QuoteWorkspace() {
             </p>
           )}
 
+          <div className="quote-editor__grid">
+            <QuoteDiscountFields key={`${quoteNo}:${version}`} value={quote.discount}
+              onChange={(discount) => { if (!locked) quote.setDiscount(discount) }}
+              onValidityChange={setDiscountValid} disabled={locked} />
+          </div>
+
           <label className="checkbox-row">
             <input
               type="checkbox"
@@ -430,6 +438,10 @@ export default function QuoteWorkspace() {
           )}
 
           <div className="quote-workspace__totals">
+            {quote.discountPercent > 0 && <>
+              <p>Before discount: {formatCurrency(quote.subtotalBeforeDiscount)}</p>
+              <p>Discount ({quote.discountPercent}%): −{formatCurrency(quote.discountAmount)}</p>
+            </>}
             <p>Subtotal: {formatCurrency(subtotal)}</p>
             {gstEnabled && <p>GST: {formatCurrency(gstAmount)}</p>}
             <p className="quote-workspace__total-line">Total: {formatCurrency(total)}</p>
@@ -441,13 +453,13 @@ export default function QuoteWorkspace() {
                 type="button"
                 className="primary-button"
                 onClick={handleSubmitForReview}
-                disabled={!quote.canEdit || !canSubmitForReview(quote)}
+                disabled={!discountValid || !quote.canEdit || !canSubmitForReview(quote)}
               >
                 Submit for Office Review
               </button>
             )}
             {(review?.status === 'returned' || reviewChanged || (status === 'office-review' && !review)) && !locked && (
-              <button type="button" className="primary-button" disabled={!quote.canEdit} onClick={handleResubmit}>
+              <button type="button" className="primary-button" disabled={!discountValid || !quote.canEdit} onClick={handleResubmit}>
                 Resubmit for review
               </button>
             )}
@@ -456,7 +468,7 @@ export default function QuoteWorkspace() {
                 type="button"
                 className={status === 'office-review' ? 'primary-button' : 'secondary-button'}
                 onClick={handleIssueQuote}
-                disabled={!canIssue}
+                disabled={!discountValid || !canIssue}
               >
                 Issue quote
               </button>
@@ -476,18 +488,18 @@ export default function QuoteWorkspace() {
               type="button"
               className="secondary-button"
               onClick={() => setPreviewAudience('customer')}
-              disabled={items.length === 0}
+              disabled={!discountValid || items.length === 0}
             >
               Preview Customer Quote
             </button>
-            <button type="button" className="secondary-button" onClick={() => setPreviewAudience('factory')} disabled={items.length === 0}>
+            <button type="button" className="secondary-button" onClick={() => setPreviewAudience('factory')} disabled={!discountValid || items.length === 0}>
               Preview Factory Quote
             </button>
-            <button type="button" className="secondary-button" disabled={!quote.canEdit} onClick={handleSaveQuote}>
+            <button type="button" className="secondary-button" disabled={!discountValid || !quote.canEdit} onClick={handleSaveQuote}>
               {alreadySaved ? 'Update saved quote' : 'Save quote'}
             </button>
             {!locked && (
-              <button type="button" className="secondary-button" onClick={handleSaveAsSeparateQuote}>
+              <button type="button" className="secondary-button" disabled={!discountValid} onClick={handleSaveAsSeparateQuote}>
                 Save as separate quote
               </button>
             )}
