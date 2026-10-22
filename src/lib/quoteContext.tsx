@@ -1,4 +1,5 @@
 import { workspaceStorage } from './workspaceStorage'
+import { isValidQuoteDiscount, type QuoteDiscount } from './quoteDiscount'
 import { createContext, useContext, useEffect, useMemo, useReducer, useRef, useState, type ReactNode } from 'react'
 import colours from '../data/colours.json'
 import {
@@ -117,6 +118,8 @@ export interface QuoteCustomer {
 }
 
 export interface QuoteState {
+  /** Omitted for legacy quotes and quotes without a configured discount. */
+  discount?: QuoteDiscount
   items: QuoteLineItem[]
   gstEnabled: boolean
   roomPhotos: Record<string, RoomPhoto[]>
@@ -142,6 +145,7 @@ export type QuoteAction =
   | { type: 'SET_QUANTITY'; id: string; quantity: number }
   | { type: 'UPDATE_ITEM'; id: string; patch: Partial<Omit<QuoteLineItem, 'id'>> }
   | { type: 'SET_GST'; enabled: boolean }
+  | { type: 'SET_DISCOUNT'; discount: QuoteDiscount }
   | { type: 'CLEAR' }
   | { type: 'SET_CUSTOMER'; customer: QuoteCustomer }
   | { type: 'SET_SHIP_TO'; shipTo: QuoteCustomer }
@@ -267,9 +271,11 @@ function normalizeItem(item: QuoteLineItem): QuoteLineItem {
 }
 
 export function normalizeQuote(parsed: Partial<QuoteState>, fallbackQuoteNo?: string): QuoteState {
+  if (parsed.discount !== undefined && !isValidQuoteDiscount(parsed.discount)) throw new Error('Invalid quote discount.')
   const quoteNo = parsed.quoteNo || fallbackQuoteNo || nextQuoteNo()
   return {
     ...defaultState(quoteNo),
+    ...(parsed.discount !== undefined ? { discount: { ...parsed.discount } } : {}),
     items: (parsed.items ?? []).map(normalizeItem),
     gstEnabled: parsed.gstEnabled ?? true,
     roomPhotos: parsed.roomPhotos ?? {},
@@ -352,6 +358,8 @@ export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState
     }
     case 'SET_GST':
       return { ...state, gstEnabled: action.enabled }
+    case 'SET_DISCOUNT':
+      return isValidQuoteDiscount(action.discount) ? { ...state, discount: { ...action.discount } } : state
     case 'CLEAR':
       return { ...state, items: [], roomPhotos: {} }
     case 'SET_CUSTOMER':
@@ -443,6 +451,7 @@ interface QuoteContextValue extends QuoteState {
   setQuantity: (id: string, quantity: number) => void
   updateItem: (id: string, patch: Partial<Omit<QuoteLineItem, 'id'>>) => void
   setGstEnabled: (enabled: boolean) => void
+  setDiscount: (discount: QuoteDiscount) => void
   setCustomer: (customer: QuoteCustomer) => void
   setShipTo: (shipTo: QuoteCustomer) => void
   setShipSameAsBill: (same: boolean) => void
@@ -480,6 +489,10 @@ interface QuoteContextValue extends QuoteState {
   removePhoto: (room: string, id: string) => void
   setPhotoCaption: (room: string, id: string, caption: string) => void
   colourExtra: number
+  discountPercent: number
+  discountNote: string
+  discountAmount: number
+  subtotalBeforeDiscount: number
   subtotal: number
   gstAmount: number
   total: number
@@ -618,7 +631,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
     })
     const defaultExtra = colourSurcharge(state.frameColour, settings.nonStandardColourPrice)
     const liveColourExtra = defaultExtra > 0 ? (state.colourExtraOverride ?? defaultExtra) : 0
-    const { colourExtra, subtotal, gstAmount, total, deposit, balance } = quoteFinancials(state, {
+    const { colourExtra, subtotal, gstAmount, total, deposit, balance, discountPercent, discountNote, discountAmount, subtotalBeforeDiscount } = quoteFinancials(state, {
       colourExtra: liveColourExtra,
       depositRate: settings.depositRate,
     })
@@ -650,6 +663,7 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       setQuantity: (id, quantity) => dispatch({ type: 'SET_QUANTITY', id, quantity }),
       updateItem: (id, patch) => dispatch({ type: 'UPDATE_ITEM', id, patch }),
       setGstEnabled: (enabled) => dispatch({ type: 'SET_GST', enabled }),
+      setDiscount: (discount) => dispatch({ type: 'SET_DISCOUNT', discount }),
       setCustomer: (customer) => dispatch({ type: 'SET_CUSTOMER', customer }),
       setShipTo: (shipTo) => dispatch({ type: 'SET_SHIP_TO', shipTo }),
       setShipSameAsBill: (same) => dispatch({ type: 'SET_SHIP_SAME', same }),
@@ -838,6 +852,10 @@ export function QuoteProvider({ children }: { children: ReactNode }) {
       setPhotoCaption: (room, id, caption) => dispatch({ type: 'SET_PHOTO_CAPTION', room, id, caption }),
       colourExtra,
       subtotal,
+      discountPercent,
+      discountNote,
+      discountAmount,
+      subtotalBeforeDiscount,
       gstAmount,
       total,
       deposit,

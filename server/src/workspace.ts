@@ -26,6 +26,7 @@ export function reviewContent(quote: Obj, terms: Obj) {
     version: quote.version,
     quoteNumber: quote.quoteNumber,
     quoteDate: quote.quoteDate,
+    ...(quote.discount !== undefined ? { discount: quote.discount } : {}),
     customer: quote.customer,
     shipSameAsBill: quote.shipSameAsBill,
     shipTo: quote.shipSameAsBill ? null : quote.shipTo,
@@ -96,6 +97,8 @@ export function validateQuote(q: unknown): asserts q is Obj {
     'INVALID_QUOTE',
     'Invalid customer, date, colour or payment details.',
   )
+  if (q.discount !== undefined) validateDiscount(q.discount)
+  if (q.status === 'issued' && object(q.issuedSnapshot)) validateDiscountSnapshot(q, q.issuedSnapshot)
   for (const item of q.items) {
     check(
       object(item) &&
@@ -182,16 +185,37 @@ export function validateCompany(c: unknown): asserts c is Obj {
     check(typeof c[key] === 'string', 400, 'INVALID_COMPANY', 'Incomplete company details.')
 }
 const money = (n: number) => Math.round(n * 100) / 100
-function totals(q: Obj, terms: Obj) {
-  const subtotal = money(
+function validateDiscount(value: unknown): asserts value is Obj {
+  check(object(value) && finite(value.percent) && value.percent <= 100 &&
+    typeof value.note === 'string' && value.note.length <= 1000,
+  400, 'INVALID_DISCOUNT', 'Enter a discount percentage from 0 to 100 and a note of up to 1000 characters.')
+}
+
+export function validateDiscountSnapshot(q: Obj, snapshot: Obj) {
+  if (q.discount === undefined && snapshot.discount === undefined) return
+  validateDiscount(q.discount)
+  validateDiscount(snapshot.discount)
+  const d = snapshot.discount
+  check(d.percent === q.discount.percent && d.note === q.discount.note &&
+    finite(d.amount) && finite(d.subtotalBeforeDiscount) &&
+    d.amount === money(d.subtotalBeforeDiscount * d.percent / 100) &&
+    snapshot.subtotal === money(d.subtotalBeforeDiscount - d.amount),
+  400, 'INVALID_SNAPSHOT', 'Issued discount details must match the quote and its saved amounts.')
+}
+
+export function totals(q: Obj, terms: Obj) {
+  if (q.discount !== undefined) validateDiscount(q.discount)
+  const subtotalBeforeDiscount = money(
     q.items.reduce(
       (sum: number, item: Obj) => sum + money((item.finalPrice ?? item.unitPrice) * item.quantity),
       0,
     ) + terms.colourExtra,
   )
+  const discountAmount = money(subtotalBeforeDiscount * (q.discount?.percent ?? 0) / 100)
+  const subtotal = money(subtotalBeforeDiscount - discountAmount)
   const gstAmount = q.gstEnabled ? money(subtotal * 0.1) : 0
   const total = money(subtotal + gstAmount)
-  return { subtotal, gstAmount, total, deposit: money(total * terms.depositRate) }
+  return { subtotalBeforeDiscount, discountAmount, subtotal, gstAmount, total, deposit: money(total * terms.depositRate) }
 }
 export const workspaceRouter = Router()
 workspaceRouter.use(requireAuth)
@@ -461,7 +485,10 @@ workspaceRouter.patch(
                   .filter((k) => used.has(k))
                   .map((k) => warranty[k])
                 check(
-                  Object.entries(calculated).every(([k, v]) => q.issuedSnapshot[k] === v) &&
+                  (['subtotal', 'gstAmount', 'total', 'deposit'] as const).every((k) => q.issuedSnapshot[k] === calculated[k]) &&
+                    canonical(q.issuedSnapshot.discount) === canonical(q.discount === undefined ? undefined : {
+                      ...q.discount, amount: calculated.discountAmount, subtotalBeforeDiscount: calculated.subtotalBeforeDiscount,
+                    }) &&
                     q.issuedSnapshot.colourExtra === terms.colourExtra &&
                     q.issuedSnapshot.depositRate === terms.depositRate &&
                     q.issuedSnapshot.gstEnabled === q.gstEnabled &&

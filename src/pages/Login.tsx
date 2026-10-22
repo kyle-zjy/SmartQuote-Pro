@@ -4,17 +4,15 @@ import { SafetyCertificateOutlined, UserOutlined } from '@ant-design/icons'
 import { useAuth } from '../lib/authContext'
 import { DEFAULT_STAFF, type StaffRole } from '../lib/staffStore'
 
-const PORTALS: Record<StaffRole, { title: string; blurb: string; hint: string; home: string }> = {
+const PORTALS: Record<StaffRole, { title: string; blurb: string; home: string }> = {
   staff: {
     title: 'Staff sign-in',
     blurb: 'Create quotes, measure openings and submit them for office review.',
-    hint: 'Demo account: staff@goldco.com.au / staff',
     home: '/',
   },
   admin: {
     title: 'Admin sign-in',
     blurb: 'Review submitted quotes, manage staff, company details and pricing.',
-    hint: 'Demo account: admin@goldco.com.au / admin',
     home: '/admin/reviews',
   },
 }
@@ -54,15 +52,18 @@ export function LoginForm() {
   const location = useLocation()
   const demoLoginEnabled = import.meta.env.DEV || import.meta.env.VITE_DATA_MODE === 'local'
   const demoAccount = demoLoginEnabled ? DEFAULT_STAFF.find((member) => member.role === portal) : undefined
+  const demoPassword = demoAccount
+    ? import.meta.env.VITE_DATA_MODE === 'local' ? demoAccount.password : `${demoAccount.role}12345678`
+    : ''
   const [email, setEmail] = useState(demoAccount?.email ?? '')
-  const [password, setPassword] = useState(demoAccount?.password ?? '')
+  const [password, setPassword] = useState(demoPassword)
   const [error, setError] = useState('')
 
   useEffect(() => {
     setEmail(demoAccount?.email ?? '')
-    setPassword(demoAccount?.password ?? '')
+    setPassword(demoPassword)
     setError('')
-  }, [demoAccount])
+  }, [demoAccount, demoPassword])
 
   if (!portal) return <Navigate to="/login" replace />
   if (session?.role === portal) return <Navigate to={PORTALS[portal].home} replace />
@@ -111,7 +112,7 @@ export function LoginForm() {
         <button type="submit" className="primary-button login-card__submit">
           Sign in
         </button>
-        <p className="muted small">{demoLoginEnabled ? config.hint : 'Use the account provided by your office.'}</p>
+        <p className="muted small">{demoAccount ? `Test account: ${demoAccount.email} / ${demoPassword}` : 'Use the account provided by your office.'}</p>
         <p className="muted small">Forgot your password? Contact your office administrator to reset it.</p>
         <div className="login-card__switch">
           <Link to="/login" className="link-button">

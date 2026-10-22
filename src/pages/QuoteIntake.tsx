@@ -4,6 +4,8 @@ import { useQuote } from '../lib/quoteContext'
 import { formatPhone } from '../lib/phoneFormat'
 import { isValidQuoteNumber } from '../lib/quoteNumberValidation'
 import QuoteAddresses from '../components/QuoteAddresses'
+import QuoteDiscountFields from '../components/QuoteDiscountFields'
+import type { QuoteDiscount } from '../lib/quoteDiscount'
 import { useAuth } from '../lib/authContext'
 import { recordQuoteOwner } from '../lib/reviewStore'
 import { withQuoteStorageLock } from '../lib/quoteWriteLock'
@@ -13,7 +15,7 @@ function todayISO(): string {
 }
 
 export default function QuoteIntake() {
-  const { items, customer, newQuote, setCustomer, setShipTo, setShipSameAsBill, setQuoteDate } = useQuote()
+  const { items, customer, newQuote, setCustomer, setShipTo, setShipSameAsBill, setQuoteDate, setDiscount } = useQuote()
   const navigate = useNavigate()
   const { user } = useAuth()
 
@@ -26,8 +28,11 @@ export default function QuoteIntake() {
   const [quoteNumber, setQuoteNumber] = useState('')
   const [error, setError] = useState('')
   const [date, setDate] = useState(todayISO())
+  const [discount, setDraftDiscount] = useState<QuoteDiscount>()
+  const [discountValid, setDiscountValid] = useState(true)
 
   async function handleCreate() {
+    if (!discountValid) return
     if (quoteNumber.trim() && !isValidQuoteNumber(quoteNumber.trim())) {
       setError('Enter a quote number with up to 50 characters. Any characters are allowed.')
       return
@@ -53,6 +58,7 @@ export default function QuoteIntake() {
     setShipTo({ name, address: siteAddress, phone, email: email.trim() })
     setShipSameAsBill(sameAddress)
     setQuoteDate(date)
+    if (discount) setDiscount(discount)
     if (user) {
       try {
         await withQuoteStorageLock(() => recordQuoteOwner(quoteNo!, user.id))
@@ -95,10 +101,11 @@ export default function QuoteIntake() {
           <input value={quoteNumber} onChange={(e) => { setQuoteNumber(e.target.value); setError('') }} placeholder="e.g. A123" />
           <span className="muted small">Use any characters (up to 50), or leave blank to generate the next number.</span>
         </label>
+        <QuoteDiscountFields value={discount} onChange={setDraftDiscount} onValidityChange={setDiscountValid} />
       </div>
       {error && <p className="price-result--error" role="alert">{error}</p>}
       <div className="quote-actions">
-        <button type="submit" className="primary-button">
+        <button type="submit" className="primary-button" disabled={!discountValid}>
           Start quote
         </button>
       </div>

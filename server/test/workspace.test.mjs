@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { app } from '../dist/src/app.js'
 import { prisma } from '../dist/src/db.js'
 import { hashPassword, verifyPassword } from '../dist/src/auth.js'
-import { validateQuote, reviewContent, canonical } from '../dist/src/workspace.js'
+import { validateQuote, reviewContent, canonical, totals, validateDiscountSnapshot } from '../dist/src/workspace.js'
 
 const q = (no) => ({
   quoteNo: no,
@@ -76,6 +76,40 @@ test('review fingerprint ignores images and payments while binding commercial co
   assert.notEqual(reviewContent(original, terms), reviewContent(changed, terms))
 })
 
+test('server calculates percentage discounts before GST and validates frozen discount details', () => {
+  const quote = q('discount')
+  quote.items[0].unitPrice = 19.99
+  quote.items[0].finalPrice = 19.99
+  quote.items[0].quantity = 3
+  quote.discount = { percent: 12.5, note: 'Defence discount' }
+  validateQuote(quote)
+  const terms = { colourExtra: 0, depositRate: 0.5 }
+  assert.deepEqual(totals(quote, terms), {
+    subtotalBeforeDiscount: 59.97, discountAmount: 7.5, subtotal: 52.47,
+    gstAmount: 5.25, total: 57.72, deposit: 28.86,
+  })
+  const snapshot = { subtotal: 52.47, discount: { ...quote.discount, amount: 7.5, subtotalBeforeDiscount: 59.97 } }
+  validateDiscountSnapshot(quote, snapshot)
+  for (const patch of [{ amount: 8 }, { percent: 10 }, { note: 'Different' }, { subtotalBeforeDiscount: 60 }]) {
+    assert.throws(() => validateDiscountSnapshot(quote, { ...snapshot, discount: { ...snapshot.discount, ...patch } }))
+  }
+  assert.throws(() => validateDiscountSnapshot(quote, { subtotal: 52.47 }))
+  for (const percent of [-1, 100.01, NaN, Infinity, '10']) {
+    assert.throws(() => validateQuote({ ...quote, discount: { percent, note: '' } }))
+    assert.throws(() => totals({ ...quote, discount: { percent, note: '' } }, terms))
+  }
+  assert.throws(() => validateQuote({ ...quote, discount: { percent: 10, note: 'x'.repeat(1001) } }))
+  const key = reviewContent(quote, terms)
+  assert.notEqual(reviewContent({ ...quote, discount: { ...quote.discount, percent: 15 } }, terms), key)
+  assert.notEqual(reviewContent({ ...quote, discount: { ...quote.discount, note: 'Changed' } }, terms), key)
+  assert.equal(totals({ ...quote, discount: { percent: 100, note: '' } }, terms).total, 0)
+  assert.equal(totals({ ...quote, discount: undefined }, terms).total, 65.97)
+  assert.equal(totals({ ...quote, gstEnabled: false }, terms).total, 52.47)
+  quote.items = [{ ...quote.items[0], unitPrice: 450, finalPrice: 500, quantity: 2 }]
+  quote.discount.percent = 10
+  assert.equal(totals(quote, { ...terms, colourExtra: 50 }).total, 1039.5)
+})
+
 test(
   'authenticated workspace persists atomic, permission-checked revisions in PostgreSQL',
   { skip: process.env.RUN_DATABASE_TESTS !== '1' },
@@ -128,6 +162,33 @@ test(
     const snapshot = async (token) => (await request('/workspace', token)).body
     const patch = async (token, changes) => await request('/workspace', token, 'PATCH', { changes })
     const change = (id, expected, value) => ({ id, expected, value })
+    await t.test('persists discounted totals and rejects forged discount snapshots', async () => {
+      const no = `${prefix}-disc`, id = keys(no).quote
+      createdIds.push(id, `owner:${encodeURIComponent(no)}`)
+      const quote = { ...q(no), discount: { percent: 10, note: 'Pensioner discount' } }
+      const saved = await patch(staff, [change(id, 0, archive(quote))])
+      assert.equal(saved.status, 200)
+      const record = saved.body.records.find((r) => r.id === id)
+      assert.equal(record.value.total, 643.5)
+      assert.deepEqual(record.value.quote.discount, quote.discount)
+      const company = (await snapshot(admin)).records.find((r) => r.id === 'company').value
+      const issued = { ...quote, status: 'issued', issuedSnapshot: {
+        colourExtra: 0, gstEnabled: true, depositRate: 0.5, subtotal: 585, gstAmount: 58.5,
+        total: 643.5, deposit: 321.75, issuedAt: new Date().toISOString(),
+        discount: { ...quote.discount, amount: 65, subtotalBeforeDiscount: 650 },
+        document: { company, warrantyNotes: [] },
+      } }
+      const tampered = structuredClone(issued)
+      tampered.issuedSnapshot.discount.amount = 60
+      assert.equal((await patch(admin, [change(id, record.revision, archive(tampered))])).status, 400)
+      const issuedResult = await patch(admin, [change(id, record.revision, archive(issued))])
+      assert.equal(issuedResult.status, 200)
+      const issuedRecord = issuedResult.body.records.find((r) => r.id === id)
+      const changed = structuredClone(issuedRecord.value)
+      changed.quote.discount.note = 'Edited after issue'
+      changed.quote.issuedSnapshot.discount.note = 'Edited after issue'
+      assert.equal((await patch(admin, [change(id, issuedRecord.revision, changed)])).status, 409)
+    })
     await t.test(
       'unauthenticated and forged browser sessions cannot access shared data',
       async () => {

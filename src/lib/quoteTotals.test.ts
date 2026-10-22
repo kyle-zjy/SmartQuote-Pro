@@ -19,6 +19,8 @@ describe('calcQuoteTotals', () => {
 
   it('applies 10% GST when enabled', () => {
     expect(calcQuoteTotals(items, true)).toEqual({
+      subtotalBeforeDiscount: 250,
+      discountAmount: 0,
       subtotal: 250,
       gstAmount: 250 * GST_RATE,
       total: 275,
@@ -30,6 +32,8 @@ describe('calcQuoteTotals', () => {
 
   it('omits GST when the quote is GST-exclusive', () => {
     expect(calcQuoteTotals(items, false)).toEqual({
+      subtotalBeforeDiscount: 250,
+      discountAmount: 0,
       subtotal: 250,
       gstAmount: 0,
       total: 250,
@@ -41,6 +45,8 @@ describe('calcQuoteTotals', () => {
 
   it('adds a non-standard colour charge before GST and takes a 50% deposit', () => {
     expect(calcQuoteTotals([{ unitPrice: 1203, quantity: 2 }], true, 220)).toEqual({
+      subtotalBeforeDiscount: 2626,
+      discountAmount: 0,
       subtotal: 2626,
       gstAmount: 262.6,
       total: 2888.6,
@@ -52,6 +58,8 @@ describe('calcQuoteTotals', () => {
 
   it('totals an empty quote as zero', () => {
     expect(calcQuoteTotals([], true)).toEqual({
+      subtotalBeforeDiscount: 0,
+      discountAmount: 0,
       subtotal: 0,
       gstAmount: 0,
       total: 0,

@@ -44,6 +44,14 @@ on Quotes to copy missing records to the database. Existing server versions are 
 Same-quote editing is protected across tabs, with optimistic revision checks across browsers.
 Newly issued quotes retain the company, bank and terms details used when they were issued.
 
+Quotes support a **Discount (%)** from 0 to 100 and a customer-visible discount note, entered
+on New quote or under Quote settings. The discount applies to the complete tax-exclusive
+subtotal (including add-ons and colour charges) before GST. The discount amount is rounded
+to cents, subtracted from the subtotal, then GST, deposit and balance are calculated.
+Changing the discount or note invalidates earlier approval. Issued quotes retain the discount
+and note in their snapshot; revise the quote to change them. Historical quotes without a
+discount keep their original totals.
+
 ## How pricing data flows
 
 The price matrices live in the source Excel file, not in the app. `scripts/generate-pricing-data.py`

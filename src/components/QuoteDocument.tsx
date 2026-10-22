@@ -36,6 +36,10 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
     customFrameColour,
     colourExtra,
     subtotal,
+    subtotalBeforeDiscount,
+    discountPercent,
+    discountAmount,
+    discountNote,
     gstAmount,
     total,
     deposit,
@@ -209,10 +213,17 @@ export default function QuoteDocument({ readOnly = false, audience = 'customer' 
         <>
           <div className="quote-sheet-foot">
             <div className="quote-sheet-foot__terms">
+              {discountPercent > 0 && discountNote && <p style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>Discount note: {discountNote}</p>}
               <p className="quote-sheet-foot__contract">{settings.termsContract}</p>
               <p className="quote-sheet-foot__sizes">{settings.sizeDisclaimer}</p>
             </div>
             <div className="quote-sheet-foot__totals">
+              {discountPercent > 0 && <>
+                <span>Before discount</span>
+                <span>{formatCurrency(subtotalBeforeDiscount)}</span>
+                <span>Discount ({discountPercent}%)</span>
+                <span>−{formatCurrency(discountAmount)}</span>
+              </>}
               <span>Sale Amt</span>
               <span>{formatCurrency(subtotal)}</span>
               <span>GST</span>
