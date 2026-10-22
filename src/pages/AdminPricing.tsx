@@ -1,4 +1,5 @@
 import ExcelDropZone from '../components/ExcelDropZone'
+import AddonCatalogEditor from '../components/AddonCatalogEditor'
 import { usePricing } from '../lib/pricingContext'
 
 export default function AdminPricing() {
@@ -12,6 +13,7 @@ export default function AdminPricing() {
         documents keep their saved values. Restore the built-in prices with “Restore default price list”.
       </p>
       <ExcelDropZone />
+      <AddonCatalogEditor />
 
       <h2>Current products ({data.products.length})</h2>
       <table className="quote-table">

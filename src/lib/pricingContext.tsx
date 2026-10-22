@@ -16,6 +16,7 @@ interface PricingState {
 interface PricingContextValue extends PricingState {
   importFromFile: (file: File) => Promise<{ warnings: string[] }>
   resetToDefault: () => Promise<void>
+  saveAddons: (addons: AddonItem[]) => Promise<void>
 }
 const PricingContext = createContext<PricingContextValue | null>(null)
 const initialState: PricingState = {
@@ -26,12 +27,10 @@ const initialState: PricingState = {
 }
 const KEY = 'smartquote-pro:pricing'
 function readPricing() {
-  if (SERVER_MODE) {
-    try {
-      return (JSON.parse(workspaceStorage.getItem(KEY) ?? 'null') as PricingState) ?? initialState
-    } catch {
-      /* Use built-in defaults. */
-    }
+  try {
+    return (JSON.parse(workspaceStorage.getItem(KEY) ?? 'null') as PricingState) ?? initialState
+  } catch {
+    /* Use built-in defaults. */
   }
   return initialState
 }
@@ -45,6 +44,17 @@ export function PricingProvider({ children }: { children: ReactNode }) {
   const value = useMemo<PricingContextValue>(
     () => ({
       ...state,
+      saveAddons: async (addons) => {
+        const names = addons.map((item) => item.name.trim().toLowerCase())
+        if (names.some((name) => !name) || new Set(names).size !== names.length)
+          throw new Error('Use a unique, non-empty name for every add-on.')
+        if (addons.some((item) => item.price === null ? !item.priceOnRequest : !Number.isFinite(item.price) || item.price < 0))
+          throw new Error('Enter a price of zero or greater, or select price on request.')
+        const next = { ...state, addons }
+        if (SERVER_MODE) await saveSharedSetting('pricing', next, sharedRecordRevision('pricing'))
+        else workspaceStorage.setItem(KEY, JSON.stringify(next))
+        setState(next)
+      },
       importFromFile: async (file) => {
         const expected = sharedRecordRevision('pricing')
         const { parseExcelFile } = await import('./xlsxImport')
@@ -56,12 +66,14 @@ export function PricingProvider({ children }: { children: ReactNode }) {
           fileName: file.name,
         }
         if (SERVER_MODE) await saveSharedSetting('pricing', next, expected)
+        else workspaceStorage.setItem(KEY, JSON.stringify(next))
         setState(next)
         return { warnings: result.warnings }
       },
       resetToDefault: async () => {
         if (SERVER_MODE)
           await saveSharedSetting('pricing', initialState, sharedRecordRevision('pricing'))
+        else workspaceStorage.removeItem(KEY)
         setState(initialState)
       },
     }),

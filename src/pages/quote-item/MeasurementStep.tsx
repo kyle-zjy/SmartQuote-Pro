@@ -369,9 +369,6 @@ export default function MeasurementStep({
             <p className="muted small">Mark and fill at least one height and one width to see the screen size.</p>
           )}
 
-          {missingMarks.length > 0 && (
-            <p className="muted small">Still to mark on the drawing: {missingMarks.join(', ')}.</p>
-          )}
           {missingValues.length > 0 && missingMarks.length === 0 && (
             <p className="muted small">Still to type: {missingValues.join(', ')}.</p>
           )}

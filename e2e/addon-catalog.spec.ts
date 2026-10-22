@@ -1,0 +1,22 @@
+import { test, expect, resetApp } from './helpers'
+
+test('admin can add, persist, edit and delete an add-on', async ({ page }) => {
+  await resetApp(page)
+  await page.goto('/admin/pricing')
+  const catalog = page.getByRole('region', { name: 'Add-on catalog' })
+  await catalog.getByLabel('Item name').fill('JAMB EXTENSION CUSTOM')
+  await catalog.getByLabel('Price ($)', { exact: true }).fill('45.50')
+  await catalog.getByRole('button', { name: 'Add add-on', exact: true }).click()
+  await expect(catalog.getByRole('status')).toHaveText('Add-on saved.')
+  await page.reload()
+  const row = catalog.getByRole('row').filter({ hasText: 'JAMB EXTENSION CUSTOM' })
+  await expect(row).toContainText('45.50')
+  await row.getByRole('button', { name: 'Edit JAMB EXTENSION CUSTOM', exact: true }).click()
+  await catalog.getByLabel('Price ($)', { exact: true }).fill('60')
+  await catalog.getByRole('button', { name: 'Save add-on', exact: true }).click()
+  await expect(row).toContainText('60.00')
+  await row.getByRole('button', { name: 'Delete JAMB EXTENSION CUSTOM', exact: true }).click()
+  await expect(row).toHaveCount(0)
+  await page.reload()
+  await expect(row).toHaveCount(0)
+})
