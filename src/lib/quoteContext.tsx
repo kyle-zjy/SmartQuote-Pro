@@ -111,6 +111,9 @@ export interface RoomPhoto {
 
 export interface QuoteCustomer {
   name: string
+  /** Optional for legacy quotes, whose full name must remain intact. */
+  firstName?: string
+  surname?: string
   address: string
   phone: string
   /** One or more comma-separated customer email addresses. Optional for legacy quotes. */
@@ -362,8 +365,17 @@ export function quoteReducer(state: QuoteState, action: QuoteAction): QuoteState
       return isValidQuoteDiscount(action.discount) ? { ...state, discount: { ...action.discount } } : state
     case 'CLEAR':
       return { ...state, items: [], roomPhotos: {} }
-    case 'SET_CUSTOMER':
-      return { ...state, customer: action.customer }
+    case 'SET_CUSTOMER': {
+      const customer = action.customer.firstName !== undefined || action.customer.surname !== undefined
+        ? { ...action.customer, name: [action.customer.firstName?.trim(), action.customer.surname?.trim()].filter(Boolean).join(' ') }
+        : action.customer
+      // Different billing/site addresses can still belong to the same customer.
+      // Preserve a distinct legacy shipping recipient instead of renaming them.
+      const shipTo = state.shipTo.name === state.customer.name
+        ? { ...state.shipTo, name: customer.name, firstName: customer.firstName, surname: customer.surname }
+        : state.shipTo
+      return { ...state, customer, shipTo }
+    }
     case 'SET_SHIP_TO':
       return { ...state, shipTo: action.shipTo }
     case 'SET_SHIP_SAME':

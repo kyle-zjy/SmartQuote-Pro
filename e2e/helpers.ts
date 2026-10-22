@@ -18,6 +18,8 @@ export { expect }
 
 export const CUSTOMER = {
   name: 'Ada Lovelace',
+  firstName: 'Ada',
+  surname: 'Lovelace',
   phone: '0412 345 678',
   address: '1 Paradise Ave\nMiami QLD 4220',
 }
@@ -41,10 +43,11 @@ export async function goTo(page: Page, name: RegExp | string) {
   await page.getByRole('navigation').first().getByRole('link', { name }).click()
 }
 
-export async function startNewQuote(page: Page, customer = CUSTOMER) {
+export async function startNewQuote(page: Page, customer: { name: string; firstName?: string; surname?: string; phone: string; address: string } = CUSTOMER) {
   await page.goto('/quotes/new')
   await expect(page.getByRole('heading', { name: 'New quote' })).toBeVisible()
-  await page.getByLabel('Customer').fill(customer.name)
+  await page.getByLabel('First Name', { exact: true }).fill(customer.firstName ?? customer.name)
+  await page.getByLabel('Surname', { exact: true }).fill(customer.surname ?? '')
   await page.getByLabel('Phone').fill(customer.phone)
   await page.getByLabel('Site address', { exact: true }).fill(customer.address)
   await page.getByRole('button', { name: 'Start quote' }).click()

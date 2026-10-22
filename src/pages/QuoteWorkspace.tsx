@@ -6,6 +6,7 @@ import QuotePdfPreview from '../components/QuotePdfPreview'
 import QuoteRoomGroup from '../components/QuoteRoomGroup'
 import QuoteStatusBadge from '../components/QuoteStatusBadge'
 import QuoteDiscountFields from '../components/QuoteDiscountFields'
+import CustomerNameFields from '../components/CustomerNameFields'
 import { useCompanySettings } from '../lib/companySettings'
 import { formatCurrency } from '../lib/formatCurrency'
 import { removeQuoteExtra } from '../lib/quotePrint'
@@ -316,6 +317,20 @@ export default function QuoteWorkspace() {
       <div className="quote-workspace__grid">
         <section className="quote-editor quote-workspace__left">
           <h2>Quote settings</h2>
+          <details>
+            <summary>Customer name</summary>
+            {customer.firstName === undefined && customer.surname === undefined && customer.name && (
+              <p className="muted small">This quote has a single saved name. It is shown in First Name until you separate it.</p>
+            )}
+            <div className="quote-editor__grid">
+              <CustomerNameFields
+                firstName={customer.firstName ?? (customer.surname === undefined ? customer.name : '')}
+                surname={customer.surname ?? ''}
+                disabled={locked}
+                onChange={(firstName, surname) => quote.setCustomer({ ...customer, firstName, surname })}
+              />
+            </div>
+          </details>
           <div className="quote-editor__grid">
             <label>
               Frame colour (default)

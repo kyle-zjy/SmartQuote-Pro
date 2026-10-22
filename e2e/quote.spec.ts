@@ -71,7 +71,8 @@ test.describe('quote workspace', () => {
 
   test('can use a different ship-to address and a colour extra', async ({ page }) => {
     await page.goto('/quotes/new')
-    await page.getByLabel('Customer').fill(CUSTOMER.name)
+    await page.getByLabel('First Name', { exact: true }).fill(CUSTOMER.firstName)
+    await page.getByLabel('Surname', { exact: true }).fill(CUSTOMER.surname)
     await page.getByLabel('Site address', { exact: true }).fill('9 Industrial Dr\nYatala QLD 4207')
     await page.getByLabel('Billing address is the same as site address').uncheck()
     await page.getByLabel('Billing address', { exact: true }).fill(CUSTOMER.address)
@@ -146,7 +147,8 @@ test('uses the entered quote number in the customer preview and formats phone nu
   await resetApp(page)
   await page.goto('/quotes/new')
   await page.getByLabel('Quote number').fill('45678')
-  await page.getByLabel('Customer').fill('Test Customer')
+  await page.getByLabel('First Name', { exact: true }).fill('Test')
+  await page.getByLabel('Surname', { exact: true }).fill('Customer')
   await page.getByLabel('Phone').fill('0417001615')
   await expect(page.getByLabel('Phone')).toHaveValue('0417-001-615')
   await page.getByRole('button', { name: 'Start quote' }).click()

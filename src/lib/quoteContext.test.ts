@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { displayQuoteNo } from './displayQuoteNo'
 import { getArchivedQuote, upsertArchivedQuote } from './quoteArchive'
-import { buildDuplicatedQuote, nextSequenceValue, normalizeQuote, type QuoteLineItem, type QuoteState } from './quoteContext'
+import { buildDuplicatedQuote, nextSequenceValue, normalizeQuote, quoteReducer, type QuoteLineItem, type QuoteState } from './quoteContext'
 
 class MemoryStorage implements Storage {
   private data = new Map<string, string>()
@@ -66,6 +66,48 @@ function sampleQuote(quoteNo: string, overrides: Partial<QuoteState> = {}): Quot
     ...overrides,
   }
 }
+
+describe('customer name compatibility (Issue 75)', () => {
+  it('preserves an unsplit legacy name without guessing its parts', () => {
+    const source = sampleQuote('75', { customer: { name: 'Dr Mary Ann van der Berg', address: '1 Test St', phone: '' } })
+    const normalized = normalizeQuote(source)
+    expect(normalized.customer.name).toBe(source.customer.name)
+    expect(normalized.customer.firstName).toBeUndefined()
+    expect(normalized.customer.surname).toBeUndefined()
+    const storage = new MemoryStorage()
+    upsertArchivedQuote(normalized, { total: 610 }, storage)
+    expect(getArchivedQuote('75', 1, storage)?.quote.customer.name).toBe(source.customer.name)
+  })
+
+  it('saves name parts and the full display name while retaining separate addresses', () => {
+    const source = sampleQuote('75', { shipSameAsBill: false, shipTo: { name: 'Ada', address: '2 Site St', phone: '123' } })
+    const updated = quoteReducer(source, { type: 'SET_CUSTOMER', customer: {
+      ...source.customer, firstName: ' Mary Ann ', surname: ' van der Berg ',
+    } })
+    expect(updated.customer.name).toBe('Mary Ann van der Berg')
+    expect(updated.shipTo).toEqual({ ...source.shipTo, name: updated.customer.name, firstName: ' Mary Ann ', surname: ' van der Berg ' })
+    const storage = new MemoryStorage()
+    upsertArchivedQuote(updated, { total: 610 }, storage)
+    const restored = normalizeQuote(getArchivedQuote('75', 1, storage)!.quote)
+    expect(restored.customer).toMatchObject(updated.customer)
+    expect(buildDuplicatedQuote(restored, '76').customer).toEqual(restored.customer)
+  })
+
+  it('allows a single name or clearing both fields and preserves a distinct shipping recipient', () => {
+    const source = sampleQuote('75', { shipTo: { name: 'Site manager', address: '2 Site St', phone: '123' } })
+    for (const [firstName, surname, name] of [['Prince', '', 'Prince'], ['', 'Li', 'Li'], ['', '', '']]) {
+      const updated = quoteReducer(source, { type: 'SET_CUSTOMER', customer: { ...source.customer, firstName, surname } })
+      expect(updated.customer.name).toBe(name)
+      expect(updated.shipTo).toEqual(source.shipTo)
+    }
+  })
+
+  it('does not rename an issued or settled quote', () => {
+    for (const quote of [sampleQuote('75', { status: 'issued' }), sampleQuote('75', { dealStatus: 'closed' }), sampleQuote('75', { dealStatus: 'abandoned' })]) {
+      expect(quoteReducer(quote, { type: 'SET_CUSTOMER', customer: { ...quote.customer, firstName: 'Changed', surname: 'Name' } })).toBe(quote)
+    }
+  })
+})
 
 describe('quote number round-trip (Issue 2)', () => {
   it('normalizeQuote never pads or otherwise mangles an entered quote number', () => {
