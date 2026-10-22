@@ -13,6 +13,7 @@ documents/*.xlsx
 /.idea/
 ~$*
 .env
+!/server/.env
 *.lnk
 .vercel
 
